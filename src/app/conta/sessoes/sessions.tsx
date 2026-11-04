@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseSessions, type DeviceSession } from "./data";
+import BackButton from "@/app/_components/back-button";
 import styles from "./sessions.module.css";
 
 type State = "loading" | "ready" | "signed-out" | "error" | "uncertain";
@@ -69,13 +70,13 @@ export default function Sessions() {
     } finally { setBusy(false); }
   }
 
-  return <main className={styles.page}><header><Link className={styles.brand} href="/">✳ entrelinhas.</Link></header><section className={styles.content}><p className={styles.eyebrow}>SUA CONTA</p><h1>Sessões e dispositivos.</h1><p>Confira as sessões ativas e encerre as que não reconhecer.</p>
+  return <main className={styles.page}><section className={styles.content}><BackButton fallback="/conta" /><p className={styles.eyebrow}>SUA CONTA</p><h1>Sessões e dispositivos.</h1><p>Confira as sessões ativas e encerre as que não reconhecer.</p>
     {state === "loading" && <p role="status">Carregando sessões…</p>}
     {state === "signed-out" && <p role="status">Sua sessão terminou. <Link href="/entrar">Entre novamente</Link>.</p>}
     {state === "error" && <><p role="alert">Não foi possível carregar as sessões agora.</p><button onClick={() => setReload(value => value + 1)}>Tentar novamente</button></>}
     {state === "uncertain" && <><p role="alert">Não foi possível confirmar se a sessão foi encerrada. Atualize a lista antes de tentar novamente. Se sua sessão atual foi encerrada, entre novamente.</p><button onClick={() => setReload(value => value + 1)}>Atualizar lista</button> <Link href="/entrar">Entrar</Link></>}
     {state === "ready" && <>{message && <p role="status">{message}</p>}{sessions.length === 0 ? <p>Nenhuma sessão ativa encontrada.</p> : <ul className={styles.list}>{sessions.map(item => <li className={styles.item} key={item.id}><div><h2>{item.current ? "Esta sessão" : "Outra sessão"}</h2><p className={styles.agent}>{item.userAgent || "Dispositivo não identificado"}</p><p>Início: {date(item.createdAt)}<br />Último uso: {date(item.lastUsedAt)}<br />Expira: {date(item.expiresAt)}</p></div><button type="button" disabled={busy} onClick={() => setSelected(item)}>Encerrar{item.current ? " esta sessão" : " sessão"}</button></li>)}</ul>}</>}
     {selected && state === "ready" && <div className={styles.confirm}><p>{selected.current ? "Você sairá desta conta neste navegador. Deseja continuar?" : "Deseja encerrar esta sessão? O dispositivo precisará entrar novamente."}</p><button type="button" onClick={revoke} disabled={busy}>{busy ? "Encerrando…" : "Confirmar"}</button> <button type="button" disabled={busy} onClick={() => setSelected(null)}>Cancelar</button></div>}
-    <p><Link href="/conta">← Voltar à conta</Link></p>
+    
   </section></main>;
 }

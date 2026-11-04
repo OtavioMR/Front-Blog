@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseProfile, profilePayload, type ProfileFields } from "./contracts";
+import BackButton from "@/app/_components/back-button";
 import styles from "./profile.module.css";
 
 type Status = "loading" | "ready" | "signed-out" | "error";
@@ -62,8 +63,8 @@ export default function ProfileForm() {
   }
   function change(key: keyof ProfileFields, value: string) { setFields(previous => ({ ...previous, [key]: value })); }
 
-  return <main className={styles.page}><header className={styles.header}><Link className={styles.brand} href="/">✳ entrelinhas.</Link><Link href="/conta">Minha conta</Link></header><section className={styles.content}>
-    <p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Seu perfil.</h1>
+  return <main className={styles.page}><section className={styles.content}>
+    <BackButton fallback="/conta" /><p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Seu perfil.</h1>
     {status === "loading" && <p role="status">Carregando perfil…</p>}
     {status === "signed-out" && <><p>Entre novamente para editar seu perfil.</p><Link className={styles.link} href="/entrar">Entrar</Link></>}
     {status === "error" && <><p role="alert">Não foi possível carregar seu perfil.</p><button onClick={() => void load()}>Tentar novamente</button></>}
@@ -74,6 +75,6 @@ export default function ProfileForm() {
       <label htmlFor="social">Rede social</label><input id="social" type="url" value={fields.socialUrl} onChange={event => change("socialUrl", event.target.value)} maxLength={500} placeholder="https://exemplo.com/perfil" disabled={busy || uncertain} />
       <button disabled={busy || uncertain}>{busy ? "Salvando…" : "Salvar perfil"}</button>
     </form>{message && <p role={uncertain ? "alert" : "status"}>{message}</p>}{uncertain && <button onClick={() => void load()}>Recarregar perfil</button>}</>}
-    <Link className={styles.link} href="/conta">← Voltar para minha conta</Link>
+    
   </section></main>;
 }

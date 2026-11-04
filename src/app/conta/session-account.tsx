@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getOwnProfile, logout, subscribeSession, type OwnProfile } from "@/lib/session-client";
-import styles from "../entrar/session.module.css";
+import Avatar from "@/app/_components/avatar";
+import TotpSettings from "./totp-settings";
+import account from "./account.module.css";
 
 export default function Account() {
   const [state, setState] = useState<"loading" | "signed-in" | "signed-out" | "busy" | "uncertain" | "error">("loading");
@@ -23,14 +25,40 @@ export default function Account() {
     return () => { active = false; revisionRef.current++; unsubscribe(); };
   }, [retry]);
   async function signOut() { revision.current++; setProfile(null); setState("busy"); const confirmed = await logout().catch(() => false); setState(confirmed ? "signed-out" : "uncertain"); }
-  return <main className={styles.page}><header><Link href="/" className={styles.brand}>✳ entrelinhas.</Link></header><section className={styles.card}>
-    <p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Minha conta.</h1>
-    {state === "loading" && <p role="status">Verificando sua sessão…</p>}
-    {state === "signed-in" && profile && <><dl><dt>Nome</dt><dd>{profile.name}</dd><dt>E-mail</dt><dd>{profile.email}</dd><dt>Perfil</dt><dd>{({ READER: "Leitor", AUTHOR: "Autor", ADMIN: "Administrador" } as Record<string, string>)[profile.role] || profile.role}</dd><dt>Verificação de e-mail</dt><dd>{profile.emailVerified ? "Confirmado" : "Pendente"}</dd>{profile.bio && <><dt>Sobre</dt><dd>{profile.bio}</dd></>}</dl><p><Link className={styles.back} href="/conta/perfil">Editar perfil</Link></p><p><Link className={styles.back} href="/conta/foto">Alterar foto</Link></p><p><Link className={styles.back} href="/conta/senha">Alterar senha</Link></p><p><Link className={styles.back} href="/studio">Acessar Studio de escrita</Link></p><p><Link className={styles.back} href="/conta/salvos">Ver artigos salvos</Link></p><p><Link className={styles.back} href="/conta/sessoes">Gerenciar sessões e dispositivos</Link></p><button className={styles.button} onClick={signOut}>Sair da conta</button></>}
+  const roles: Record<string, string> = { READER: "Leitor", AUTHOR: "Autor", ADMIN: "Administrador" };
+  const canWrite = profile?.role === "AUTHOR" || profile?.role === "ADMIN";
+  return <main className={account.page}>
+    <p className={account.eyebrow}>SEU ESPAÇO</p><h1 className={account.title}>Minha conta.</h1>
+    {state === "loading" && <div className={account.skeleton} role="status" aria-label="Carregando"><span /><span /><span />Verificando sua sessão…</div>}
     {state === "busy" && <p role="status">Saindo…</p>}
-    {state === "signed-out" && <><p>Entre novamente para acessar sua conta.</p><Link className={styles.back} href="/entrar">Entrar</Link></>}
-    {state === "uncertain" && <><p role="alert">Não foi possível confirmar a saída no servidor. Entre novamente para usar sua conta.</p><Link className={styles.back} href="/entrar">Ir para entrada</Link></>}
-    {state === "error" && <><p role="alert">Não foi possível carregar seu perfil agora. Tente novamente ou entre novamente se o problema persistir.</p><button className={styles.button} onClick={() => setRetry(value => value + 1)}>Tentar novamente</button> <Link className={styles.back} href="/entrar">Entrar</Link></>}
-    <br /><Link className={styles.back} href="/">← Voltar ao início</Link>
-  </section></main>;
+    {state === "signed-in" && profile && <div className={account.layout}>
+      <section className={account.summary} aria-labelledby="summary-title">
+        <Avatar name={profile.name} src={profile.profilePhoto} size={72} />
+        <h2 id="summary-title">{profile.name}</h2><p className={account.muted}>{profile.email}</p>
+        <p><span className={account.badge}>{roles[profile.role] || profile.role}</span> <span className={profile.emailVerified ? account.badgeOk : account.badgeWarn}>E-mail {profile.emailVerified ? "confirmado" : "pendente"}</span></p>
+        {profile.bio ? <p className={account.bio}>{profile.bio}</p> : <p className={account.muted}>Você ainda não escreveu uma biografia.</p>}
+        <div className={account.actions}><Link className={account.primary} href="/conta/perfil">Editar perfil</Link><button className={account.secondary} onClick={signOut}>Sair da conta</button></div>
+      </section>
+      <div className={account.main}>
+        <section className={account.panel} aria-labelledby="manage-title"><h2 id="manage-title">Gerenciar conta</h2>
+          <ul className={account.links}>
+            <li><Link href="/conta/perfil"><strong>Informações pessoais</strong><span>Nome, biografia e links públicos</span></Link></li>
+            <li><Link href="/conta/foto"><strong>Foto de perfil</strong><span>{profile.profilePhoto ? "Troque sua imagem" : "Adicione uma foto"}</span></Link></li>
+            <li><Link href="/conta/salvos"><strong>Artigos salvos</strong><span>Suas leituras guardadas</span></Link></li>
+            {profile.role === "READER" && <li><Link href="/studio"><strong>Quero ser autor</strong><span>Aceite as regras de publicação e comece a escrever</span></Link></li>}
+            {canWrite && <li><Link href="/studio"><strong>Studio de escrita</strong><span>Crie e edite suas publicações</span></Link></li>}
+            {canWrite && <li><Link href={`/autores/${encodeURIComponent(profile.id)}`}><strong>Minhas publicações</strong><span>Veja seu perfil público de autor</span></Link></li>}
+          </ul></section>
+        <section className={account.panel} aria-labelledby="security-title"><h2 id="security-title">Segurança</h2>
+          <ul className={account.links}>
+            <li><Link href="/conta/senha"><strong>Alterar senha</strong><span>Exige a senha atual e encerra as sessões</span></Link></li>
+            <li><Link href="/conta/sessoes"><strong>Sessões e dispositivos</strong><span>Revise onde sua conta está conectada</span></Link></li>
+          </ul>
+          <h3>Verificação em duas etapas</h3><TotpSettings userId={profile.id} /></section>
+      </div>
+    </div>}
+    {state === "signed-out" && <div className={account.notice}><p>Entre novamente para acessar sua conta.</p><Link className={account.primary} href="/entrar">Entrar</Link></div>}
+    {state === "uncertain" && <div className={account.notice}><p role="alert">Não foi possível confirmar a saída no servidor. Entre novamente para usar sua conta.</p><Link className={account.primary} href="/entrar">Ir para entrada</Link></div>}
+    {state === "error" && <div className={account.notice}><p role="alert">Não foi possível carregar seu perfil agora. Tente novamente ou entre novamente se o problema persistir.</p><button className={account.primary} onClick={() => setRetry(value => value + 1)}>Tentar novamente</button> <Link className={account.secondary} href="/entrar">Entrar</Link></div>}
+  </main>;
 }

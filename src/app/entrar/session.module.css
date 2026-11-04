@@ -14,3 +14,7 @@
 .form button:disabled, .button:disabled { opacity: .6; cursor: wait; }
 .error { color: #922e25; line-height: 1.5; }
 .back { display: inline-block; margin-top: 30px; color: #526357; text-decoration: underline; }
+.passwordRow { display: flex; gap: 8px; align-items: stretch; }
+.passwordRow input { flex: 1; min-width: 0; }
+.form .ghost { background: transparent; color: #526357; border: 1px solid #a9b1a4; margin-top: 0; padding: 12px 14px; font-size: 14px; }
+.form > .ghost { border: 0; text-decoration: underline; justify-self: start; padding: 4px 0; }

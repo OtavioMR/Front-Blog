@@ -108,6 +108,11 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   const authorHtml = await (await fetch(`${base}/autores/${article.author.id}`)).text();
   assert.match(authorHtml, /<title>Autora de teste \| Entrelinhas<\/title>/);
   assert.match(authorHtml, /Biografia de teste/);
+  assert.match(authorHtml, /Artigos publicados/);
+  assert.match(authorHtml, /Uma história de teste/);
+  assert.match(authorHtml, /aria-label="Ler artigo: Uma história de teste"/);
+  const authorAboutHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=sobre`)).text();
+  assert.match(authorAboutHtml, /Sobre .*Autora de teste/);
   assert.equal((await fetch(`${base}/autores/invalido`)).status, 404);
   const sitemap = await fetch(`${base}/sitemap.xml`);
   assert.equal(sitemap.status, 200);

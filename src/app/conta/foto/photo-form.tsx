@@ -1,35 +1,49 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
-import { uploadPhoto } from "./photo-upload";
+import { authenticatedFetchForSubject, getOwnProfile, notifyProfileChanged, subscribeSession } from "@/lib/session-client";
+import Link from "next/link";
+import Avatar from "@/app/_components/avatar";
+import BackButton from "@/app/_components/back-button";
+import { uploadPhoto, validatePhoto } from "./photo-upload";
 import styles from "../perfil/profile.module.css";
+import photo from "./photo.module.css";
 
 type State = "loading" | "ready" | "signed-out" | "error";
 
 export default function PhotoForm() {
   const [state, setState] = useState<State>("loading");
   const [subject, setSubject] = useState("");
+  const [name, setName] = useState("");
+  const [current, setCurrent] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
   const revision = useRef(0);
   const pending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
 
+  const clearSelection = useCallback(() => { setFile(null); if (input.current) input.current.value = ""; }, []);
+  useEffect(() => {
+    if (!file) { setPreview(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
   const load = useCallback(async () => {
-    const current = ++revision.current;
-    setState("loading"); setSubject(""); setFile(null); setMessage("");
-    if (input.current) input.current.value = "";
+    const generation = ++revision.current;
+    setState("loading"); setSubject(""); clearSelection(); setMessage("");
     try {
       const profile = await getOwnProfile();
-      if (current !== revision.current) return;
+      if (generation !== revision.current) return;
       if (!profile) { setState("signed-out"); return; }
-      setSubject(profile.id); setUncertain(false); setState("ready");
-    } catch { if (current === revision.current) setState("error"); }
-  }, []);
+      setSubject(profile.id); setName(profile.name); setCurrent(profile.profilePhoto || null); setUncertain(false); setState("ready");
+    } catch { if (generation === revision.current) setState("error"); }
+  }, [clearSelection]);
 
   useEffect(() => {
     let active = true;
@@ -39,42 +53,62 @@ export default function PhotoForm() {
     return () => { active = false; generation.current++; unsubscribe(); };
   }, [load]);
 
+  function choose(selected: File | null) {
+    setMessage(""); setFailed(false);
+    if (!selected) { clearSelection(); return; }
+    const problem = validatePhoto(selected);
+    if (problem) { clearSelection(); setFailed(true); setMessage(problem); return; }
+    setFile(selected);
+  }
+
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending.current || !subject || !file || uncertain) return;
-    const current = revision.current;
-    pending.current = true; setBusy(true); setMessage("");
+    const generation = revision.current;
+    pending.current = true; setBusy(true); setMessage(""); setFailed(false);
     try {
       const result = await uploadPhoto(subject, file, authenticatedFetchForSubject);
-      if (current !== revision.current) return;
+      if (generation !== revision.current) return;
       if (result.kind === "signed-out") { setState("signed-out"); return; }
       if (result.kind === "account-changed") { void load(); return; }
-      if (result.kind === "invalid") { setMessage(result.message); return; }
-      if (result.kind === "uncertain") throw new Error();
-      setFile(null);
-      if (input.current) input.current.value = "";
-      setMessage("Foto atualizada. Ela pode aparecer no seu perfil público.");
+      if (result.kind === "invalid") { setFailed(true); setMessage(result.message); return; }
+      if (result.kind !== "success") throw new Error();
+      // Only now, with the API's confirmation, the new photo replaces the old one everywhere.
+      const updatedProfile = await getOwnProfile();
+      if (updatedProfile) setCurrent(updatedProfile.profilePhoto || null);
+      clearSelection(); setMessage("Foto atualizada com sucesso.");
+      notifyProfileChanged();
     } catch {
-      if (current === revision.current) {
-        setUncertain(true);
-        setMessage("Não foi possível confirmar o envio. Recarregue seu perfil antes de tentar novamente.");
+      if (generation === revision.current) {
+        setUncertain(true); setFailed(true);
+        setMessage("Não foi possível confirmar o envio. Recarregue sua conta para verificar antes de tentar novamente.");
       }
     } finally { pending.current = false; setBusy(false); }
   }
 
-  return <main className={styles.page}><header className={styles.header}><Link className={styles.brand} href="/">✳ entrelinhas.</Link><Link href="/conta">Minha conta</Link></header><section className={styles.content}>
+  return <main className={styles.page}><section className={styles.content}>
+    <BackButton fallback="/conta" />
     <p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Foto de perfil.</h1>
     {state === "loading" && <p role="status">Carregando sua conta…</p>}
     {state === "signed-out" && <p>Entre novamente para atualizar sua foto. <Link href="/entrar">Entrar</Link></p>}
     {state === "error" && <><p role="alert">Não foi possível carregar sua conta.</p><button onClick={() => void load()}>Tentar novamente</button></>}
-    {state === "ready" && <><p>Escolha uma imagem JPEG, PNG ou WebP de até 5 MiB. Sua foto pode aparecer publicamente.</p>
-      <form className={styles.form} onSubmit={upload}><label htmlFor="photo">Imagem</label>
-        <input ref={input} id="photo" type="file" accept="image/jpeg,image/png,image/webp" required disabled={busy || uncertain} onChange={event => setFile(event.target.files?.[0] || null)} />
-        <button disabled={busy || uncertain || !file}>{busy ? "Enviando…" : "Atualizar foto"}</button>
+    {state === "ready" && <>
+      <p>Escolha uma imagem JPEG, PNG ou WebP de até 5 MiB. Sua foto pode aparecer publicamente. Sem foto, usamos suas iniciais.</p>
+      <div className={photo.preview}>
+        <Avatar name={name} src={preview || current} size={128} />
+        <div><strong>{preview ? "Prévia da nova foto" : current ? "Foto atual" : "Avatar padrão"}</strong><span>{preview ? "Ainda não enviada. Confirme para salvar." : current ? "Escolha outra imagem para trocar." : "Você ainda não enviou uma foto."}</span></div>
+      </div>
+      <form className={styles.form} onSubmit={upload} aria-busy={busy}>
+        <label htmlFor="photo">{current ? "Trocar imagem" : "Imagem"}</label>
+        <input ref={input} id="photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || uncertain} onChange={event => choose(event.target.files?.[0] || null)} />
+        <div className={photo.actions}>
+          <button disabled={busy || uncertain || !file}>{busy ? "Enviando…" : "Salvar foto"}</button>
+          {file && !busy && <button type="button" className={photo.secondary} onClick={() => { clearSelection(); setMessage(""); }}>Cancelar</button>}
+        </div>
       </form>
-      {message && <p role={uncertain ? "alert" : "status"}>{message}</p>}
+      {busy && <p role="status" className={photo.progress}><span className={photo.spinner} aria-hidden="true" />Enviando e processando a imagem…</p>}
+      {message && !busy && <p role={failed ? "alert" : "status"} className={failed ? photo.error : photo.success}>{message}</p>}
       {uncertain && <button onClick={() => void load()}>Recarregar conta</button>}
     </>}
-    <p><Link className={styles.link} href="/conta">← Voltar para minha conta</Link></p>
   </section></main>;
 }

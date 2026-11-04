@@ -5,9 +5,9 @@
 .content h1 { font: 400 clamp(40px, 6vw, 62px)/1.05 Georgia, serif; letter-spacing: -.05em; }
 .content p { color: #526357; line-height: 1.6; }
 .content a { color: inherit; text-underline-offset: 4px; }
-.content button { padding: 10px 14px; border: 1px solid #314c39; background: #314c39; color: white; font: inherit; cursor: pointer; }
-.content button:disabled { opacity: .6; cursor: wait; }
-.content button:focus-visible, .content a:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
+.content button:not([data-back-button]):not([class*="back"]) { padding: 10px 14px; border: 1px solid #314c39; background: #314c39; color: white; font: inherit; cursor: pointer; }
+.content button:not([data-back-button]):not([class*="back"]):disabled { opacity: .6; cursor: wait; }
+.content button:not([data-back-button]):not([class*="back"]):focus-visible, .content a:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
 .eyebrow { font-size: 11px; font-weight: bold; letter-spacing: .15em; color: #8a503c !important; }
 .list { list-style: none; padding: 0; margin: 32px 0; display: grid; gap: 14px; }
 .item { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px; border: 1px solid #c9cfc3; background: #f2f1e8; }

@@ -5,7 +5,7 @@ export function validatePhoto(file: Pick<File, "size" | "type">): string | null 
 }
 
 type FetchForSubject = (subject: string, path: string, init: RequestInit) => Promise<Response>;
-export type PhotoUploadResult = { kind: "success" | "signed-out" | "account-changed" | "uncertain" } | { kind: "invalid"; message: string };
+export type PhotoUploadResult = { kind: "success" } | { kind: "signed-out" | "account-changed" | "uncertain" } | { kind: "invalid"; message: string };
 
 export async function uploadPhoto(subject: string, file: File, send: FetchForSubject): Promise<PhotoUploadResult> {
   const problem = validatePhoto(file);

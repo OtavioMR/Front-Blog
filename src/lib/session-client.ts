@@ -41,6 +41,11 @@ async function tokensFrom(response: Response, epoch: string) {
   token = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000, epoch };
 }
 
+const profileListeners = new Set<() => void>();
+// Lets header/menu components refetch the confirmed profile after login, logout or a photo change.
+function notifyProfile() { profileListeners.forEach((listener) => listener()); }
+export const notifyProfileChanged = notifyProfile;
+export function subscribeProfile(listener: () => void) { profileListeners.add(listener); return () => { profileListeners.delete(listener); }; }
 export function subscribeSession(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
 
 export async function login(email: string, password: string, totpCode: string): Promise<void> {
@@ -67,6 +72,7 @@ export async function login(email: string, password: string, totpCode: string): 
       saveState({ epoch, pending: false });
     } catch { token = null; broadcast(); throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
     broadcast();
+    notifyProfile();
   });
 }
 
@@ -161,7 +167,7 @@ export async function invalidateSessionForSubject(expectedId: string): Promise<b
   });
 }
 
-export type OwnProfile = { id: string; name: string; email: string; role: string; emailVerified: boolean; bio: string | null; firstPostApproved?: boolean };
+export type OwnProfile = { id: string; name: string; email: string; role: string; emailVerified: boolean; bio: string | null; profilePhoto?: string | null; firstPostApproved?: boolean };
 
 export async function getOwnProfile(): Promise<OwnProfile | null> {
   return locked(async () => {
@@ -173,7 +179,7 @@ export async function getOwnProfile(): Promise<OwnProfile | null> {
     const value: unknown = await response.json();
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Resposta de perfil inválida.");
     const profile = value as Record<string, unknown>;
-    if (profile.id !== id || typeof profile.name !== "string" || typeof profile.email !== "string" || typeof profile.role !== "string" || typeof profile.emailVerified !== "boolean" || !(profile.bio === null || typeof profile.bio === "string") || !(profile.firstPostApproved === undefined || typeof profile.firstPostApproved === "boolean")) throw new Error("Resposta de perfil inválida.");
+    if (profile.id !== id || typeof profile.name !== "string" || typeof profile.email !== "string" || typeof profile.role !== "string" || typeof profile.emailVerified !== "boolean" || !(profile.bio === null || typeof profile.bio === "string") || !(profile.firstPostApproved === undefined || typeof profile.firstPostApproved === "boolean") || !(profile.profilePhoto === undefined || profile.profilePhoto === null || typeof profile.profilePhoto === "string")) throw new Error("Resposta de perfil inválida.");
     return profile as OwnProfile;
   });
 }
@@ -188,6 +194,7 @@ export async function logout(): Promise<boolean> {
     token = null;
     saveState({ epoch: crypto.randomUUID(), pending: true });
     broadcast();
+    notifyProfile();
     try {
       const response = await fetch("/api/v1/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${current.value}` }, credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000) });
       return response.ok;

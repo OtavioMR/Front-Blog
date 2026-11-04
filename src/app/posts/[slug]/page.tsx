@@ -11,6 +11,9 @@ import Replies from "./replies";
 import CommentForm from "./comment-form";
 import PostViewTracker from "./post-view-tracker";
 import Interactions from "./interactions";
+import EditArticleLink from "./edit-article-link";
+import Avatar from "@/app/_components/avatar";
+import { getAuthor } from "../../autores/[id]/data";
 import styles from "./post.module.css";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ commentsPage?: string }> };
@@ -34,7 +37,7 @@ export default async function PostPage({ params, searchParams }: Props) {
   if (!post) notFound();
   if (slug !== post.slug) permanentRedirect(`/posts/${post.slug}`);
   const requestedPage = commentsPage((await searchParams).commentsPage);
-  const [related, comments] = await Promise.all([getRelatedPosts(post.slug), getComments(post.id, requestedPage)]);
+  const [related, comments, authorProfile] = await Promise.all([getRelatedPosts(post.slug), getComments(post.id, requestedPage), post.author?.id ? getAuthor(post.author.id).catch(() => null) : Promise.resolve(null)]);
 
   const content = sanitizeHtml(post.content, {
     allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"],
@@ -47,27 +50,36 @@ export default async function PostPage({ params, searchParams }: Props) {
   const { jsonLd } = postSeo(post);
   const date = post.publishedAt ? new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(post.publishedAt)) : null;
 
+  const fmt = (value: string) => new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+  const updated = post.updatedAt && post.publishedAt && Date.parse(post.updatedAt) - Date.parse(post.publishedAt) > 3_600_000 ? fmt(post.updatedAt) : null;
   return (
     <main className={styles.page}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="Entrelinhas, página inicial"><span aria-hidden="true">✳</span> entrelinhas.</Link>
-        <Link className={styles.back} href="/">← Voltar ao início</Link>
-      </header>
       <article className={styles.article}>
         <PostViewTracker postId={post.id} />
         <div className={styles.category}>{post.categories.map(category => category.name).join(" · ") || "BOAS HISTÓRIAS"}</div>
         <h1>{post.title}</h1>
         {post.excerpt && <p className={styles.excerpt}>{post.excerpt}</p>}
-        <div className={styles.meta}>
-          {post.author?.name && <span>Por {authorPath ? <Link href={authorPath}>{post.author.name}</Link> : post.author.name}</span>}
-          {date && <time dateTime={post.publishedAt!}>{date}</time>}
-          <span>{post.readingTimeMinutes} min de leitura</span>
+        <div className={styles.byline}>
+          {post.author?.name && <Avatar name={post.author.name} src={authorProfile?.profilePhoto} size={52} />}
+          <div className={styles.bylineText}>
+            {post.author?.name && <strong>{authorPath ? <Link href={authorPath}>{post.author.name}</Link> : post.author.name}</strong>}
+            <span>{date && <time dateTime={post.publishedAt!}>{date}</time>}{date && " · "}{post.readingTimeMinutes} min de leitura{updated && <> · Atualizado em <time dateTime={post.updatedAt!}>{updated}</time></>}</span>
+          </div>
+          <EditArticleLink postId={post.id} authorId={post.author?.id} />
         </div>
         {cover && <div className={styles.cover}><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
         <div className={styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
         <Interactions postId={post.id} />
-      </article>
+        {post.author?.name && <aside className={styles.authorBox} aria-labelledby="author-box-title">
+          <Avatar name={post.author.name} src={authorProfile?.profilePhoto} size={72} />
+          <div>
+            <p className={styles.authorLabel}>ESCRITO POR</p>
+            <h2 id="author-box-title">{post.author.name}</h2>
+            {authorProfile?.bio && <p className={styles.authorBio}>{authorProfile.bio}</p>}
+            {authorPath && <Link className={styles.authorLink} href={authorPath}>Ver {authorProfile && authorProfile.publicationCount > 1 ? `as ${authorProfile.publicationCount} publicações` : "outras publicações"} do autor <span aria-hidden="true">→</span></Link>}
+          </div>
+        </aside>}      </article>
       <section className={styles.comments} id="comentarios" aria-labelledby="comments-title">
         <p className={styles.category}>A CONVERSA CONTINUA</p><h2 id="comments-title">Comentários.</h2>
         {comments.kind === "disabled" ? <p>Os comentários estão desativados neste artigo.</p> : comments.kind === "unavailable" ? <p role="status">Não foi possível carregar os comentários agora. Tente novamente mais tarde.</p> : <>

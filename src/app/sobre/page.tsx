@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import SessionNav from "@/app/_components/session-nav";
 import styles from "./sobre.module.css";
 
 export const metadata: Metadata = {
@@ -10,15 +11,6 @@ export const metadata: Metadata = {
 export default function SobrePage() {
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="Entrelinhas, página inicial"><span aria-hidden="true">✳</span> entrelinhas.</Link>
-        <nav className={styles.nav} aria-label="Navegação principal">
-          <Link href="/#artigos">Artigos</Link>
-          <Link href="/categorias">Categorias</Link>
-          <Link href="/entrar">Entrar</Link>
-        </nav>
-      </header>
-
       <section className={styles.intro} aria-labelledby="sobre-titulo">
         <div className={styles.introCopy}>
           <p className={styles.eyebrow}>SOBRE O ENTRELINHAS</p>

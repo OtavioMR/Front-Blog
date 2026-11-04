@@ -64,7 +64,7 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
   }
 
   const info = config[mode];
-  return <main className={styles.page}><header className={styles.header}><Link className={styles.brand} href="/">✳ entrelinhas.</Link><Link className={styles.back} href="/">← Voltar ao início</Link></header><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{info.title}</h1><p className={styles.description}>{info.description}</p>
+  return <main className={styles.page}><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{info.title}</h1><p className={styles.description}>{info.description}</p>
     {message && <p className={styles.message} role={success ? "status" : "alert"}>{message}</p>}
     {!success && <form className={styles.form} method="post" onSubmit={submit}>
       {mode === "register" && <label className={styles.field}>Nome<input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>}

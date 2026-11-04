@@ -1,0 +1,126 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 90;
+  background: #f6f3eb;
+  border-bottom: 1px solid #c9cfc3;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.navbar.hidden {
+  transform: translateY(-100%);
+}
+
+.navbar:hover,
+.navbar:focus-within {
+  transform: translateY(0) !important;
+}
+
+.inner {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 6%;
+  height: 90px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.brand {
+  font-family: Georgia, serif;
+  font-size: 30px;
+  font-weight: bold;
+  letter-spacing: -1.5px;
+  color: #202b24 !important;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none !important;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.brand:hover {
+  text-decoration: none !important;
+  color: #202b24 !important;
+}
+
+.brand:focus-visible {
+  outline: 3px solid #b46343;
+  outline-offset: 4px;
+}
+
+.brandMark {
+  display: inline-block;
+  color: #cc704e !important;
+  font-size: 28px;
+  margin-right: 9px;
+  line-height: 1;
+}
+
+.brandDot {
+  color: #c26b4b !important;
+}
+
+.nav {
+  display: flex;
+  gap: 28px;
+  color: #526357;
+  font-size: 13px;
+  font-weight: bold;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.nav a:focus-visible {
+  outline: 3px solid #b46343;
+  outline-offset: 4px;
+}
+
+@media (max-width: 700px) {
+  .inner {
+    height: auto;
+    min-height: 70px;
+    padding: 14px 6%;
+    gap: 14px;
+  }
+  .brand {
+    font-size: 25px;
+  }
+  .brandMark {
+    font-size: 24px;
+    margin-right: 7px;
+  }
+  .nav {
+    gap: 16px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 440px) {
+  .inner {
+    flex-wrap: wrap;
+    padding: 10px 5%;
+  }
+  .nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar {
+    transition: none;
+  }
+}

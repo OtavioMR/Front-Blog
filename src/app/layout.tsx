@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Navbar from "./_components/navbar";
+import NavTracker from "./_components/nav-tracker";
 import { BackToTop, ReadingProgress } from "./_components/reading-navigation";
 
 export const metadata: Metadata = {
@@ -10,7 +12,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body><ReadingProgress />{children}<BackToTop /></body>
+      <body>
+        <ReadingProgress />
+        <NavTracker />
+        <Navbar />
+        {children}
+        <BackToTop />
+      </body>
     </html>
   );
 }

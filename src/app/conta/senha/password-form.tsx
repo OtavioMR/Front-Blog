@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, invalidateSessionForSubject, subscribeSession } from "@/lib/session-client";
 import { passwordPayload } from "./contracts";
+import BackButton from "@/app/_components/back-button";
 import styles from "./password.module.css";
 
 type Status = "loading" | "ready" | "signed-out" | "error" | "changed" | "uncertain";
@@ -62,8 +63,8 @@ export default function PasswordForm() {
     } finally { setBusy(false); }
   }
 
-  return <main className={styles.page}><header className={styles.header}><Link className={styles.brand} href="/">✳ entrelinhas.</Link><Link href="/conta">Minha conta</Link></header><section className={styles.content}>
-    <p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar senha.</h1>
+  return <main className={styles.page}><section className={styles.content}>
+    <BackButton fallback="/conta" /><p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar senha.</h1>
     {status === "loading" && <p role="status">Verificando sua sessão…</p>}
     {status === "signed-out" && <><p>Entre novamente para alterar sua senha.</p><Link className={styles.link} href="/entrar">Entrar</Link></>}
     {status === "error" && <><p role="alert">Não foi possível verificar sua conta.</p><button onClick={() => void load()}>Tentar novamente</button></>}
@@ -75,6 +76,6 @@ export default function PasswordForm() {
       <label htmlFor="confirm-password">Confirme a nova senha</label><input id="confirm-password" type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={busy} />
       {message && <p role="alert">{message}</p>}<button disabled={busy}>{busy ? "Salvando…" : "Alterar senha"}</button>
     </form></>}
-    <Link className={styles.link} href="/conta">← Voltar para minha conta</Link>
+    
   </section></main>;
 }

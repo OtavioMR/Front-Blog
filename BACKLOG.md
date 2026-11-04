@@ -88,6 +88,8 @@ Os links repetidos de artigos e categorias receberam nomes acessíveis que ident
 
 As páginas de autor, categorias e categoria individual agora têm títulos próprios; a página da categoria informa também o número da página após a primeira. O HTML gerado foi verificado em `npm.cmd run test:public` com API simulada. Build e lint passaram, este último com um aviso preexistente no teste editorial; a sprint continua aberta até cumprir os demais critérios.
 
+Por solicitação do usuário, a página de perfil de autor em `/autores/[id]` agora exibe a aba de artigos publicados com a listagem completa dos artigos do escritor (título, resumo, capa válida, categoria, data de publicação, tempo de leitura e link acessível), além da aba informativa “Sobre o autor”, paginação e estado vazio. O backend recebeu o filtro `authorId` em `FindPostsQueryDto` e `posts.service.ts` com Swagger e testes unitários aprovados, e o frontend prioriza esse filtro com fallback seguro. `npm.cmd run test:public`, `npm.cmd run build` e `npm.cmd run lint` passaram, e a integração com a API real em execução no container confirmou os artigos e a paginação no HTML gerado.
+
 ## Sprint 3 — conta, Studio e revisão inicial
 
 - [ ] S3.1 Criar perfil, foto, senha e gestão de sessões segundo os contratos.

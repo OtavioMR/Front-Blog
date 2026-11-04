@@ -100,22 +100,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const [articles, categories] = await Promise.all([getArticles(page, search, author, category), getCategories()]);
   const filtering = Boolean(search || author || category);
+  const showFeatured = page === 1 && !filtering && articles.data.length > 0;
+  const featured = showFeatured ? articles.data[0] : null;
+  const rest = showFeatured ? articles.data.slice(1) : articles.data;
+  const cover = (a: ArticleSummary) => Boolean(a.coverImage && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(a.coverImage));
 
   return (
     <main className="page">
-      <header className="header">
-        <Link className="brand" href="/" aria-label="Blog, página inicial">
-          <span className="brand-mark" aria-hidden="true">✳</span>
-          entrelinhas<span className="brand-dot">.</span>
-        </Link>
-        <nav className="header-nav" aria-label="Navegação principal">
-          <Link href="/categorias">Categorias</Link>
-          <Link href="/sobre">Sobre</Link>
-          <a href="#artigos">Artigos</a>
-          <Link href="/entrar">Entrar</Link>
-        </nav>
-      </header>
-
       <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
           <p className="eyebrow"><span /> HISTÓRIAS QUE CONECTAM</p>
@@ -148,19 +139,33 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
         {articles.data.length === 0 ? (
           <div className="article-status"><p>{page > 1 ? "Não há artigos nesta página." : filtering ? "Nenhum artigo encontrado para esta busca." : "Ainda não há artigos publicados por aqui."}</p>{page > 1 && <Link href={pageLink(1, search, author, category)}>Voltar à primeira página</Link>}</div>
         ) : (
-          <div className="article-grid">
-            {articles.data.map((article, index) => (
-              <article className={`article-card ${index === 0 && page === 1 && !filtering ? styles.leadArticle : ""}`} key={article.id}>
-                {article.coverImage && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(article.coverImage) && <div className={styles.cardCover}><Image src={article.coverImage} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 50vw" unoptimized /></div>}
-                {index === 0 && page === 1 && !filtering && <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>}
-                <p className="article-category">{article.categories?.[0]?.name || "LEITURA"}</p>
-                <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
-                <p className="article-excerpt">{article.excerpt}</p>
-                <p className="article-meta">{article.author ? <Link href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
-                <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+          <>
+            {featured && (
+              <article className={styles.featured}>
+                {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
+                <div className={styles.featuredBody}>
+                  <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
+                  <p className="article-category">{featured.categories?.[0]?.name || "LEITURA"}</p>
+                  <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`}>{featured.title}</Link></h3>
+                  <p className="article-excerpt">{featured.excerpt}</p>
+                  <p className="article-meta">{featured.author ? <Link href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
+                  <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                </div>
               </article>
-            ))}
-          </div>
+            )}
+            {rest.length > 0 && <div className="article-grid">
+              {rest.map((article) => (
+                <article className={`article-card ${styles.card}`} key={article.id}>
+                  {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
+                  <p className="article-category">{article.categories?.[0]?.name || "LEITURA"}</p>
+                  <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
+                  <p className="article-excerpt">{article.excerpt}</p>
+                  <p className="article-meta">{article.author ? <Link href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
+                  <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                </article>
+              ))}
+            </div>}
+          </>
         )}
         {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
           <nav className="pagination" aria-label="Paginação dos artigos">
