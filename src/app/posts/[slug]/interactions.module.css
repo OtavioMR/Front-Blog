@@ -1,0 +1,7 @@
+.interactions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid #c9cfc3; border-bottom: 1px solid #c9cfc3; padding: 20px 0; margin: 48px auto 0; max-width: 700px; color: #526357; font-size: 14px; }
+.interactions p { line-height: 1.6; margin: 0; }
+.interactions a { text-decoration: underline; }
+.interactions button { border: 1px solid #718373; padding: 10px 16px; background: transparent; color: #314c39; font: inherit; cursor: pointer; }
+.interactions button[aria-pressed="true"] { background: #314c39; color: #fff; }
+.interactions button:disabled { opacity: .6; cursor: wait; }
+.interactions button:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }

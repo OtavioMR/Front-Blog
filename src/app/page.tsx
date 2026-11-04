@@ -1,0 +1,176 @@
+import Link from "next/link";
+import type { Metadata } from "next";
+import Image from "next/image";
+import styles from "./home.module.css";
+
+type ArticleSummary = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  publishedAt: string | null;
+  readingTimeMinutes: number;
+  coverImage?: string | null;
+  author?: { id: string; name: string };
+  categories?: { name: string }[];
+};
+
+type ArticlePage = {
+  data: ArticleSummary[];
+  meta: { page: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean };
+};
+
+type QueryParams = { search?: string | string[]; author?: string | string[]; categorySlug?: string | string[]; page?: string | string[] };
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<QueryParams> }): Promise<Metadata> {
+  const { search, author, categorySlug } = await searchParams;
+  if ([search, author, categorySlug].some((value) => typeof value === "string" && value.trim())) return { title: "Busca de artigos", robots: { index: false, follow: true } };
+  return { title: "Entrelinhas | Um espaço para boas ideias" };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isArticleSummary(value: unknown): value is ArticleSummary {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.slug === "string"
+    && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug)
+    && typeof value.title === "string"
+    && typeof value.excerpt === "string"
+    && value.published === true
+    && value.isActive === true
+    && (value.publishedAt === null || typeof value.publishedAt === "string")
+    && typeof value.readingTimeMinutes === "number"
+    && (value.coverImage === undefined || value.coverImage === null || typeof value.coverImage === "string")
+    && (value.author === undefined || (isRecord(value.author) && typeof value.author.id === "string" && typeof value.author.name === "string"))
+    && (value.categories === undefined || (Array.isArray(value.categories) && value.categories.every((category: unknown) => isRecord(category) && typeof category.name === "string")));
+}
+
+function pageLink(page: number, search: string, author: string, category: string) {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (author) params.set("author", author);
+  if (category) params.set("categorySlug", category);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return `/${query ? `?${query}` : ""}#artigos`;
+}
+
+async function getArticles(page: number, search: string, author: string, category: string): Promise<ArticlePage> {
+  const params = new URLSearchParams({ page: String(page), limit: "6" });
+  if (search) params.set("search", search);
+  if (author) params.set("author", author);
+  if (category) params.set("categorySlug", category);
+  const response = await fetch(`${process.env.API_ORIGIN || "http://localhost:3001"}/api/v1/posts?${params}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error("API indisponível");
+  const result: unknown = await response.json();
+  if (!isRecord(result) || !Array.isArray(result.data) || !result.data.every(isArticleSummary) || !isRecord(result.meta)
+      || typeof result.meta.page !== "number" || typeof result.meta.totalPages !== "number"
+      || typeof result.meta.hasNextPage !== "boolean" || typeof result.meta.hasPreviousPage !== "boolean") {
+    throw new Error("Resposta inválida");
+  }
+  return result as ArticlePage;
+}
+
+async function getCategories(): Promise<{ slug: string; name: string }[] | null> {
+  try {
+    const response = await fetch(`${process.env.API_ORIGIN || "http://localhost:3001"}/api/v1/categories?limit=100`, {
+      cache: "no-store", signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    if (!isRecord(value) || !Array.isArray(value.data) || !value.data.every((item: unknown) =>
+      isRecord(item) && typeof item.slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.slug)
+      && typeof item.name === "string" && item.isActive === true)) return null;
+    return value.data as { slug: string; name: string }[];
+  } catch { return null; }
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<QueryParams> }) {
+  const query = await searchParams;
+  const search = typeof query.search === "string" ? query.search.trim().slice(0, 100) : "";
+  const author = typeof query.author === "string" ? query.author.trim().slice(0, 100) : "";
+  const category = typeof query.categorySlug === "string" ? query.categorySlug.trim().slice(0, 100) : "";
+  const requestedPage = typeof query.page === "string" && /^[1-9]\d*$/.test(query.page) ? Number(query.page) : 1;
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const [articles, categories] = await Promise.all([getArticles(page, search, author, category), getCategories()]);
+  const filtering = Boolean(search || author || category);
+
+  return (
+    <main className="page">
+      <header className="header">
+        <Link className="brand" href="/" aria-label="Blog, página inicial">
+          <span className="brand-mark" aria-hidden="true">✳</span>
+          entrelinhas<span className="brand-dot">.</span>
+        </Link>
+        <nav className="header-nav" aria-label="Navegação principal">
+          <Link href="/categorias">Categorias</Link>
+          <Link href="/sobre">Sobre</Link>
+          <a href="#artigos">Artigos</a>
+          <Link href="/entrar">Entrar</Link>
+        </nav>
+      </header>
+
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-copy">
+          <p className="eyebrow"><span /> HISTÓRIAS QUE CONECTAM</p>
+          <h1 id="hero-title">Sempre existe <em>mais</em> para descobrir.</h1>
+          <p className="introduction">
+            Um lugar para desacelerar, encontrar novas perspectivas e deixar a curiosidade levar você mais longe.
+          </p>
+          <div className="hero-footer"><a href="#artigos">EXPLORAR ARTIGOS <span aria-hidden="true">↘</span></a></div>
+        </div>
+        <div className="artwork" aria-hidden="true">
+          <div className="artwork-sun" />
+          <div className="artwork-hill hill-back" />
+          <div className="artwork-hill hill-front" />
+          <span className="artwork-star">✳</span>
+          <span className="artwork-caption">PARA MENTES<br />CURIOSAS</span>
+        </div>
+      </section>
+
+      <section className="articles" id="artigos" aria-labelledby="articles-title">
+        <div className="articles-heading">
+          <div><p className="eyebrow">LEITURAS PARA DESCOBRIR</p><h2 id="articles-title">Ideias para ficar um pouco mais.</h2></div>
+          <form className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
+            <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
+            <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
+            {categories ? <div className={styles.field}><label htmlFor="category">Categoria <span>(opcional)</span></label><select id="category" name="categorySlug" defaultValue={category}><option value="">Todas</option>{category && !categories.some(item => item.slug === category) && <option value={category}>Categoria selecionada</option>}{categories.map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></div> : category ? <input type="hidden" name="categorySlug" value={category} /> : null}
+            <button type="submit">Buscar</button>
+          </form>
+        </div>
+        {filtering && <div className={styles.resultSummary}><p>Resultados{search && <> para <strong>“{search}”</strong></>}{author && <> por <strong>{author}</strong></>}{category && <> em <strong>{categories?.find(item => item.slug === category)?.name || category}</strong></>}</p><Link href="/#artigos">Limpar busca</Link></div>}
+        {articles.data.length === 0 ? (
+          <div className="article-status"><p>{page > 1 ? "Não há artigos nesta página." : filtering ? "Nenhum artigo encontrado para esta busca." : "Ainda não há artigos publicados por aqui."}</p>{page > 1 && <Link href={pageLink(1, search, author, category)}>Voltar à primeira página</Link>}</div>
+        ) : (
+          <div className="article-grid">
+            {articles.data.map((article, index) => (
+              <article className={`article-card ${index === 0 && page === 1 && !filtering ? styles.leadArticle : ""}`} key={article.id}>
+                {article.coverImage && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(article.coverImage) && <div className={styles.cardCover}><Image src={article.coverImage} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 50vw" unoptimized /></div>}
+                {index === 0 && page === 1 && !filtering && <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>}
+                <p className="article-category">{article.categories?.[0]?.name || "LEITURA"}</p>
+                <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
+                <p className="article-excerpt">{article.excerpt}</p>
+                <p className="article-meta">{article.author ? <Link href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
+                <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+              </article>
+            ))}
+          </div>
+        )}
+        {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
+          <nav className="pagination" aria-label="Paginação dos artigos">
+            {articles.meta.hasPreviousPage && <Link href={pageLink(page - 1, search, author, category)}>← Anterior</Link>}
+            <span>Página {articles.meta.page}{articles.meta.totalPages > 0 && ` de ${articles.meta.totalPages}`}</span>
+            {articles.meta.hasNextPage && <Link href={pageLink(page + 1, search, author, category)}>Próxima →</Link>}
+          </nav>
+        )}
+      </section>
+      <footer className="footer"><span>entrelinhas.</span><span>UM BLOG PARA LER E SENTIR.</span></footer>
+    </main>
+  );
+}

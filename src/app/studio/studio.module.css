@@ -1,0 +1,24 @@
+.page { max-width: 1300px; margin: 0 auto; padding: 0 6% 80px; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 90px; border-bottom: 1px solid #c9cfc3; }
+.brand { font: bold 29px Georgia, serif; letter-spacing: -.05em; }
+.content { max-width: 760px; margin: 70px auto; }
+.content h1 { font-size: clamp(48px, 7vw, 78px); margin-bottom: 30px; }
+.content h2 { margin: 30px 0 10px; }
+.content p, .content li { line-height: 1.7; color: #526357; }
+.content li { margin-bottom: 10px; }
+.eyebrow, .version { font-size: 11px; font-weight: bold; letter-spacing: .12em; color: #8a503c !important; }
+.content button { background: #314c39; color: white; border: 0; padding: 14px 20px; font: inherit; margin: 16px 0; cursor: pointer; }
+.content button:disabled { opacity: .5; cursor: not-allowed; }
+.content button:focus-visible, .check input:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
+.check { display: flex; align-items: baseline; gap: 10px; margin-top: 22px; }
+.link { text-decoration: underline; }
+.empty { padding: 24px; background: #e9ebdf; }
+.list { list-style: none; padding: 0; margin-top: 30px; }
+.list li { display: flex; justify-content: space-between; gap: 20px; padding: 18px 0; border-top: 1px solid #c9cfc3; }
+.list span { font-size: 13px; white-space: nowrap; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.editor { display: grid; gap: 18px; }
+.editor label { display: grid; gap: 8px; font-weight: 700; }
+.editor input, .editor textarea { width: 100%; padding: 12px; color: inherit; background: #fffefa; border: 1px solid #a9b1a4; font: inherit; }
+.editor textarea { resize: vertical; line-height: 1.6; }
+.editor input:focus-visible, .editor textarea:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }

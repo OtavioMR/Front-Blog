@@ -1,0 +1,18 @@
+.page { max-width: 1180px; margin: auto; padding: 32px 28px 90px; min-height: 100vh; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-bottom: 28px; border-bottom: 1px solid #d8d5cb; }
+.brand { color: inherit; font-size: 1.45rem; font-weight: 800; text-decoration: none; letter-spacing: -.06em; }
+.back { color: inherit; font-size: .85rem; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.intro { padding: 76px 0 48px; max-width: 740px; }
+.eyebrow { color: #a44a31; font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.intro h1 { font-family: Georgia, serif; font-size: clamp(2.8rem, 7vw, 5.7rem); font-weight: 400; letter-spacing: -.055em; line-height: 1.02; margin: 18px 0; }
+.intro p:last-child { color: #5b5c55; font-size: 1.08rem; line-height: 1.7; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.card { background: #f5f2e9; border: 1px solid #dfdbcf; padding: 28px; min-height: 200px; display: flex; flex-direction: column; align-items: flex-start; }
+.card h2 { font-family: Georgia, serif; font-weight: 400; font-size: 1.8rem; line-height: 1.16; margin: 0 0 16px; }
+.card p { color: #5b5c55; line-height: 1.6; margin: 0 0 18px; }
+.card a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.action { margin-top: auto; font-size: .85rem; font-weight: 700; }
+.status { border-top: 1px solid #d8d5cb; padding: 24px 0; line-height: 1.6; }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; margin-top: 36px; }
+.pagination a { color: inherit; text-underline-offset: 4px; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .intro { padding: 52px 0 32px; } .page { padding-inline: 20px; } }
