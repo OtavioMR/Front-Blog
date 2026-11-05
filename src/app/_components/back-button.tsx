@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import ConfirmDialog from "./confirm-dialog";
 import styles from "./back-button.module.css";
 
 const AUTH_PATHS = ["/entrar", "/cadastro", "/recuperar-senha", "/reset-password", "/confirmar-email", "/reenviar-verificacao"];
@@ -8,19 +10,19 @@ const AUTH_PATHS = ["/entrar", "/cadastro", "/recuperar-senha", "/reset-password
 // Goes back in the SPA history when the previous page is a suitable in-app page; otherwise uses `fallback`.
 export default function BackButton({ fallback = "/", label = "Voltar", className = "", confirmMessage }: { fallback?: string; label?: string; className?: string; confirmMessage?: string }) {
   const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
   function goBack() {
-    if (confirmMessage && !window.confirm(confirmMessage)) return;
     let previous: string | null = null;
     try { previous = sessionStorage.getItem("blog-nav-prev"); } catch { /* use fallback */ }
     const usable = previous && previous.startsWith("/") && !previous.startsWith("//") && !AUTH_PATHS.some(path => previous === path || previous!.startsWith(`${path}/`)) && window.history.length > 1;
     if (usable) router.back(); else router.push(fallback);
   }
-  return (
+  return (<>
     <button
       type="button"
       data-back-button="true"
       className={`${styles.back} ${className}`}
-      onClick={goBack}
+      onClick={() => confirmMessage ? setConfirming(true) : goBack()}
     >
       <svg
         width="16"
@@ -37,5 +39,6 @@ export default function BackButton({ fallback = "/", label = "Voltar", className
       </svg>
       <span>{label}</span>
     </button>
-  );
+    {confirming && confirmMessage && <ConfirmDialog title="Sair desta página?" description={confirmMessage} confirmLabel="Sair" onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); goBack(); }} />}
+  </>);
 }

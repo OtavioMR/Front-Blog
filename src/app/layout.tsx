@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("entrelinhas-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}})()` }} /></head>
       <body>
         <ReadingProgress />
         <NavTracker />

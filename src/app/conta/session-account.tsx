@@ -40,16 +40,22 @@ export default function Account() {
         <div className={account.actions}><Link className={account.primary} href="/conta/perfil">Editar perfil</Link><button className={account.secondary} onClick={signOut}>Sair da conta</button></div>
       </section>
       <div className={account.main}>
-        <section className={account.panel} aria-labelledby="manage-title"><h2 id="manage-title">Gerenciar conta</h2>
+        <section className={account.panel} aria-labelledby="manage-title"><h2 id="manage-title">Seu perfil e suas leituras</h2><p className={account.panelIntro}>Cuide das informações que você compartilha e encontre seus artigos salvos.</p>
           <ul className={account.links}>
             <li><Link href="/conta/perfil"><strong>Informações pessoais</strong><span>Nome, biografia e links públicos</span></Link></li>
             <li><Link href="/conta/foto"><strong>Foto de perfil</strong><span>{profile.profilePhoto ? "Troque sua imagem" : "Adicione uma foto"}</span></Link></li>
             <li><Link href="/conta/salvos"><strong>Artigos salvos</strong><span>Suas leituras guardadas</span></Link></li>
+            <li><Link href="/conta/feed"><strong>Seu feed</strong><span>Novidades dos autores que você acompanha</span></Link></li>
+            <li><Link href="/conta/notificacoes"><strong>Notificações</strong><span>Interações e atualizações para você</span></Link></li>
+            <li><Link href="/conta/configuracoes"><strong>Configurações</strong><span>Personalize sua experiência de leitura</span></Link></li>
+          </ul></section>
+        {(profile.role === "READER" || canWrite) && <section className={account.panel} aria-labelledby="writing-title"><h2 id="writing-title">Escrita</h2><p className={account.panelIntro}>Acompanhe sua jornada de publicação.</p>
+          <ul className={account.links}>
             {profile.role === "READER" && <li><Link href="/studio"><strong>Quero ser autor</strong><span>Aceite as regras de publicação e comece a escrever</span></Link></li>}
             {canWrite && <li><Link href="/studio"><strong>Studio de escrita</strong><span>Crie e edite suas publicações</span></Link></li>}
             {canWrite && <li><Link href={`/autores/${encodeURIComponent(profile.id)}`}><strong>Minhas publicações</strong><span>Veja seu perfil público de autor</span></Link></li>}
-          </ul></section>
-        <section className={account.panel} aria-labelledby="security-title"><h2 id="security-title">Segurança</h2>
+          </ul></section>}
+        <section className={account.panel} aria-labelledby="security-title"><h2 id="security-title">Segurança</h2><p className={account.panelIntro}>Gerencie sua senha, suas sessões e a verificação em duas etapas.</p>
           <ul className={account.links}>
             <li><Link href="/conta/senha"><strong>Alterar senha</strong><span>Exige a senha atual e encerra as sessões</span></Link></li>
             <li><Link href="/conta/sessoes"><strong>Sessões e dispositivos</strong><span>Revise onde sua conta está conectada</span></Link></li>

@@ -10,7 +10,7 @@
   align-items: center;
   gap: 16px;
   padding: 24px 0 20px;
-  border-bottom: 1px solid #d7ddd1;
+  border-bottom: 1px solid light-dark(#d7ddd1, #4f514e);
   flex-wrap: wrap;
 }
 
@@ -18,14 +18,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #526357;
+  color: light-dark(#526357, #c8cdc9);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .backLink:hover {
-  color: #202b24;
+  color: light-dark(#202b24, #b8bbb9);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -46,7 +46,7 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: #8a503c;
+  color: light-dark(#8a503c, #dac7c1);
   text-transform: uppercase;
 }
 
@@ -56,12 +56,12 @@
   font-weight: 400;
   line-height: 1.15;
   margin: 0 0 8px;
-  color: #202b24;
+  color: light-dark(#202b24, #b8bbb9);
 }
 
 .subtitle {
   margin: 0;
-  color: #59675d;
+  color: light-dark(#59675d, #cacecb);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -85,27 +85,27 @@
 }
 
 .feedbackSaving {
-  background: #f4f6ea;
-  border: 1px solid #c9d2bf;
-  color: #314c39;
+  background: light-dark(#f4f6ea, #313230);
+  border: 1px solid light-dark(#c9d2bf, #4c4e4a);
+  color: light-dark(#314c39, #bdc6c0);
 }
 
 .feedbackSuccess {
-  background: #eaf4eb;
-  border: 1px solid #b7dcbe;
-  color: #21542a;
+  background: light-dark(#eaf4eb, #303130);
+  border: 1px solid light-dark(#b7dcbe, #48514a);
+  color: light-dark(#21542a, #b8c8bb);
 }
 
 .feedbackError {
-  background: #faeceb;
-  border: 1px solid #ecc1be;
-  color: #922e25;
+  background: light-dark(#faeceb, #323030);
+  border: 1px solid light-dark(#ecc1be, #544a4a);
+  color: light-dark(#922e25, #dcbcb9);
 }
 
 .feedbackDirty {
-  background: #fbf3ea;
-  border: 1px solid #ebd0b8;
-  color: #8a4a1d;
+  background: light-dark(#fbf3ea, #323130);
+  border: 1px solid light-dark(#ebd0b8, #544e48);
+  color: light-dark(#8a4a1d, #dac5b7);
   font-size: 13px;
   padding: 6px 12px;
   border-radius: 999px;
@@ -115,7 +115,7 @@
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #b9c5b4;
+  border: 2px solid light-dark(#b9c5b4, #494b47);
   border-top-color: #314c39;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -133,28 +133,28 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  background: #e8ede1;
-  color: #354b3b;
+  background: light-dark(#e8ede1, #30302f);
+  color: light-dark(#354b3b, #bec5c0);
 }
 
 .badgeDraft {
-  background: #e8ede1;
-  color: #354b3b;
+  background: light-dark(#e8ede1, #30302f);
+  color: light-dark(#354b3b, #bec5c0);
 }
 
 .badgePending {
-  background: #f6e3cf;
-  color: #8a4a1d;
+  background: light-dark(#f6e3cf, #322f2d);
+  color: light-dark(#8a4a1d, #dac5b7);
 }
 
 .badgeApproved {
-  background: #dcebd9;
-  color: #24562c;
+  background: light-dark(#dcebd9, #2e302e);
+  color: light-dark(#24562c, #b9c9bb);
 }
 
 .badgeRejected {
-  background: #faeceb;
-  color: #922e25;
+  background: light-dark(#faeceb, #323030);
+  color: light-dark(#922e25, #dcbcb9);
 }
 
 /* Buttons */
@@ -185,7 +185,7 @@
 
 .btnSecondary {
   background: transparent;
-  color: #314c39;
+  color: light-dark(#314c39, #bdc6c0);
   border: 1px solid #314c39;
   padding: 10px 18px;
   font: inherit;
@@ -195,7 +195,7 @@
 }
 
 .btnSecondary:hover:not(:disabled) {
-  background: #e8ede1;
+  background: light-dark(#e8ede1, #30302f);
 }
 
 .btnSecondary:disabled {
@@ -205,7 +205,7 @@
 
 .btnDanger {
   background: transparent;
-  color: #922e25;
+  color: light-dark(#922e25, #dcbcb9);
   border: 1px solid #922e25;
   padding: 8px 14px;
   font: inherit;
@@ -215,7 +215,7 @@
 }
 
 .btnDanger:hover:not(:disabled) {
-  background: #faeceb;
+  background: light-dark(#faeceb, #323030);
 }
 
 .btnPrimary:focus-visible,
@@ -244,8 +244,8 @@
 .mainCanvas {
   display: grid;
   gap: 28px;
-  background: #ffffff;
-  border: 1px solid #d7ddd1;
+  background: light-dark(#ffffff, #333333);
+  border: 1px solid light-dark(#d7ddd1, #4f514e);
   padding: 36px;
 }
 
@@ -266,22 +266,22 @@
   align-items: baseline;
   font-size: 13px;
   font-weight: 700;
-  color: #354b3b;
+  color: light-dark(#354b3b, #bec5c0);
 }
 
 .fieldCounter {
   font-size: 12px;
   font-weight: 400;
-  color: #72796e;
+  color: light-dark(#72796e, #d2d4d1);
 }
 
 .titleInput {
   font-family: Georgia, serif;
   font-size: clamp(24px, 3vw, 36px);
   padding: 12px 14px;
-  border: 1px solid #c9cfc3;
-  color: #202b24;
-  background: #fffefa;
+  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
+  color: light-dark(#202b24, #b8bbb9);
+  background: light-dark(#fffefa, #333232);
   width: 100%;
 }
 
@@ -295,9 +295,9 @@
   font-size: 17px;
   line-height: 1.75;
   padding: 16px;
-  border: 1px solid #c9cfc3;
-  color: #202b24;
-  background: #fffefa;
+  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
+  color: light-dark(#202b24, #b8bbb9);
+  background: light-dark(#fffefa, #333232);
   width: 100%;
   min-height: 480px;
   resize: vertical;
@@ -313,13 +313,13 @@
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #647169;
+  color: light-dark(#647169, #cdd2cf);
   padding-top: 8px;
-  border-top: 1px solid #ecefe8;
+  border-top: 1px solid light-dark(#ecefe8, #545553);
 }
 
 .fieldError {
-  color: #922e25;
+  color: light-dark(#922e25, #dcbcb9);
   font-size: 13px;
   margin: 4px 0 0;
 }
@@ -331,8 +331,8 @@
 }
 
 .sideCard {
-  background: #fbfaf6;
-  border: 1px solid #d7ddd1;
+  background: light-dark(#fbfaf6, #323232);
+  border: 1px solid light-dark(#d7ddd1, #4f514e);
   padding: 24px;
   display: grid;
   gap: 16px;
@@ -343,15 +343,15 @@
   font-size: 20px;
   font-weight: 400;
   margin: 0;
-  color: #202b24;
-  border-bottom: 1px solid #d7ddd1;
+  color: light-dark(#202b24, #b8bbb9);
+  border-bottom: 1px solid light-dark(#d7ddd1, #4f514e);
   padding-bottom: 12px;
 }
 
 .cardHint {
   margin: 0;
   font-size: 13px;
-  color: #59675d;
+  color: light-dark(#59675d, #cacecb);
   line-height: 1.5;
 }
 
@@ -360,8 +360,8 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #d5dcca;
-  border: 1px solid #c9cfc3;
+  background: light-dark(#d5dcca, #2e2e2c);
+  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
   border-radius: 2px;
 }
 
@@ -381,9 +381,9 @@
 
 .fileLabel {
   display: inline-block;
-  background: #e8ede1;
+  background: light-dark(#e8ede1, #30302f);
   border: 1px solid #314c39;
-  color: #314c39;
+  color: light-dark(#314c39, #bdc6c0);
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 700;
@@ -392,7 +392,7 @@
 }
 
 .fileLabel:hover {
-  background: #d8ded0;
+  background: light-dark(#d8ded0, #2e2f2d);
 }
 
 .fileLabel input {
@@ -413,7 +413,7 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: #202b24;
+  color: light-dark(#202b24, #b8bbb9);
   cursor: pointer;
 }
 
@@ -430,9 +430,9 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 14px;
-  border: 1px solid #c9cfc3;
-  background: #ffffff;
-  color: #202b24;
+  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
+  background: light-dark(#ffffff, #333333);
+  color: light-dark(#202b24, #b8bbb9);
 }
 
 .tagInput:focus-visible {
@@ -448,8 +448,8 @@
 
 .tagPill {
   display: inline-block;
-  background: #e8ede1;
-  color: #354b3b;
+  background: light-dark(#e8ede1, #30302f);
+  color: light-dark(#354b3b, #bec5c0);
   font-size: 12px;
   font-weight: 700;
   padding: 3px 8px;
@@ -461,25 +461,25 @@
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: #59675d;
+  color: light-dark(#59675d, #cacecb);
   gap: 12px;
 }
 
 .infoItem strong {
-  color: #202b24;
+  color: light-dark(#202b24, #b8bbb9);
 }
 
 .reviewSection {
   margin-top: 12px;
   padding-top: 14px;
-  border-top: 1px solid #d7ddd1;
+  border-top: 1px solid light-dark(#d7ddd1, #4f514e);
   display: grid;
   gap: 10px;
 }
 
 .confirmBox {
-  background: #f4f7ef;
-  border: 1px solid #c9d2bf;
+  background: light-dark(#f4f7ef, #313231);
+  border: 1px solid light-dark(#c9d2bf, #4c4e4a);
   padding: 14px;
   font-size: 13px;
   line-height: 1.5;
@@ -493,7 +493,7 @@
 }
 
 .viewArticleLink {
-  color: #314c39;
+  color: light-dark(#314c39, #bdc6c0);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -511,3 +511,9 @@
     animation-duration: 2s;
   }
 }
+
+.scheduleFields { display: grid; gap: 10px; }
+.scheduleFields label { font-size: 13px; font-weight: 700; }
+.scheduleInput { width: 100%; min-width: 0; padding: 10px; border: 1px solid light-dark(#a9b1a4, #606860); background: light-dark(#fffefa, #333232); color: light-dark(#202b24, #e0e5e0); font: inherit; }
+.scheduleInput:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
+.revisionPreview { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; border: 1px solid var(--border, #a9b1a4); }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import SessionNav from "./session-nav";
+import ThemeControl from "./theme-control";
 import styles from "./navbar.module.css";
 
 const SCROLL_THRESHOLD_DOWN = 20;
@@ -11,23 +12,20 @@ const SCROLL_THRESHOLD_UP = 10;
 const TOP_OFFSET = 20;
 
 export default function Navbar() {
-  const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
+  return <NavbarForRoute key={pathname} />;
+}
+
+function NavbarForRoute() {
+  const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
   const scrollDownAccum = useRef(0);
   const scrollUpAccum = useRef(0);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    // When changing routes, always ensure the navbar is visible
-    setHidden(false);
-    lastScrollY.current = typeof window !== "undefined" ? window.scrollY : 0;
-    scrollDownAccum.current = 0;
-    scrollUpAccum.current = 0;
-  }, [pathname]);
-
-  useEffect(() => {
     let ticking = false;
+    lastScrollY.current = window.scrollY;
 
     function handleScroll() {
       if (!ticking) {
@@ -108,6 +106,7 @@ export default function Navbar() {
           <Link href="/sobre">Sobre</Link>
           <Link href="/#artigos">Artigos</Link>
           <SessionNav />
+          <ThemeControl />
         </nav>
       </div>
     </header>

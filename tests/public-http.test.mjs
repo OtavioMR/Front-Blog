@@ -16,6 +16,7 @@ const article = {
 test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }, async (t) => {
   let lastPostQuery;
   let categoriesDown = false;
+  let seriesState = "ok";
   const api = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     response.setHeader("Content-Type", "application/json");
@@ -41,6 +42,13 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     }
     if (url.pathname === "/api/v1/posts/ausente") { response.statusCode = 404; return response.end("{}"); }
     if (url.pathname === "/api/v1/posts/erro") { response.statusCode = 503; return response.end("{}"); }
+    if (url.pathname === `/api/v1/posts/${article.id}/series`) {
+      assert.equal(request.headers.authorization, undefined); assert.equal(request.headers.cookie, undefined);
+      if (seriesState === "down") { response.statusCode = 503; return response.end("{}"); }
+      const posts = [{ id: article.id, slug: article.slug, title: article.title, position: 1 }, { id: "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", slug: "proximo-capitulo", title: "Próximo capítulo", position: 3 }];
+      if (seriesState === "draft") posts.push({ id: "8d779824-0a9f-442f-8652-a81600000001", slug: "rascunho-secreto", title: "TITULO PRIVADO", position: 4, published: false });
+      return response.end(JSON.stringify({ id: "8d779824-0a9f-442f-8652-a81600000002", title: "Série de teste", description: "Sequência pública", posts, privateToken: "TOKEN PRIVADO" }));
+    }
     if (url.pathname === "/api/v1/posts/uma-historia/related") return response.end(JSON.stringify([{ ...article, slug: "outra-historia", title: "Outra leitura" }]));
     if (url.pathname === "/api/v1/posts/rascunho") return response.end(JSON.stringify({ ...article, published: false, content: "CONTEUDO PRIVADO" }));
     if (url.pathname === "/api/v1/posts/antigo" || url.pathname === "/api/v1/posts/uma-historia") return response.end(JSON.stringify(article));
@@ -125,8 +133,23 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.equal(post.status, 200);
   assert.match(html, /Conteúdo de teste/);
   assert.match(html, /Outra leitura/);
+  assert.match(html, /Série de teste/);
+  assert.match(html, /href="\/posts\/proximo-capitulo"/);
+  assert.match(html, /aria-current="page"/);
+  assert.doesNotMatch(html, /TOKEN PRIVADO/);
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
   assert.doesNotMatch(html, /href="javascript:/);
+  seriesState = "draft";
+  const unsafeSeries = await fetch(`${base}/posts/uma-historia`);
+  const unsafeHtml = await unsafeSeries.text();
+  assert.equal(unsafeSeries.status, 200);
+  assert.doesNotMatch(unsafeHtml, /TITULO PRIVADO|rascunho-secreto|Série de teste/);
+  seriesState = "down";
+  const seriesDown = await fetch(`${base}/posts/uma-historia`);
+  assert.equal(seriesDown.status, 200);
+  const downHtml = await seriesDown.text();
+  assert.match(downHtml, /Conteúdo de teste/);
+  assert.doesNotMatch(downHtml, /Série de teste/);
   assert.equal((await fetch(`${base}/posts/ausente`)).status, 404);
   assert.equal((await fetch(`${base}/posts/erro`)).status, 500);
   const draft = await fetch(`${base}/posts/rascunho`);

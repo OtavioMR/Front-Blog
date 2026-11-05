@@ -6,10 +6,10 @@ import sanitizeHtml from "sanitize-html";
 import { getPublicPost, publicAuthorPath, publicCoverPath } from "@/lib/public-post";
 import { postSeo } from "@/lib/post-seo";
 import { getRelatedPosts } from "./related";
+import { getPublicSeries } from "./series";
 import { commentsPage, getComments } from "./comments";
-import Replies from "./replies";
 import CommentForm from "./comment-form";
-import CommentItem from "./comment-item";
+import CommentThread from "./comment-thread";
 import { CommentSession } from "./comment-session";
 import PostViewTracker from "./post-view-tracker";
 import Interactions from "./interactions";
@@ -39,7 +39,7 @@ export default async function PostPage({ params, searchParams }: Props) {
   if (!post) notFound();
   if (slug !== post.slug) permanentRedirect(`/posts/${post.slug}`);
   const requestedPage = commentsPage((await searchParams).commentsPage);
-  const [related, comments, authorProfile] = await Promise.all([getRelatedPosts(post.slug), getComments(post.id, requestedPage), post.author?.id ? getAuthor(post.author.id).catch(() => null) : Promise.resolve(null)]);
+  const [related, comments, authorProfile, series] = await Promise.all([getRelatedPosts(post.slug), getComments(post.id, requestedPage), post.author?.id ? getAuthor(post.author.id).catch(() => null) : Promise.resolve(null), getPublicSeries(post.id, post.slug)]);
 
   const content = sanitizeHtml(post.content, {
     allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"],
@@ -72,6 +72,7 @@ export default async function PostPage({ params, searchParams }: Props) {
         </div>
         {cover && <div className={styles.cover}><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
         <div className={styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
+        {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
         {post.author?.name && <aside className={styles.authorBox} aria-labelledby="author-box-title">
           <Avatar name={post.author.name} src={authorProfile?.profilePhoto} size={72} />
@@ -87,8 +88,7 @@ export default async function PostPage({ params, searchParams }: Props) {
         {comments.kind === "disabled" ? <p>Os comentários estão desativados neste artigo.</p> : comments.kind === "unavailable" ? <p role="status">Não foi possível carregar os comentários agora. Tente novamente mais tarde.</p> : <>
           {post.id && <CommentForm postId={post.id} slug={post.slug} page={requestedPage} />}
           {comments.page.data.length === 0 ? <p>Ainda não há comentários nesta página.</p> : <CommentSession><ol className={styles.commentsList}>{comments.page.data.map(item => <li key={item.id}>
-            <CommentItem item={item} postAuthorId={post.author?.id} />
-            <Replies postId={item.postId} rootId={item.id} initial={item.replies.data} total={item.replies.meta.total} slug={post.slug} page={requestedPage} canReply={item.isActive} postAuthorId={post.author?.id} />
+            <CommentThread item={item} postAuthorId={post.author?.id} slug={post.slug} page={requestedPage} />
           </li>)}</ol></CommentSession>}
           {(comments.page.meta.hasPreviousPage || comments.page.meta.hasNextPage) && <nav className={styles.commentsPagination} aria-label="Paginação dos comentários">{comments.page.meta.hasPreviousPage && <Link href={`/posts/${encodeURIComponent(post.slug)}?commentsPage=${requestedPage - 1}#comentarios`}>← Anteriores</Link>}<span>Página {comments.page.meta.page} de {comments.page.meta.totalPages}</span>{comments.page.meta.hasNextPage && <Link href={`/posts/${encodeURIComponent(post.slug)}?commentsPage=${requestedPage + 1}#comentarios`}>Próximos →</Link>}</nav>}
         </>}

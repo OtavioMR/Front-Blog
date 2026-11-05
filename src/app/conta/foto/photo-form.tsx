@@ -25,14 +25,10 @@ export default function PhotoForm() {
   const revision = useRef(0);
   const pending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
+  const previewUrl = useRef<string | null>(null);
 
-  const clearSelection = useCallback(() => { setFile(null); if (input.current) input.current.value = ""; }, []);
-  useEffect(() => {
-    if (!file) { setPreview(null); return; }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  const clearSelection = useCallback(() => { if (previewUrl.current) URL.revokeObjectURL(previewUrl.current); previewUrl.current = null; setPreview(null); setFile(null); if (input.current) input.current.value = ""; }, []);
+  useEffect(() => () => { if (previewUrl.current) URL.revokeObjectURL(previewUrl.current); }, []);
 
   const load = useCallback(async () => {
     const generation = ++revision.current;
@@ -58,7 +54,9 @@ export default function PhotoForm() {
     if (!selected) { clearSelection(); return; }
     const problem = validatePhoto(selected);
     if (problem) { clearSelection(); setFailed(true); setMessage(problem); return; }
-    setFile(selected);
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = URL.createObjectURL(selected);
+    setPreview(previewUrl.current); setFile(selected);
   }
 
   async function upload(event: FormEvent<HTMLFormElement>) {

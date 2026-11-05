@@ -12,6 +12,7 @@ import {
   safeExternalUrl,
 } from "./data";
 import styles from "./profile.module.css";
+import Follow from "./follow";
 
 export async function generateMetadata({
   params,
@@ -73,6 +74,7 @@ export default async function AuthorPage({
           <h1>{author.name}</h1>
           {author.bio && <p className={styles.bio}>{author.bio}</p>}
           <span className={styles.countBadge}>{countText}</span>
+          <Follow authorId={author.id} />
           {(website || social) && (
             <nav className={styles.links} aria-label="Links do autor">
               {website && (

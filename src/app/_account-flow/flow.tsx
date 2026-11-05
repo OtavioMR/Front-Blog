@@ -18,15 +18,20 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [emailChange, setEmailChange] = useState(false);
   useEffect(() => {
     if (mode !== "reset" && mode !== "confirm") return;
     const url = new URL(window.location.href);
     const value = url.searchParams.get("token");
+    if (mode === "confirm" && url.searchParams.get("type") === "email-change") {
+      // The link identifies the confirmation operation; the token itself remains in memory only.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEmailChange(true);
+    }
     if (value !== null) {
       url.searchParams.delete("token");
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
       // Read the browser-only URL after hydration, then remove the secret from the address bar.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToken(value);
     }
   }, [mode]);
@@ -48,7 +53,8 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
       : { email: get("email").trim() };
     setBusy(true); setMessage("");
     try {
-      const response = await fetch(`/api/v1${config[mode].endpoint}`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload), cache: "no-store", credentials: "omit" });
+      const endpoint = mode === "confirm" && emailChange ? "/users/confirm-email-change" : config[mode].endpoint;
+      const response = await fetch(`/api/v1${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload), cache: "no-store", credentials: "omit" });
       if (!response.ok) {
         if (response.status === 429) setMessage("Muitas tentativas. Aguarde um pouco e tente novamente.");
         else if (response.status === 409 && mode === "register") setMessage("Não foi possível criar a conta com esse e-mail. Verifique os dados ou recupere sua senha.");
@@ -58,13 +64,13 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
         return;
       }
       setToken(""); setSuccess(true);
-      setMessage(mode === "register" ? "Conta criada. Confira seu e-mail para obter o código de confirmação." : mode === "confirm" ? "E-mail confirmado com sucesso." : mode === "reset" ? "Senha redefinida com sucesso." : "Se houver uma conta elegível para este e-mail, as instruções serão enviadas.");
+      setMessage(mode === "register" ? "Conta criada. Confira seu e-mail para obter o código de confirmação." : mode === "confirm" ? (emailChange ? "Novo e-mail confirmado. Suas sessões anteriores foram encerradas; entre novamente com o novo endereço." : "E-mail confirmado com sucesso.") : mode === "reset" ? "Senha redefinida com sucesso." : "Se houver uma conta elegível para este e-mail, as instruções serão enviadas.");
     } catch { setMessage("Não foi possível conectar ao serviço. Tente novamente em instantes."); }
     finally { setBusy(false); }
   }
 
   const info = config[mode];
-  return <main className={styles.page}><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{info.title}</h1><p className={styles.description}>{info.description}</p>
+  return <main className={styles.page}><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{emailChange && mode === "confirm" ? "Confirme seu novo e-mail." : info.title}</h1><p className={styles.description}>{emailChange && mode === "confirm" ? "Confirme o código enviado ao novo endereço. Ele é válido por 30 minutos." : info.description}</p>
     {message && <p className={styles.message} role={success ? "status" : "alert"}>{message}</p>}
     {!success && <form className={styles.form} method="post" onSubmit={submit}>
       {mode === "register" && <label className={styles.field}>Nome<input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>}

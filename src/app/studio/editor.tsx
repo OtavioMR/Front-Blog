@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { validatePhoto } from "../conta/foto/photo-upload";
-import { isPendingResponse, parseDraft, validDraftId, type Draft } from "./editor-contracts";
+import { isPendingResponse, parseDraft, parsePublicationResponse, parseScheduleResponse, parseUpdatedDraft, publicationEligibility, reviewEligibility, scheduleToIso, validDraftId, type Draft } from "./editor-contracts";
 import styles from "./editor.module.css";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
+import Revisions from "./revisions";
 
 type State = "loading" | "ready" | "signed-out" | "denied" | "error";
 type Category = { id: string; name: string; slug?: string; isActive?: boolean };
@@ -30,9 +33,13 @@ function extractTagNames(tags?: { name: string }[]): string[] {
 }
 
 export default function Editor({ initialId }: { initialId?: string }) {
+  const router = useRouter();
+  const [destination, setDestination] = useState<string | null>(null);
   const [state, setState] = useState<State>("loading");
   const [owner, setOwner] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [reviewProfile, setReviewProfile] = useState<{ role: string; firstPostApproved?: boolean } | null>(null);
+  const [authorId, setAuthorId] = useState("");
   const [id, setId] = useState(initialId || "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -53,6 +60,12 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const [titleError, setTitleError] = useState("");
   const [contentError, setContentError] = useState("");
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+  const [confirmPublication, setConfirmPublication] = useState<boolean | null>(null);
+  const [publicationUncertain, setPublicationUncertain] = useState(false);
+  const [revisionUncertain, setRevisionUncertain] = useState(false);
+  const [scheduleInput, setScheduleInput] = useState("");
+  const [scheduleError, setScheduleError] = useState("");
+  const [confirmSchedule, setConfirmSchedule] = useState<string | null | undefined>(undefined);
 
   const running = useRef(false);
   const revision = useRef(0);
@@ -66,8 +79,10 @@ export default function Editor({ initialId }: { initialId?: string }) {
     !sameList(categoryIds, saved.categoryIds) ||
     !sameList(parsedCurrentTags, saved.tags);
 
-  const isReadOnly = busy || status === "PENDING";
+  const isReadOnly = busy || revisionUncertain || status === "PENDING";
   const isEditMode = Boolean(id);
+  const publicationAccess = reviewProfile ? publicationEligibility(reviewProfile.role, owner, authorId, reviewProfile.firstPostApproved) : "unknown";
+  const reviewAccess = reviewProfile ? reviewEligibility(reviewProfile.role, owner, authorId, reviewProfile.firstPostApproved) : "unknown";
 
   // Warn before leaving page if there are unsaved changes
   useEffect(() => {
@@ -79,14 +94,13 @@ export default function Editor({ initialId }: { initialId?: string }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  function preventUnsavedNavigation(event: { preventDefault: () => void }) {
-    if (dirty && !window.confirm(LEAVE_PROMPT)) {
-      event.preventDefault();
-    }
+  function preventUnsavedNavigation(event: { preventDefault: () => void }, href: string) {
+    if (dirty) { event.preventDefault(); setDestination(href); }
   }
 
   function apply(draft: Draft) {
     setId(draft.id);
+    setAuthorId(draft.authorId);
     setTitle(draft.title);
     setContent(draft.content);
     const catIds = extractCategoryIds(draft.categories);
@@ -126,6 +140,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
         }
         const userIsAdmin = profile.role === "ADMIN";
         setOwner(profile.id);
+        setReviewProfile({ role: profile.role, firstPostApproved: profile.firstPostApproved });
         setIsAdmin(userIsAdmin);
 
         // Fetch categories list
@@ -177,6 +192,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
     const unsubscribe = subscribeSession(() => {
       generation.current++;
+      setReviewProfile(null);
       setFeedback({
         type: "error",
         text: "A sessão foi alterada. Copie seu texto antes de sair e recarregue com a conta correta.",
@@ -293,7 +309,8 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
       if (!response.ok) throw new Error();
 
-      const draft = parseDraft(await response.json(), owner, isAdmin);
+      const result = await response.json();
+      const draft = id ? parseUpdatedDraft(result, owner, isAdmin) : parseDraft(result, owner, isAdmin);
       if (operation !== revision.current) return;
       if (id && draft.id !== id) throw new Error();
 
@@ -378,7 +395,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
   // Submit draft for review
   async function submitReview() {
-    if (!id || dirty || isReadOnly || running.current || status === "PENDING" || scheduledAt !== null) return;
+    if (!id || reviewAccess !== "eligible" || publicationUncertain || published || dirty || isReadOnly || running.current || status === "PENDING" || scheduledAt !== null) return;
     const operation = ++revision.current;
     running.current = true;
     setBusy(true);
@@ -417,6 +434,80 @@ export default function Editor({ initialId }: { initialId?: string }) {
     }
   }
 
+  async function changePublication(nextPublished: boolean) {
+    if (!id || publicationAccess !== "eligible" || publicationUncertain || dirty || isReadOnly || running.current || published === nextPublished) return;
+    const operation = ++revision.current;
+    running.current = true;
+    setBusy(true);
+    setConfirmPublication(null);
+    setFeedback({ type: "saving", text: nextPublished ? "Publicando artigo..." : "Retirando artigo do ar..." });
+    try {
+      const response = await authenticatedFetchForSubject(owner, `/api/v1/posts/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ published: nextPublished }),
+      });
+      if (operation !== revision.current) return;
+      if ([400, 401, 403, 404, 409, 422, 429].includes(response.status)) {
+        setFeedback({ type: "error", text: "Não foi possível alterar a publicação. Confira sua sessão e o estado do artigo no Studio." });
+        return;
+      }
+      if (!response.ok) throw new Error();
+      const result = parsePublicationResponse(await response.json(), owner, id, nextPublished);
+      if (operation !== revision.current) return;
+      apply(result);
+      setFeedback({ type: "success", text: nextPublished ? "Artigo publicado." : "Artigo retirado do ar e mantido como rascunho." });
+    } catch {
+      if (operation === revision.current) {
+        setPublicationUncertain(true);
+        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do artigo antes de tentar novamente." });
+      }
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
+  }
+
+  function requestSchedule() {
+    const iso = scheduleToIso(scheduleInput);
+    if (!iso) { setScheduleError("Informe uma data e hora futura válida no seu horário local."); return; }
+    setScheduleError("");
+    setConfirmSchedule(iso);
+  }
+
+  async function changeSchedule(nextSchedule: string | null) {
+    if (!id || publicationAccess !== "eligible" || publicationUncertain || dirty || isReadOnly || running.current || published || (nextSchedule === null && !scheduledAt)) return;
+    if (nextSchedule !== null && Date.parse(nextSchedule) <= Date.now()) {
+      setConfirmSchedule(undefined);
+      setScheduleError("O horário escolhido já passou. Escolha outro horário.");
+      return;
+    }
+    const operation = ++revision.current;
+    running.current = true;
+    setBusy(true);
+    setConfirmSchedule(undefined);
+    setFeedback({ type: "saving", text: nextSchedule ? "Agendando publicação..." : "Cancelando agendamento..." });
+    try {
+      const response = await authenticatedFetchForSubject(owner, `/api/v1/posts/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scheduledAt: nextSchedule }),
+      });
+      if (operation !== revision.current) return;
+      if ([400, 401, 403, 404, 409, 422, 429].includes(response.status)) {
+        setFeedback({ type: "error", text: "Não foi possível alterar o agendamento. Confira a data, sua sessão e o estado do artigo no Studio." });
+        return;
+      }
+      if (!response.ok) throw new Error();
+      const result = parseScheduleResponse(await response.json(), owner, id, nextSchedule);
+      if (operation !== revision.current) return;
+      apply(result);
+      setScheduleInput("");
+      setFeedback({ type: "success", text: nextSchedule ? "Publicação agendada." : "Agendamento cancelado. O artigo continua como rascunho." });
+    } catch {
+      if (operation === revision.current) {
+        setPublicationUncertain(true);
+        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do artigo antes de tentar novamente." });
+      }
+    } finally { running.current = false; setBusy(false); }
+  }
+
   // Calculated metrics
   const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
   const readingTimeMin = Math.max(1, Math.ceil(wordCount / 200));
@@ -444,13 +535,27 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
   return (
     <main className={styles.page}>
+      {destination && <ConfirmDialog title="Sair sem salvar?" description={LEAVE_PROMPT} confirmLabel="Sair sem salvar" onCancel={() => setDestination(null)} onConfirm={() => { const target = destination; setDestination(null); router.push(target); }} />}
+      {confirmPublication !== null && <ConfirmDialog
+        title={confirmPublication ? "Publicar artigo?" : "Retirar artigo do ar?"}
+        description={confirmPublication ? (scheduledAt ? "O artigo ficará público agora e o agendamento será cancelado." : "O artigo ficará público imediatamente.") : "O artigo deixará de estar público e continuará disponível como rascunho."}
+        confirmLabel={confirmPublication ? "Publicar" : "Retirar do ar"}
+        onCancel={() => setConfirmPublication(null)}
+        onConfirm={() => void changePublication(confirmPublication)}
+      />}
+      {confirmSchedule !== undefined && <ConfirmDialog
+        title={confirmSchedule ? "Agendar publicação?" : "Cancelar agendamento?"}
+        description={confirmSchedule ? `O artigo será publicado a partir de ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" }).format(new Date(confirmSchedule))}, no seu horário local. A verificação ocorre a cada minuto enquanto o serviço estiver em execução.` : "O artigo continuará como rascunho e não será publicado automaticamente."}
+        confirmLabel={confirmSchedule ? "Confirmar agendamento" : "Cancelar agendamento"}
+        onCancel={() => setConfirmSchedule(undefined)}
+        onConfirm={() => void changeSchedule(confirmSchedule)}
+      />}
       {/* Top action & navigation bar */}
       <nav className={styles.topBar} aria-label="Ações do editor">
         <Link
           href="/studio"
           className={styles.backLink}
-          onNavigate={preventUnsavedNavigation}
-          onClick={preventUnsavedNavigation}
+          onNavigate={event => preventUnsavedNavigation(event, "/studio")}
         >
           ← Voltar ao Studio
         </Link>
@@ -489,7 +594,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
               <Link
                 className={styles.btnSecondary}
                 href={`/posts/${encodeURIComponent(slug)}`}
-                onNavigate={preventUnsavedNavigation}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -623,6 +727,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
           {/* Sidebar Settings */}
           <aside className={styles.sidebar} aria-label="Configurações do artigo">
+            {id && <Revisions id={id} owner={owner} isAdmin={isAdmin} dirty={dirty} pending={status === "PENDING"} busy={busy || coverBusy} setBusy={setBusy} onRestore={apply} onUncertain={() => { setRevisionUncertain(true); setPublicationUncertain(true); }} />}
             {/* Cover Image Card */}
             <section className={styles.sideCard} aria-labelledby="cover-card-title">
               <h2 id="cover-card-title">Imagem de capa</h2>
@@ -751,12 +856,32 @@ export default function Editor({ initialId }: { initialId?: string }) {
                   </strong>
                 </div>
 
+                {status !== "PENDING" && (
+                  <div className={styles.reviewSection}>
+                    {publicationAccess === "eligible" ? <>
+                      <button type="button" className={styles.btnSecondary} disabled={busy || dirty || publicationUncertain} onClick={() => setConfirmPublication(!published)}>
+                        {published ? "Retirar do ar" : "Publicar agora"}
+                      </button>
+                      {!published && <div className={styles.scheduleFields}>
+                        <label htmlFor="schedule-date">Data e hora da publicação</label>
+                        <input id="schedule-date" className={styles.scheduleInput} type="datetime-local" value={scheduleInput} onChange={event => { setScheduleInput(event.target.value); setScheduleError(""); }} disabled={busy || dirty || publicationUncertain} aria-describedby="schedule-help" aria-invalid={Boolean(scheduleError)} />
+                        <p id="schedule-help" className={styles.cardHint}>Horário local do seu dispositivo. A publicação depende do serviço estar em execução.</p>
+                        {scheduleError && <p className={styles.fieldError} role="alert">{scheduleError}</p>}
+                        <button type="button" className={styles.btnSecondary} disabled={busy || dirty || publicationUncertain} onClick={requestSchedule}>{scheduledAt ? "Remarcar publicação" : "Agendar publicação"}</button>
+                        {scheduledAt && <button type="button" className={styles.btnSecondary} disabled={busy || dirty || publicationUncertain} onClick={() => setConfirmSchedule(null)}>Cancelar agendamento</button>}
+                      </div>}
+                      {dirty && <p className={styles.cardHint}>Salve suas alterações antes de alterar a publicação.</p>}
+                      {publicationUncertain && <p className={styles.cardHint}>Recarregue o editor para verificar o estado atual.</p>}
+                    </> : publicationAccess === "unknown" ? <p className={styles.cardHint}>Não foi possível verificar a elegibilidade para publicação. Recarregue a página.</p> : null}
+                  </div>
+                )}
+
                 {published && slug && (
                   <div className={styles.reviewSection}>
                     <Link
                       className={styles.viewArticleLink}
                       href={`/posts/${encodeURIComponent(slug)}`}
-                      onNavigate={preventUnsavedNavigation}
+                      onNavigate={event => preventUnsavedNavigation(event, `/posts/${encodeURIComponent(slug)}`)}
                     >
                       Acessar artigo publicado ↗
                     </Link>
@@ -765,7 +890,11 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
                 {!published && status !== "PENDING" && (
                   <div className={styles.reviewSection}>
-                    {scheduledAt ? (
+                    {reviewAccess === "unknown" ? (
+                      <p className={styles.cardHint}>Não foi possível verificar a elegibilidade para revisão. Recarregue a página para tentar novamente.</p>
+                    ) : reviewAccess === "ineligible" ? (
+                      <p className={styles.cardHint}>O envio para revisão está disponível apenas para o primeiro artigo do próprio autor.</p>
+                    ) : scheduledAt ? (
                       <p className={styles.cardHint}>
                         Artigos agendados não podem ser enviados para revisão.
                       </p>

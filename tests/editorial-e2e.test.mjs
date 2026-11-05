@@ -35,13 +35,16 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
     const bearer = (req.headers.authorization || "").replace(/^Bearer /, "");
     const role = bearer === token("AUTHOR") ? "AUTHOR" : bearer === token("ADMIN") ? "ADMIN" : "";
     if (!role) return respond(401, {});
-    if (req.url === `/api/v1/users/${authorId}` && req.method === "GET") return respond(200, { id: authorId, name: "Autora sintética", email: "autora@example.test", role, emailVerified: true, bio: null });
+    if (req.url === `/api/v1/users/${authorId}` && req.method === "GET") return respond(200, { id: authorId, name: "Autora sintética", email: "autora@example.test", role, emailVerified: true, bio: null, firstPostApproved: false });
     if (req.url === "/api/v1/posts" && req.method === "POST" && role === "AUTHOR") {
       const input = JSON.parse(body);
-      post = { id: postId, authorId, title: input.title, content: input.content, published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
+      post = { id: postId, authorId, title: input.title, slug: "titulo-sintetico", content: input.content, published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
       return respond(201, post);
     }
     if (req.url === `/api/v1/posts/${postId}` && req.method === "GET") return respond(200, post);
+    if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Artigo em revisao" });
+    if (req.url === "/api/v1/posts/me?page=1&limit=10" && req.method === "GET") return respond(200, { data: post?.isActive ? [post] : [], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } });
+    if (req.url === `/api/v1/posts/${postId}` && req.method === "DELETE" && role === "AUTHOR") { post.isActive = false; post.published = false; post.scheduledAt = null; res.statusCode = 204; return res.end(); }
     if (req.url === `/api/v1/post-reviews/${postId}/submit` && req.method === "POST" && role === "AUTHOR" && post?.reviewStatus === "DRAFT") { post.reviewStatus = "PENDING"; return respond(201, { status: "PENDING" }); }
     if (req.url === "/api/v1/post-reviews" && req.method === "GET") return role !== "ADMIN" ? respond(403, {}) : respond(200, post?.reviewStatus === "PENDING" ? [post] : []);
     if (req.url === `/api/v1/post-reviews/${postId}/decision` && req.method === "POST" && role === "ADMIN" && post?.reviewStatus === "PENDING") { post.reviewStatus = JSON.parse(body).decision; post.published = post.reviewStatus === "APPROVED"; return respond(201, { status: post.reviewStatus }); }
@@ -105,17 +108,27 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Enviar para revisão')"), false);
   post.scheduledAt = null;
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
-  await waitFor(() => has("Seu artigo permanece privado"), "rascunho sem agendamento");
+  await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Enviar para revis\u00e3o')"), "rascunho sem agendamento");
   await click("Enviar para revisão");
   await fill("textarea", "Conteúdo sintético modificado.");
   assert.equal(await has("Confirmar envio"), false);
-  await evaluate("window.confirm = () => false");
   await evaluate("Array.from(document.querySelectorAll('a')).find(a => a.textContent.includes('Voltar ao Studio')).click()");
+  await waitFor(() => has("Sair sem salvar?"), "confirmação de saída"); await click("Cancelar");
   assert.equal(await evaluate("location.pathname"), `/studio/${postId}`);
   assert.equal(await evaluate("document.querySelector('textarea').value"), "Conteúdo sintético modificado.");
   await fill("textarea", "Conteúdo sintético para revisão.");
   await click("Enviar para revisão"); await click("Confirmar envio"); await waitFor(() => has("Artigo enviado para revisão."), "envio");
   assert.equal(post.reviewStatus, "PENDING"); assert.equal(await evaluate("document.querySelector('textarea').readOnly"), true);
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('input,textarea')).every(field => field.readOnly || field.disabled)"), true);
+  const deniedEdit = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "PATCH", headers: { Authorization: `Bearer ${token("AUTHOR")}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: "Mudanca indevida" }) });
+  const deniedDelete = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token("AUTHOR")}` } });
+  assert.equal(deniedEdit.status, 409); assert.equal(deniedDelete.status, 409); assert.equal(post.isActive, true);
+  await cdp("Page.navigate", { url: `${base}/studio` });
+  await waitFor(() => has("Em revis\u00e3o"), "listagem de artigo pendente");
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('a')).some(x => x.textContent.trim() === 'Editar artigo')"), false);
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Desativar')?.disabled"), true);
+  assert.equal(await evaluate("!!document.querySelector('dialog[open]')"), false);
+
 
   const request = (path, init = {}) => fetch(`${base}${path}`, { redirect: "manual", ...init });
   let response = await request("/gestao-editorial"); assert.equal(response.status, 401);
@@ -130,4 +143,11 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   response = await form("/gestao-editorial", { csrf: decisionCsrf, id: postId, decision: "APPROVED" }, session); assert.equal(response.status, 303);
   assert.equal(post.reviewStatus, "APPROVED"); assert.equal(post.published, true);
   response = await request("/gestao-editorial", { headers: { Cookie: session } }); assert.match(await response.text(), /Nenhum artigo aguardando revisão/);
+  await cdp("Page.navigate", { url: `${base}/studio` });
+  await waitFor(() => has("Título sintético"), "listagem do autor");
+  await click("Desativar"); await waitFor(() => has("Desativar artigo?"), "confirmação de desativação"); await click("Cancelar"); assert.equal(post.isActive, true);
+  await click("Desativar"); await click("Desativar artigo");
+  await waitFor(() => has("Artigo desativado com sucesso."), "desativação confirmada");
+  assert.equal(post.isActive, false); assert.equal(post.published, false);
+  assert.equal(await has("Título sintético"), false);
 });

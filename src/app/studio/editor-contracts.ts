@@ -39,3 +39,45 @@ export function parseDraft(value: unknown, owner: string, isAdmin = false): Draf
 
 export function validDraftId(id: string) { return uuid.test(id); }
 export function isPendingResponse(value: unknown) { return !!value && typeof value === "object" && "status" in value && value.status === "PENDING"; }
+
+export function reviewEligibility(role: string, requesterId: string, authorId: string, firstPostApproved: boolean | undefined): "eligible" | "ineligible" | "unknown" {
+  if (role !== "AUTHOR" || !requesterId || requesterId !== authorId) return "ineligible";
+  if (firstPostApproved === undefined) return "unknown";
+  return firstPostApproved ? "ineligible" : "eligible";
+}
+
+export function publicationEligibility(role: string, requesterId: string, authorId: string, firstPostApproved: boolean | undefined): "eligible" | "ineligible" | "unknown" {
+  if (!["AUTHOR", "ADMIN"].includes(role) || !requesterId || requesterId !== authorId) return "ineligible";
+  if (firstPostApproved === undefined) return "unknown";
+  return firstPostApproved ? "eligible" : "ineligible";
+}
+
+// PATCH responses omit isActive, while the endpoint only updates active posts.
+// Reject an explicit inactive value and retain strict validation for every other field.
+export function parseUpdatedDraft(value: unknown, owner: string, isAdmin = false): Draft {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Resposta inválida.");
+  const item = value as Record<string, unknown>;
+  return parseDraft(item.isActive === undefined ? { ...item, isActive: true } : item, owner, isAdmin);
+}
+
+export function parsePublicationResponse(value: unknown, owner: string, id: string, publish: boolean): Draft {
+  const draft = parseUpdatedDraft(value, owner);
+  if (draft.id !== id || draft.published !== publish || draft.reviewStatus === "PENDING" || (publish && draft.scheduledAt !== null)) throw new Error("Resposta inv\u00e1lida.");
+  return draft;
+}
+
+export function scheduleToIso(local: string, now = Date.now()): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return null;
+  const date = new Date(local);
+  if (!Number.isFinite(date.getTime()) || date.getTime() <= now) return null;
+  const part = (value: number) => String(value).padStart(2, "0");
+  const roundtrip = `${date.getFullYear()}-${part(date.getMonth() + 1)}-${part(date.getDate())}T${part(date.getHours())}:${part(date.getMinutes())}`;
+  return roundtrip === local ? date.toISOString() : null;
+}
+
+export function parseScheduleResponse(value: unknown, owner: string, id: string, scheduled: string | null): Draft {
+  const draft = parseUpdatedDraft(value, owner);
+  if (draft.id !== id || draft.published || draft.reviewStatus === "PENDING" ||
+      (scheduled === null ? draft.scheduledAt !== null : draft.scheduledAt === null || Date.parse(draft.scheduledAt) !== Date.parse(scheduled))) throw new Error("Invalid schedule response.");
+  return draft;
+}

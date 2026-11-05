@@ -27,4 +27,6 @@ test("listagem própria valida os campos e paginação antes de exibir", () => {
   assert.equal(parseOwnArticles(page).data[0].reviewStatus, "PENDING");
   assert.throws(() => parseOwnArticles({ ...page, meta: {} }));
   assert.throws(() => parseOwnArticles({ ...page, data: [{ ...page.data[0], published: "false" }] }));
+  assert.equal(parseOwnArticles({ ...page, data: [{ ...page.data[0], scheduledAt: "2099-01-01T12:00:00Z" }] }).data[0].scheduledAt, "2099-01-01T12:00:00Z");
+  assert.throws(() => parseOwnArticles({ ...page, data: [{ ...page.data[0], scheduledAt: "inválido" }] }));
 });

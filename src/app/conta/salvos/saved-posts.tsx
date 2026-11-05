@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { authenticatedFetch, subscribeSession } from "@/lib/session-client";
 import { loadSavedPage, type SavedPage } from "./data";
 import BackButton from "@/app/_components/back-button";
+import Collections from "./collections";
 import styles from "../sessoes/sessions.module.css";
 
 type State = "loading" | "ready" | "signed-out" | "forbidden" | "error";
@@ -40,6 +41,7 @@ export default function SavedPosts() {
     {state === "error" && <><p role="alert">Não foi possível carregar seus artigos salvos agora.</p><button type="button" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button></>}
     {state === "ready" && result && <>{result.data.length === 0 ? <p>{page === 1 ? "Você ainda não salvou nenhum artigo." : "Nenhum artigo encontrado nesta página."}</p> : <ul className={styles.list}>{result.data.map(post => <li className={styles.item} key={post.id}><article><h2><Link prefetch={false} href={`/posts/${post.id}`}>{post.title}</Link></h2><p>{post.excerpt}</p><p>{post.author.name}</p></article></li>)}</ul>}
       {(result.meta.hasPreviousPage || result.meta.hasNextPage) && <nav aria-label="Paginação dos artigos salvos"><button type="button" disabled={!result.meta.hasPreviousPage} onClick={() => setPage(value => value - 1)}>← Anteriores</button> <span>Página {page} de {result.meta.totalPages || 1}</span> <button type="button" disabled={!result.meta.hasNextPage} onClick={() => setPage(value => value + 1)}>Próximos →</button></nav>}
+      <Collections saved={result.data} />
     </>}
     
   </section></main>;

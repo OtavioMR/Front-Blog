@@ -1,18 +1,18 @@
 .page { min-height: 100vh; max-width: 1180px; margin: auto; padding: 32px 28px 80px; }
-.header { display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid #d8d5cb; padding-bottom: 28px; }
+.header { display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid light-dark(#d8d5cb, #504f4d); padding-bottom: 28px; }
 .brand { color: inherit; font-size: 1.45rem; font-weight: 800; text-decoration: none; letter-spacing: -.06em; }
 .back { color: inherit; font-size: .85rem; text-underline-offset: 4px; }
 .panel { max-width: 540px; margin: 72px auto 0; }
-.eyebrow { color: #a44a31; font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+.eyebrow { color: light-dark(#a44a31, #e2c5bd); font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
 .panel h1 { font-family: Georgia, serif; font-size: clamp(2.6rem, 7vw, 4.4rem); font-weight: 400; letter-spacing: -.05em; line-height: 1.05; margin: 18px 0; }
-.description { color: #5b5c55; line-height: 1.6; }
+.description { color: light-dark(#5b5c55, #cbcbc9); line-height: 1.6; }
 .form { display: grid; gap: 18px; margin: 30px 0; }
 .field { display: grid; gap: 7px; font-size: .9rem; font-weight: 700; }
-.field input { width: 100%; border: 1px solid #aaa89f; border-radius: 0; background: #fffdf8; color: #24241f; padding: 13px; font: inherit; font-weight: 400; }
-.hint { color: #5b5c55; font-size: .82rem; font-weight: 400; line-height: 1.5; }
+.field input { width: 100%; border: 1px solid light-dark(#aaa89f, #454543); border-radius: 0; background: light-dark(#fffdf8, #333232); color: light-dark(#24241f, #b9b9b7); padding: 13px; font: inherit; font-weight: 400; }
+.hint { color: light-dark(#5b5c55, #cbcbc9); font-size: .82rem; font-weight: 400; line-height: 1.5; }
 .form button { justify-self: start; background: #333b30; color: white; border: 0; padding: 14px 22px; font: inherit; font-weight: 700; cursor: pointer; }
 .form button:disabled { opacity: .6; cursor: wait; }
-.message { padding: 15px; background: #f0eee5; line-height: 1.5; }
+.message { padding: 15px; background: light-dark(#f0eee5, #31312f); line-height: 1.5; }
 .links { display: flex; flex-wrap: wrap; gap: 18px; line-height: 1.5; }
 .links a { color: inherit; text-underline-offset: 4px; }
 @media (max-width: 600px) { .page { padding-inline: 20px; } .panel { margin-top: 48px; } }

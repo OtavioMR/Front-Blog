@@ -5,8 +5,8 @@
   right: 0;
   width: 100%;
   z-index: 90;
-  background: #f6f3eb;
-  border-bottom: 1px solid #c9cfc3;
+  background: light-dark(#f6f3eb, #323130);
+  border-bottom: 1px solid light-dark(#c9cfc3, #4c4e4b);
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
@@ -36,7 +36,7 @@
   font-size: 30px;
   font-weight: bold;
   letter-spacing: -1.5px;
-  color: #202b24 !important;
+  color: light-dark(#202b24, #b8bbb9) !important;
   display: inline-flex;
   align-items: center;
   text-decoration: none !important;
@@ -46,7 +46,7 @@
 
 .brand:hover {
   text-decoration: none !important;
-  color: #202b24 !important;
+  color: light-dark(#202b24, #b8bbb9) !important;
 }
 
 .brand:focus-visible {
@@ -56,20 +56,20 @@
 
 .brandMark {
   display: inline-block;
-  color: #cc704e !important;
+  color: light-dark(#cc704e, #efd1c6) !important;
   font-size: 28px;
   margin-right: 9px;
   line-height: 1;
 }
 
 .brandDot {
-  color: #c26b4b !important;
+  color: light-dark(#c26b4b, #ebd0c5) !important;
 }
 
 .nav {
   display: flex;
   gap: 28px;
-  color: #526357;
+  color: light-dark(#526357, #c8cdc9);
   font-size: 13px;
   font-weight: bold;
   align-items: center;
