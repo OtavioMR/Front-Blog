@@ -72,8 +72,7 @@ export default function PhotoForm() {
       if (result.kind === "invalid") { setFailed(true); setMessage(result.message); return; }
       if (result.kind !== "success") throw new Error();
       // Only now, with the API's confirmation, the new photo replaces the old one everywhere.
-      const updatedProfile = await getOwnProfile();
-      if (updatedProfile) setCurrent(updatedProfile.profilePhoto || null);
+      setCurrent(result.profilePhoto);
       clearSelection(); setMessage("Foto atualizada com sucesso.");
       notifyProfileChanged();
     } catch {

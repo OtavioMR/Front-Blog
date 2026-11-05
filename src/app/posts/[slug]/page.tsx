@@ -16,6 +16,7 @@ import Interactions from "./interactions";
 import EditArticleLink from "./edit-article-link";
 import { PostReport } from "./report-form";
 import Avatar from "@/app/_components/avatar";
+import BackButton from "@/app/_components/back-button";
 import { getAuthor } from "../../autores/[id]/data";
 import styles from "./post.module.css";
 
@@ -60,6 +61,7 @@ export default async function PostPage({ params, searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <article className={styles.article}>
         <PostViewTracker postId={post.id} />
+        <div className={styles.articleBack}><BackButton fallback="/" /></div>
         <div className={styles.category}>{post.categories.map(category => category.name).join(" · ") || "BOAS HISTÓRIAS"}</div>
         <h1>{post.title}</h1>
         {post.excerpt && <p className={styles.excerpt}>{post.excerpt}</p>}
@@ -97,11 +99,11 @@ export default async function PostPage({ params, searchParams }: Props) {
       </section>
       {related && related.length > 0 && <section className={styles.related} aria-labelledby="related-title">
         <p className={styles.category}>CONTINUE A LEITURA</p><h2 id="related-title">Mais histórias para descobrir.</h2>
-        <div className={styles.relatedGrid}>{related.map(item => <article className={styles.relatedCard} key={item.slug}>
+        <div className={styles.relatedGrid}>{related.map(item => <article className={`${styles.relatedCard} article-surface`} key={item.slug}>
           <h3><Link href={`/posts/${encodeURIComponent(item.slug)}`}>{item.title}</Link></h3>
           {item.excerpt && <p>{item.excerpt}</p>}
           <p className={styles.relatedMeta}>{item.author?.name || "Equipe editorial"} · {item.readingTimeMinutes} min de leitura</p>
-          <Link className={styles.relatedLink} href={`/posts/${encodeURIComponent(item.slug)}`} aria-label={`Ler artigo: ${item.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+          <Link className={`${styles.relatedLink} article-surface-link`} href={`/posts/${encodeURIComponent(item.slug)}`} aria-label={`Ler artigo: ${item.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
         </article>)}</div>
       </section>}
       <footer className={styles.footer}><Link href="/">entrelinhas.</Link><span>UM BLOG PARA LER E SENTIR.</span></footer>

@@ -5,6 +5,7 @@
 .profile { display: grid; grid-template-columns: 240px minmax(0, 680px); gap: 56px; align-items: start; padding-top: 70px; padding-bottom: 40px; }
 .portrait { width: 240px; aspect-ratio: 1; background: light-dark(#e7bbaa, #302a28); display: grid; place-items: center; overflow: hidden; font-size: 5rem; color: light-dark(#964932, #ddc5bd); border-radius: 4px; }
 .portrait img { width: 100%; height: 100%; object-fit: cover; }
+.portraitAvatar { width: 100% !important; height: 100% !important; border-radius: 0; }
 .eyebrow { color: light-dark(#a44a31, #e2c5bd); font-size: .72rem; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; margin: 0; }
 .profile h1 { font-family: Georgia, serif; font-size: clamp(2.4rem, 5vw, 4.5rem); font-weight: 400; letter-spacing: -.055em; line-height: 1.02; margin: 16px 0 20px; }
 .bio { color: light-dark(#5b5c55, #cbcbc9); font-size: 1.05rem; line-height: 1.7; white-space: pre-line; margin: 0 0 20px; }

@@ -6,13 +6,13 @@ import {
   getAuthor,
   getAuthorArticles,
   pageNumber,
-  photoPath,
   coverPath,
   formatDate,
   safeExternalUrl,
 } from "./data";
 import styles from "./profile.module.css";
 import Follow from "./follow";
+import Avatar from "@/app/_components/avatar";
 import backStyles from "@/app/_components/back-button.module.css";
 
 export async function generateMetadata({
@@ -55,7 +55,6 @@ export default async function AuthorPage({
 
   const articles = await getAuthorArticles(id, author.name, page, 6);
 
-  const photo = photoPath(author.profilePhoto);
   const website = safeExternalUrl(author.websiteUrl);
   const social = safeExternalUrl(author.socialUrl);
 
@@ -69,11 +68,7 @@ export default async function AuthorPage({
       </Link>
       <article className={styles.profile}>
         <div className={styles.portrait}>
-          {photo ? (
-            <Image src={photo} alt="" width={240} height={240} unoptimized />
-          ) : (
-            <span aria-hidden="true">✳</span>
-          )}
+          <Avatar name={author.name} src={author.profilePhoto} size={240} className={styles.portraitAvatar} />
         </div>
         <div>
           <p className={styles.eyebrow}>Quem escreve</p>
@@ -150,7 +145,7 @@ export default async function AuthorPage({
                   const dateStr = formatDate(item.publishedAt);
                   const categoryName = item.categories?.[0]?.name || "Leitura";
                   return (
-                    <article className={styles.card} key={item.id}>
+                    <article className={`${styles.card} article-surface`} key={item.id}>
                       {cover && (
                         <div className={styles.cardCover}>
                           <Image
@@ -177,7 +172,7 @@ export default async function AuthorPage({
                         <span>{item.readingTimeMinutes} min de leitura</span>
                       </div>
                       <Link
-                        className={styles.action}
+                        className={`${styles.action} article-surface-link`}
                         href={`/posts/${encodeURIComponent(item.slug)}`}
                         aria-label={`Ler artigo: ${item.title}`}
                       >

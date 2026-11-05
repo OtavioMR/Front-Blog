@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
+import Avatar from "@/app/_components/avatar";
 import { showToast } from "@/app/_components/toast";
 import { authenticatedFetchForSubject } from "@/lib/session-client";
 import { useCommentSession } from "./comment-session";
@@ -58,7 +59,7 @@ export default function CommentItem({ item, postAuthorId, onDeleted }: { item: C
     setBusy(false);
   }
 
-  return <div className={styles.comment}><div className={styles.commentHeader}><div><strong>{current.author.name}</strong><time dateTime={current.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(current.createdAt))}</time></div>
+  return <div className={styles.comment}><div className={styles.commentHeader}><div className={styles.commentAuthor}><Avatar name={current.author.name} src={current.author.profilePhoto} size={36} /><div><strong>{current.author.name}</strong><time dateTime={current.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(current.createdAt))}</time></div></div>
     {current.isActive && profile && !editing && <div className={styles.commentMenu} ref={menuRef}><button ref={buttonRef} type="button" className={styles.commentMenuTrigger} aria-label="Ações do comentário" aria-expanded={menuOpen} aria-controls={menuId} onClick={() => { if (!menuOpen) document.dispatchEvent(new Event("comment-menu-open")); setMenuOpen(!menuOpen); }}>⋯</button>{menuOpen && <div id={menuId} className={styles.commentMenuPanel}>
       {mayEdit && <button className={styles.commentMenuAction} type="button" disabled={busy || uncertain} onClick={() => { if (!mayEdit || !profile) return; setEditingSubject(profile.id); setText(current.content); setEditing(true); setMenuOpen(false); }}>Editar comentário</button>}
       {mayDelete && <button className={styles.commentMenuAction} type="button" disabled={busy || uncertain} onClick={() => { setConfirming(profile.id); setMenuOpen(false); }}>Excluir comentário</button>}

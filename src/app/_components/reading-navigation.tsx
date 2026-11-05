@@ -49,7 +49,8 @@ export function BackToTop() {
   }, []);
 
   function goToTop() {
-    window.scrollTo({ top: 0, behavior: "instant" });
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
     const destination = document.querySelector<HTMLElement>("main header a")
       ?? document.querySelector<HTMLElement>("main");
     if (destination) {

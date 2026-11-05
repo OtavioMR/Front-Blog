@@ -104,6 +104,7 @@ function NavbarForRoute() {
           <Link href="/categorias">Categorias</Link>
           <Link href="/sobre">Sobre</Link>
           <Link href="/#artigos">Artigos</Link>
+          <Link className={styles.settings} href="/configuracoes"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>Configurações</Link>
           <SessionNav />
         </nav>
       </div>

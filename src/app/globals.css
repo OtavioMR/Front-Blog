@@ -44,6 +44,12 @@ h2 { font-size: clamp(30px, 3vw, 44px); margin: 0; }
 .search input:focus-visible, .search button:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
 .article-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 38px; }
 .article-card { border: 1px solid light-dark(#d7ddd1, #4f514e); background: light-dark(#fbfaf6, #323232); padding: 28px; display: flex; flex-direction: column; min-height: 270px; }
+.article-surface { position: relative; cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease; }
+.article-surface:hover { border-color: light-dark(#829a85, #9cb3a0); box-shadow: 0 4px 14px #0002; }
+.article-surface:focus-within { outline: 3px solid #b46343; outline-offset: 3px; }
+.article-surface-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.article-surface-secondary { position: relative; z-index: 2; }
+@media (prefers-reduced-motion: reduce) { .article-surface { transition: none; } }
 .article-category { color: light-dark(#99583d, #decac1); font-size: 10px; font-weight: bold; letter-spacing: .13em; text-transform: uppercase; }
 .article-card h3 { font: 400 29px/1.15 Georgia, serif; letter-spacing: -.03em; margin: 13px 0; }
 .article-card h3 a:hover, .article-link:hover { text-decoration: underline; }

@@ -47,7 +47,7 @@ export default function Account() {
             <li><Link href="/conta/salvos"><strong>Artigos salvos</strong><span>Suas leituras guardadas</span></Link></li>
             <li><Link href="/conta/feed"><strong>Seu feed</strong><span>Novidades dos autores que você acompanha</span></Link></li>
             <li><Link href="/conta/notificacoes"><strong>Notificações</strong><span>Interações e atualizações para você</span></Link></li>
-            <li><Link href="/conta/configuracoes"><strong>Configurações</strong><span>Personalize sua experiência de leitura</span></Link></li>
+            <li><Link href="/conta/configuracoes"><strong>Configurações</strong><span>Gerencie seus dados e a segurança da conta</span></Link></li>
           </ul></section>
         {(profile.role === "READER" || canWrite) && <section className={account.panel} aria-labelledby="writing-title"><h2 id="writing-title">Escrita</h2><p className={account.panelIntro}>Acompanhe sua jornada de publicação.</p>
           <ul className={account.links}>

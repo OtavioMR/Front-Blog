@@ -37,7 +37,7 @@ export default function BackButton({ fallback = "/", label = "Voltar", className
       >
         <path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" />
       </svg>
-      <span>{label}</span>
+      <span>{label.startsWith("Voltar") ? label : `Voltar · ${label}`}</span>
     </button>
     {confirming && confirmMessage && <ConfirmDialog title="Sair desta página?" description={confirmMessage} confirmLabel="Sair" onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); goBack(); }} />}
   </>);

@@ -1,3 +1,4 @@
 .user { display: inline-flex; align-items: center; gap: 8px; }
+.account { padding: 8px 12px; border: 1px solid light-dark(#849889, #819185); border-radius: 5px; color: light-dark(#264633, #e1ebe3); }
 .user span:last-child { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .placeholder { display: inline-block; width: 64px; height: 28px; background: light-dark(#e8ede1, #30302f); border-radius: 14px; }

@@ -27,7 +27,7 @@ test("envio multipart usa campo file, valida limite e interpreta resultados com 
     assert.equal(init.headers, undefined); // O navegador define o boundary multipart.
     return Response.json({ id: subject, profilePhoto: "/uploads/profile-photos/abc-123.webp" });
   };
-  assert.deepEqual(await uploadPhoto(subject, file, send), { kind: "success" });
+  assert.deepEqual(await uploadPhoto(subject, file, send), { kind: "success", profilePhoto: "/uploads/profile-photos/abc-123.webp" });
   const oversized = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "grande.png", { type: "image/png" });
   assert.equal((await uploadPhoto(subject, oversized, send)).kind, "invalid");
   assert.equal(calls, 1);

@@ -4,6 +4,7 @@
 .brand span { color: light-dark(#cc704e, #efd1c6); }
 .back { color: light-dark(#526357, #c8cdc9); font-size: 13px; font-weight: 700; }
 .article { max-width: 900px; margin: 0 auto; padding: 78px 0 100px; }
+.articleBack { margin-bottom: 28px; }
 .category { color: light-dark(#8a503c, #dac7c1); font-size: 11px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 24px; }
 .article h1 { max-width: 900px; font-size: clamp(42px, 6vw, 76px); }
 .excerpt { color: light-dark(#526357, #cfd2cf); font-size: clamp(18px, 2vw, 22px); line-height: 1.6; max-width: 740px; margin: 24px 0; }
@@ -29,6 +30,7 @@
 .commentsList > li { border-top: 1px solid light-dark(#d8ddd4, #50514f); padding: 22px 0; }
 .comment { overflow-wrap: anywhere; }
 .commentHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.commentAuthor { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .commentMenu { position: relative; flex: none; }
 .commentMenuTrigger { min-width: 44px; min-height: 44px; border: 0; border-radius: 50%; background: transparent; color: inherit; font: inherit; font-size: 24px; cursor: pointer; }
 .commentMenuTrigger:hover, .commentMenuTrigger[aria-expanded="true"] { background: light-dark(#edf0e9, #414540); }

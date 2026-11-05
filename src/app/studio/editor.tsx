@@ -7,6 +7,7 @@ import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@
 import { validatePhoto } from "../conta/foto/photo-upload";
 import { isPendingResponse, parseDraft, parsePublicationResponse, parseScheduleResponse, parseUpdatedDraft, publicationEligibility, reviewEligibility, scheduleToIso, validDraftId, type Draft } from "./editor-contracts";
 import styles from "./editor.module.css";
+import backStyles from "../_components/back-button.module.css";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import Revisions from "./revisions";
 
@@ -554,7 +555,8 @@ export default function Editor({ initialId }: { initialId?: string }) {
       <nav className={styles.topBar} aria-label="Ações do editor">
         <Link
           href="/studio"
-          className={styles.backLink}
+          className={`${styles.backLink} ${backStyles.back}`}
+          data-back-button="true"
           onNavigate={event => preventUnsavedNavigation(event, "/studio")}
         >
           ← Voltar ao Studio

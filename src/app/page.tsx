@@ -142,27 +142,27 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
         ) : (
           <>
             {featured && (
-              <article className={styles.featured}>
+              <article className={`${styles.featured} article-surface`}>
                 {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
                 <div className={styles.featuredBody}>
                   <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
                   <p className="article-category">{featured.categories?.[0]?.name || "LEITURA"}</p>
                   <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`}>{featured.title}</Link></h3>
                   <p className="article-excerpt">{featured.excerpt}</p>
-                  <p className="article-meta">{featured.author ? <Link href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
-                  <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                  <p className="article-meta">{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
+                  <Link className="article-link article-surface-link" prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
                 </div>
               </article>
             )}
             {rest.length > 0 && <div className="article-grid">
               {rest.map((article) => (
-                <article className={`article-card ${styles.card}`} key={article.id}>
+                <article className={`article-card ${styles.card} article-surface`} key={article.id}>
                   {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
                   <p className="article-category">{article.categories?.[0]?.name || "LEITURA"}</p>
                   <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
                   <p className="article-excerpt">{article.excerpt}</p>
-                  <p className="article-meta">{article.author ? <Link href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
-                  <Link className="article-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                  <p className="article-meta">{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
+                  <Link className="article-link article-surface-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
                 </article>
               ))}
             </div>}

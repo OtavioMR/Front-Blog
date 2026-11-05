@@ -5,7 +5,7 @@ export function validatePhoto(file: Pick<File, "size" | "type">): string | null 
 }
 
 type FetchForSubject = (subject: string, path: string, init: RequestInit) => Promise<Response>;
-export type PhotoUploadResult = { kind: "success" } | { kind: "signed-out" | "account-changed" | "uncertain" } | { kind: "invalid"; message: string };
+export type PhotoUploadResult = { kind: "success"; profilePhoto: string } | { kind: "signed-out" | "account-changed" | "uncertain" } | { kind: "invalid"; message: string };
 
 export async function uploadPhoto(subject: string, file: File, send: FetchForSubject): Promise<PhotoUploadResult> {
   const problem = validatePhoto(file);
@@ -21,6 +21,6 @@ export async function uploadPhoto(subject: string, file: File, send: FetchForSub
     if (!response.ok) return { kind: "uncertain" };
     const result: unknown = await response.json();
     if (!result || typeof result !== "object" || !("id" in result) || result.id !== subject || !("profilePhoto" in result) || typeof result.profilePhoto !== "string" || !/^\/uploads\/profile-photos\/[0-9a-f-]+\.webp$/i.test(result.profilePhoto)) return { kind: "uncertain" };
-    return { kind: "success" };
+    return { kind: "success", profilePhoto: result.profilePhoto };
   } catch { return { kind: "uncertain" }; }
 }
