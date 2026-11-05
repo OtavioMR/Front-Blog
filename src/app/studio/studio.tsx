@@ -41,7 +41,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         if (response.status === 403) { setView("denied"); return; }
         if (!response.ok) throw new Error();
         const value = parseOwnArticles(await response.json());
-        if (current === revision.current) { setArticles(value); setPage(value.meta.page); setView("author"); }
+        if (current === revision.current) { setSubject(profile.id); setArticles(value); setPage(value.meta.page); setView("author"); }
       } else setView("denied");
     } catch { if (current === revision.current) setView("error"); }
   }, []);
@@ -73,6 +73,24 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
     finally { setBusy(false); }
   }
 
+  async function removeArticle(id: string, title: string) {
+    if (!subject || busy || uncertain || !window.confirm(`Desativar “${title}”? O artigo será removido das listagens e deixará de estar publicado; a remoção é lógica.`)) return;
+    const current = revision.current;
+    setBusy(true); setFeedback("");
+    try {
+      const response = await authenticatedFetchForSubject(subject, `/api/v1/posts/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (current !== revision.current) return;
+      if (response.status === 409) { await load(1); return; }
+      if (response.status === 401) { setView("signed-out"); return; }
+      if (response.status === 403) { setFeedback("Você não tem permissão para desativar este artigo."); return; }
+      if (response.status === 404) { setFeedback("Artigo não encontrado. Atualize a lista."); setUncertain(true); return; }
+      if (response.status !== 204) throw new Error();
+      setArticles(previous => previous ? { ...previous, data: previous.data.filter(article => article.id !== id) } : previous);
+      setFeedback("Artigo desativado com sucesso.");
+    } catch { if (current === revision.current) { setUncertain(true); setFeedback("Não foi possível confirmar a desativação. Atualize a lista antes de tentar novamente."); } }
+    finally { setBusy(false); }
+  }
+
   return <main className={styles.page}>
     <section className={styles.content}><BackButton fallback="/conta" /><p className={styles.eyebrow}>SEU ESPAÇO DE ESCRITA</p><h1>Studio.</h1>
       {view === "loading" && <p role="status">Carregando seu espaço…</p>}
@@ -80,6 +98,6 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
       {view === "denied" && <p role="alert">Sua conta não tem acesso a este espaço.</p>}
       {view === "error" && <><p role="alert">Não foi possível carregar o Studio agora.</p><button onClick={() => void load(page)}>Tentar novamente</button></>}
       {view === "reader" && rules && <><h2>Compartilhe suas histórias.</h2><p>Para começar, leia e aceite as regras de publicação. O primeiro artigo passa por revisão.</p><ul>{rules.rules.map((rule, index) => <li key={index}>{rule}</li>)}</ul><p className={styles.version}>Versão {rules.version}</p><form onSubmit={accept}><label className={styles.check}><input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)} disabled={busy || uncertain} required /> Li e aceito as regras de autoria.</label><button disabled={!checked || busy || uncertain}>{busy ? "Enviando…" : "Aceitar e tornar-me autor"}</button></form>{feedback && <p role="alert">{feedback}</p>}{uncertain && <button onClick={() => { setUncertain(false); void load(1); }}>Atualizar estado</button>}</>}
-      {view === "author" && articles && <><h2>Seus artigos.</h2><p>Acompanhe aqui suas histórias e o andamento da revisão.</p>{editorialEnabled ? <Link className={styles.link} href="/studio/novo">Criar rascunho</Link> : <p>A criação e a edição de artigos estarão disponíveis em breve.</p>}{articles.data.length === 0 ? <p className={styles.empty}>Você ainda não tem artigos.</p> : <ul className={styles.list}>{articles.data.map(article => <li key={article.id}><div><strong>{article.title}</strong><br /><span>{article.published ? "Publicado" : labels[article.reviewStatus] || "Status indisponível"}</span></div><span className={styles.rowActions}>{article.published && <Link href={`/posts/${encodeURIComponent(article.slug)}`}>Ver artigo</Link>}{editorialEnabled && <Link href={`/studio/${encodeURIComponent(article.id)}`}>Editar artigo</Link>}</span></li>)}</ul>}{(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && <nav className={styles.pagination} aria-label="Paginação dos seus artigos"><button disabled={!articles.meta.hasPreviousPage} onClick={() => void load(page - 1)}>Anterior</button><span>Página {page}</span><button disabled={!articles.meta.hasNextPage} onClick={() => void load(page + 1)}>Próxima</button></nav>}</>}
+      {view === "author" && articles && <><h2>Seus artigos.</h2><p>Acompanhe aqui suas histórias e o andamento da revisão.</p>{editorialEnabled ? <Link className={styles.link} href="/studio/novo">Criar rascunho</Link> : <p>A criação e a edição de artigos estarão disponíveis em breve.</p>}{feedback && <p role="status">{feedback}</p>}{uncertain && <button onClick={() => { setUncertain(false); void load(page); }}>Atualizar lista</button>}{articles.data.length === 0 ? <p className={styles.empty}>Você ainda não tem artigos nesta página.</p> : <ul className={styles.list}>{articles.data.map(article => <li key={article.id}><div><strong>{article.title}</strong><br /><span>{article.published ? "Publicado" : labels[article.reviewStatus] || "Status indisponível"}</span></div><span className={styles.rowActions}>{article.published && <Link href={`/posts/${encodeURIComponent(article.slug)}`}>Ver artigo</Link>}{editorialEnabled && article.reviewStatus !== "PENDING" && <Link href={`/studio/${encodeURIComponent(article.id)}`}>Editar artigo</Link>}<button type="button" disabled={busy || uncertain} onClick={() => void removeArticle(article.id, article.title)} aria-label={`Desativar artigo ${article.title}`}>{busy ? "Aguarde…" : "Desativar"}</button></span></li>)}</ul>}{(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && <nav className={styles.pagination} aria-label="Paginação dos seus artigos"><button disabled={busy || !articles.meta.hasPreviousPage} onClick={() => void load(page - 1)}>Anterior</button><span>Página {page}</span><button disabled={busy || !articles.meta.hasNextPage} onClick={() => void load(page + 1)}>Próxima</button></nav>}</>}
     </section></main>;
 }

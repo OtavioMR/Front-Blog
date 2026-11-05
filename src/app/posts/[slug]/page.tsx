@@ -9,6 +9,8 @@ import { getRelatedPosts } from "./related";
 import { commentsPage, getComments } from "./comments";
 import Replies from "./replies";
 import CommentForm from "./comment-form";
+import CommentItem from "./comment-item";
+import { CommentSession } from "./comment-session";
 import PostViewTracker from "./post-view-tracker";
 import Interactions from "./interactions";
 import EditArticleLink from "./edit-article-link";
@@ -84,10 +86,10 @@ export default async function PostPage({ params, searchParams }: Props) {
         <p className={styles.category}>A CONVERSA CONTINUA</p><h2 id="comments-title">Comentários.</h2>
         {comments.kind === "disabled" ? <p>Os comentários estão desativados neste artigo.</p> : comments.kind === "unavailable" ? <p role="status">Não foi possível carregar os comentários agora. Tente novamente mais tarde.</p> : <>
           {post.id && <CommentForm postId={post.id} slug={post.slug} page={requestedPage} />}
-          {comments.page.data.length === 0 ? <p>Ainda não há comentários nesta página.</p> : <ol className={styles.commentsList}>{comments.page.data.map(item => <li key={item.id}>
-            <div className={styles.comment}><strong>{item.author.name}</strong><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(item.createdAt))}</time><p>{item.isActive ? item.content : "Comentário excluído"}</p>{item.editedAt && item.isActive && <span>Editado</span>}</div>
-            <Replies postId={item.postId} rootId={item.id} initial={item.replies.data} total={item.replies.meta.total} slug={post.slug} page={requestedPage} canReply={item.isActive} />
-          </li>)}</ol>}
+          {comments.page.data.length === 0 ? <p>Ainda não há comentários nesta página.</p> : <CommentSession><ol className={styles.commentsList}>{comments.page.data.map(item => <li key={item.id}>
+            <CommentItem item={item} postAuthorId={post.author?.id} />
+            <Replies postId={item.postId} rootId={item.id} initial={item.replies.data} total={item.replies.meta.total} slug={post.slug} page={requestedPage} canReply={item.isActive} postAuthorId={post.author?.id} />
+          </li>)}</ol></CommentSession>}
           {(comments.page.meta.hasPreviousPage || comments.page.meta.hasNextPage) && <nav className={styles.commentsPagination} aria-label="Paginação dos comentários">{comments.page.meta.hasPreviousPage && <Link href={`/posts/${encodeURIComponent(post.slug)}?commentsPage=${requestedPage - 1}#comentarios`}>← Anteriores</Link>}<span>Página {comments.page.meta.page} de {comments.page.meta.totalPages}</span>{comments.page.meta.hasNextPage && <Link href={`/posts/${encodeURIComponent(post.slug)}?commentsPage=${requestedPage + 1}#comentarios`}>Próximos →</Link>}</nav>}
         </>}
       </section>

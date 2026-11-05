@@ -1,4 +1,4 @@
-export type Comment = { id: string; postId: string; rootId: string | null; author: { name: string }; content: string; isActive: boolean; createdAt: string; editedAt: string | null };
+export type Comment = { id: string; postId: string; rootId: string | null; author: { id?: string; name: string }; content: string; isActive: boolean; createdAt: string; editedAt: string | null };
 type RootComment = Comment & { replies: { data: Comment[]; meta: { total: number } } };
 type CommentPage = { data: RootComment[]; meta: { page: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean } };
 export type CommentsResult = { kind: "available"; page: CommentPage } | { kind: "disabled" } | { kind: "unavailable" };

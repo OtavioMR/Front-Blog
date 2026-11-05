@@ -34,6 +34,22 @@ A API temporária e os contêineres sintéticos foram parados após as provas. N
 
 **Provas reais parciais:** API em cópia temporária e banco sintético com 43 migrations. Via proxy local passaram cadastro/confirmação por e-mail, login, cookie HttpOnly/Strict, refresh rotativo, logout/revogação, upload de 5 MiB e rejeição de 5 MiB + 1 byte. Um autor sintético submeteu um artigo que um ADMIN sintético aprovou. O frontend retornou artigo 200 com HTML e canonical, home com título real, perfil público 200 e artigo inexistente 404. Detalhes em [infraestrutura](docs/sprint-0-infra.md). Faltam navegador com duas abas, HTTPS e encaminhamento de IP; nenhuma sprint foi concluída.
 
+## Missão — integração e experiência (05/11/2026)
+
+Execução sequencial; cada etapa exige contratos confirmados no código, estados e permissões tratados, testes proporcionais e evidências registradas aqui. Não marcar concluída enquanto houver critérios ou integrações reais pendentes. Preservar flags editoriais e não usar dados reais como fixtures.
+
+- [ ] Etapa 1: exclusão de artigos/rascunhos, gestão editorial existente, edição e exclusão de comentários e feedback. Validar soft delete, troca de conta, permissões e resultados incertos.
+- [ ] Etapa 2: painel da conta, configurações e temas claro/escuro/sistema; validar persistência, hidratação, contraste e responsividade.
+- [ ] Etapa 3: publicação, agendamento, revisões, séries e editor, respeitando primeira revisão e bloqueios existentes.
+- [ ] Etapa 4: seguidores, feed, coleções, notificações, curtidas e denúncias.
+- [ ] Etapa 5: administração e integrações complementares viáveis, com autorização de servidor e API.
+
+**Auditoria inicial:** o README do backend relata 45 integrações totais/parciais e 59 ausentes; é uma referência histórica, sujeita a confirmação por módulo. Estão ausentes a exclusão de artigo e a edição/exclusão/curtida de comentários. Publicação, agendamento e revisão inicial são parciais; conta, sessões, criação de comentários e listagem própria já existem. O Studio e a fila editorial têm flags desativadas e validação real pendente. A arquitetura planejada e o código efetivo do backend prevalecem sobre suposições do inventário.
+
+**Etapa 1 em andamento:** Studio integra `DELETE /posts/:id` para a conta titular, com confirmação, estado de espera e reconciliação manual em resultado incerto; edição de item PENDING deixou de ser oferecida. O service confirma despublicação, cancelamento do agendamento e remoção lógica. `npm.cmd run test:studio` passou (5 testes) e `npm.cmd run build` passou com TypeScript. `npm.cmd run lint` falhou em dois erros preexistentes em `navbar.tsx` e `photo-form.tsx`, além de quatro avisos; não relacionados à alteração. Faltam testes específicos da exclusão, comentários, validação em navegador e API real. O backend permite editar comentário pelo autor ou ADMIN e desativar pelo autor do comentário, autor do artigo ou ADMIN, preservando respostas.
+
+Edição inline e desativação de comentários e respostas foram conectadas a `PATCH/DELETE /comments/:id`, com sessão compartilhada, verificação de troca de conta e preservação do texto em erro. A desativação recarrega a discussão após 204 para refletir as respostas e bloquear novas respostas à raiz. Build e lint dos arquivos alterados passaram; `npm.cmd run test:public` passou (10 testes) após executar o build sequencialmente. Esses testes existentes não exercitam as novas mutações; faltam testes focados e validação visual e real. A primeira execução paralela ao build falhou por indisponibilidade temporária do servidor de teste.
+
 ## Sprint 1 — fundação e autenticação
 
 - [ ] S1.1 Inicializar Next.js App Router, React, TypeScript strict, lint, build, variáveis de exemplo e CI.

@@ -4,19 +4,20 @@ import { useRef, useState } from "react";
 import type { Comment } from "./comments";
 import { fetchReplies } from "./replies-data";
 import CommentForm from "./comment-form";
+import CommentItem from "./comment-item";
 import styles from "./post.module.css";
 
-export default function Replies({ postId, rootId, initial, total, slug, page, canReply }: { postId: string; rootId: string; initial: Comment[]; total: number; slug: string; page: number; canReply: boolean }) {
+export default function Replies({ postId, rootId, initial, total, slug, page, canReply, postAuthorId }: { postId: string; rootId: string; initial: Comment[]; total: number; slug: string; page: number; canReply: boolean; postAuthorId?: string }) {
   const [replying, setReplying] = useState(false);
   return <div>
-    <ReplyList key={`${rootId}-${total}`} postId={postId} rootId={rootId} initial={initial} total={total} />
+    <ReplyList key={`${rootId}-${total}`} postId={postId} rootId={rootId} initial={initial} total={total} postAuthorId={postAuthorId} />
     {canReply && <><button type="button" className={styles.repliesButton} aria-expanded={replying} onClick={() => setReplying(value => !value)}>{replying ? "Fechar resposta" : "Responder"}</button>{replying && <CommentForm postId={postId} slug={slug} page={page} replyToId={rootId} />}</>}
   </div>;
 }
 
 const STEP = 3;
 
-function ReplyList({ postId, rootId, initial, total }: { postId: string; rootId: string; initial: Comment[]; total: number }) {
+function ReplyList({ postId, rootId, initial, total, postAuthorId }: { postId: string; rootId: string; initial: Comment[]; total: number; postAuthorId?: string }) {
   const [items, setItems] = useState(initial);
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(STEP);
@@ -50,7 +51,7 @@ function ReplyList({ postId, rootId, initial, total }: { postId: string; rootId:
   return <div>
     <button type="button" className={styles.repliesButton} onClick={toggle} aria-expanded={open} aria-controls={`respostas-${rootId}`}>{open ? "Ocultar respostas" : `Ver ${count} ${count === 1 ? "resposta" : "respostas"}`}</button>
     {open && <>
-      <ol className={styles.replies} id={`respostas-${rootId}`}>{shown.map(reply => <li className={styles.comment} key={reply.id}><strong>{reply.author.name}</strong><time dateTime={reply.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(reply.createdAt))}</time><p>{reply.isActive ? reply.content : "Comentário excluído"}</p>{reply.editedAt && reply.isActive && <span>Editado</span>}</li>)}</ol>
+      <ol className={styles.replies} id={`respostas-${rootId}`}>{shown.map(reply => <li key={reply.id}><CommentItem item={reply} postAuthorId={postAuthorId} /></li>)}</ol>
       {error && <p role="alert">Não foi possível carregar as respostas. Tente novamente.</p>}
       {canShowMore && <button type="button" className={styles.repliesButton} onClick={showMore} disabled={busy}>{busy ? "Carregando respostas…" : error ? "Tentar novamente" : "Mostrar mais respostas"}</button>}
     </>}
