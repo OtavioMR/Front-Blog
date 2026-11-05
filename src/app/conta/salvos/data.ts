@@ -25,3 +25,10 @@ export async function loadSavedPage(page: number, fetcher: (path: string) => Pro
   if (!response.ok) throw new Error("Serviço indisponível.");
   return { state: "ready" as const, result: parseSavedPage(await response.json(), page) };
 }
+
+export async function loadOwnedSavedPage(page: number, getProfile: () => Promise<{ id: string } | null>, fetchForSubject: (subject: string, path: string) => Promise<Response>) {
+  const profile = await getProfile();
+  if (!profile) return { state: "signed-out" as const, owner: "" };
+  const result = await loadSavedPage(page, path => fetchForSubject(profile.id, path));
+  return { ...result, owner: result.state === "ready" ? profile.id : "" };
+}

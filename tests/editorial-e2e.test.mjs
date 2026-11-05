@@ -21,7 +21,8 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   const authorId = "4c781e0d-b963-493c-b2df-0a8fa66c0615";
   const postId = "d28beb9c-6a69-4c3a-841c-7593a8a63265";
   const token = (role) => `test.${Buffer.from(JSON.stringify({ sub: authorId, role })).toString("base64url")}.test`;
-  let post;
+  let post, reportDecision;
+  let category = { id: postId, name: "Categoria sintética", slug: "categoria-sintetica", description: "Descrição", isActive: true };
   const api = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     let body = ""; for await (const chunk of req) body += chunk;
@@ -32,9 +33,17 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
       return ["AUTHOR", "ADMIN"].includes(role) ? respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     }
     if (req.method === "POST" && req.url === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token("AUTHOR"), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
+    if (req.method === "GET" && req.url === "/api/v1/categories?page=1&limit=20") return respond(200, { data: category ? [category] : [], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } });
+    if (req.method === "GET" && req.url === `/api/v1/categories/${postId}`) return category ? respond(200, category) : respond(404, {});
     const bearer = (req.headers.authorization || "").replace(/^Bearer /, "");
     const role = bearer === token("AUTHOR") ? "AUTHOR" : bearer === token("ADMIN") ? "ADMIN" : "";
     if (!role) return respond(401, {});
+    if (role === "ADMIN" && req.url === "/api/v1/categories" && req.method === "POST") { const value = JSON.parse(body); category = { id: postId, ...value, slug: "nova-categoria", isActive: true }; return respond(201, category); }
+    if (role === "ADMIN" && req.url === `/api/v1/categories/${postId}` && req.method === "PATCH") { category = { ...category, ...JSON.parse(body) }; return respond(200, category); }
+    if (role === "ADMIN" && req.url === `/api/v1/categories/${postId}` && req.method === "DELETE") { category = null; res.statusCode = 204; return res.end(); }
+    if (req.url === "/api/v1/admin/analytics/overview" && req.method === "GET") return role === "ADMIN" ? respond(200, { users: { total: 1, active: 1, verified: 1 }, posts: { total: 1, published: 1, drafts: 0 }, comments: { total: 0, active: 0 }, reports: { total: 0, pending: 0 }, generatedAt: "2026-01-01T12:00:00Z" }) : respond(403, {});
+    if (req.url === "/api/v1/reports?status=PENDING&page=1&limit=20" && req.method === "GET") return role === "ADMIN" ? respond(200, { data: reportDecision ? [] : [{ id: postId, postId, commentId: null, reason: "Motivo sintético", status: "PENDING" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }) : respond(403, {});
+    if (req.url === `/api/v1/reports/${postId}` && req.method === "PATCH") { if (role !== "ADMIN") return respond(403, {}); reportDecision = JSON.parse(body); return respond(200, { id: postId, ...reportDecision }); }
     if (req.url === `/api/v1/users/${authorId}` && req.method === "GET") return respond(200, { id: authorId, name: "Autora sintética", email: "autora@example.test", role, emailVerified: true, bio: null, firstPostApproved: false });
     if (req.url === "/api/v1/posts" && req.method === "POST" && role === "AUTHOR") {
       const input = JSON.parse(body);
@@ -143,6 +152,36 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   response = await form("/gestao-editorial", { csrf: decisionCsrf, id: postId, decision: "APPROVED" }, session); assert.equal(response.status, 303);
   assert.equal(post.reviewStatus, "APPROVED"); assert.equal(post.published, true);
   response = await request("/gestao-editorial", { headers: { Cookie: session } }); assert.match(await response.text(), /Nenhum artigo aguardando revisão/);
+  await cdp("Page.navigate", { url: `${base}/gestao-editorial/entrar` });
+  await waitFor(() => evaluate("!!document.querySelector('input[name=email]')"), "entrada administrativa");
+  await fill("input[name=email]", "admin@example.test"); await fill("input[name=password]", "ADMIN"); await click("Entrar");
+  await waitFor(() => evaluate("location.pathname === '/gestao-editorial'"), "entrada administrativa no navegador");
+  await cdp("Emulation.setDeviceMetricsOverride", { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
+  await cdp("Page.navigate", { url: `${base}/gestao-editorial/categorias` });
+  await waitFor(() => has("Categoria sintética"), "categorias administrativas");
+  assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, "categorias sem rolagem horizontal");
+  await evaluate("document.querySelector('#new-name').focus()");
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  assert.equal(await evaluate("document.activeElement?.id"), "new-description");
+  await click("Desativar categoria"); await waitFor(() => has("Desativar categoria?"), "confirmação de categoria").catch(async error => { throw new Error(`${error.message}: ${await evaluate("document.body.innerText")}`); });
+  assert.equal(await has("Categoria sintética"), true);
+  await evaluate("Array.from(document.querySelectorAll('a')).find(a => a.textContent.trim() === 'Cancelar').click()");
+  await waitFor(() => has("Categorias"), "cancelamento da categoria");
+  await fill("#new-name", "Nova categoria"); await fill("#new-description", "Resumo sintético"); await click("Criar categoria");
+  await waitFor(() => has("Nova categoria"), "criação de categoria"); assert.equal(category.name, "Nova categoria");
+  await fill(`input[id='name-${postId}']`, "Categoria editada"); await click("Salvar categoria");
+  await waitFor(() => has("Categoria editada"), "edição de categoria"); assert.equal(category.name, "Categoria editada");
+  await click("Desativar categoria"); await waitFor(() => has("Desativar categoria?"), "confirmação de categoria editada"); await click("Confirmar desativação");
+  await waitFor(() => has("Nenhuma categoria nesta página."), "categoria desativada"); assert.equal(category, null);
+  await cdp("Page.navigate", { url: `${base}/gestao-editorial/denuncias` });
+  await waitFor(() => has("Motivo sintético"), "fila de denúncias");
+  assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, "denúncias sem rolagem horizontal");
+  await fill("textarea[name=note]", "Análise sintética");
+  await evaluate("(() => { const select = document.querySelector('select[name=decision]'); select.value = 'RESOLVED'; select.dispatchEvent(new Event('change', { bubbles: true })); })()");
+  await click("Registrar decisão"); await waitFor(() => has("Nenhuma denúncia nesta página."), "decisão registrada");
+  assert.deepEqual(reportDecision, { status: "RESOLVED", note: "Análise sintética" });
+  await cdp("Emulation.clearDeviceMetricsOverride");
   await cdp("Page.navigate", { url: `${base}/studio` });
   await waitFor(() => has("Título sintético"), "listagem do autor");
   await click("Desativar"); await waitFor(() => has("Desativar artigo?"), "confirmação de desativação"); await click("Cancelar"); assert.equal(post.isActive, true);

@@ -14,6 +14,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - [BACKLOG.md](BACKLOG.md) é a fonte local de tarefas e status. Consulte a sprint relevante e atualize tarefas, evidências, pendências e bloqueios. Não declare uma sprint concluída sem seus critérios de aceite.
 - Consulte `C:/Users/otavv/Downloads/Arquitetura_Frontend_Blog.md` e confirme propostas no backend `C:/Users/otavv/Documents/Backend-Blog`. O planejamento usou o commit `f89622e`; não suponha que contratos propostos existam.
 - Trabalhe na sprint solicitada e limite mudanças ao necessário. Alterações no backend seguem também o [AGENTS.md do backend](../Backend-Blog/AGENTS.md). Não exponha segredos nem dados reais em exemplos, testes ou logs.
+- O usuário definiu o projeto Docker existente `backend-blog` e seu banco principal como ambiente de testes. Use essa API e esse banco para integrações, com contas e conteúdo identificados como sintéticos; preserve dados existentes, volumes e migrations. Não exija uma cópia isolada como pré-requisito. Verifique efeitos externos de SMTP e entregas antes de executar fluxos que enviem mensagens.
 
 ## Arquitetura e segurança
 - Use Next.js App Router, React e TypeScript, com renderização no servidor para leitura pública e URL canônica `/posts/[slug]`. Integre com os contratos reais do NestJS em `/api/v1`; valide DTOs, respostas, erros e paginação.

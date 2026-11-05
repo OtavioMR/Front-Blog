@@ -13,13 +13,14 @@ import {
 } from "./data";
 import styles from "./profile.module.css";
 import Follow from "./follow";
+import backStyles from "@/app/_components/back-button.module.css";
 
 export async function generateMetadata({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string; aba?: string }>;
+  searchParams: Promise<{ page?: string; aba?: string; origem?: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
   const author = await getAuthor(id);
@@ -40,7 +41,7 @@ export default async function AuthorPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string; aba?: string }>;
+  searchParams: Promise<{ page?: string; aba?: string; origem?: string }>;
 }) {
   const { id } = await params;
   const author = await getAuthor(id);
@@ -49,6 +50,8 @@ export default async function AuthorPage({
   const query = await searchParams;
   const page = pageNumber(query?.page);
   const activeTab = query?.aba === "sobre" ? "sobre" : "artigos";
+  const fromAccount = query?.origem === "conta";
+  const originQuery = fromAccount ? "&origem=conta" : "";
 
   const articles = await getAuthorArticles(id, author.name, page, 6);
 
@@ -61,6 +64,9 @@ export default async function AuthorPage({
 
   return (
     <main className={styles.page}>
+      <Link href={fromAccount ? "/conta" : "/"} data-back-button="true" className={backStyles.back}>
+        <span aria-hidden="true">←</span><span>{fromAccount ? "Voltar à conta" : "Voltar ao início"}</span>
+      </Link>
       <article className={styles.profile}>
         <div className={styles.portrait}>
           {photo ? (
@@ -93,36 +99,30 @@ export default async function AuthorPage({
       </article>
 
       <section className={styles.tabsContainer} id="artigos">
-        <ul className={styles.tabs} role="tablist" aria-label="Seções do autor">
-          <li className={styles.tabItem} role="presentation">
+        <nav aria-label="Seções do autor"><ul className={styles.tabs}>
+          <li className={styles.tabItem}>
             <Link
-              role="tab"
-              id="tab-artigos"
-              aria-selected={activeTab === "artigos"}
-              aria-controls="painel-artigos"
+              aria-current={activeTab === "artigos" ? "page" : undefined}
               className={`${styles.tab} ${activeTab === "artigos" ? styles.tabActive : ""}`}
-              href={`/autores/${encodeURIComponent(author.id)}?aba=artigos#artigos`}
+              href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
             >
               Artigos publicados
               <span className={styles.tabBadge}>{totalArticles}</span>
             </Link>
           </li>
-          <li className={styles.tabItem} role="presentation">
+          <li className={styles.tabItem}>
             <Link
-              role="tab"
-              id="tab-sobre"
-              aria-selected={activeTab === "sobre"}
-              aria-controls="painel-sobre"
+              aria-current={activeTab === "sobre" ? "page" : undefined}
               className={`${styles.tab} ${activeTab === "sobre" ? styles.tabActive : ""}`}
-              href={`/autores/${encodeURIComponent(author.id)}?aba=sobre#sobre`}
+              href={`/autores/${encodeURIComponent(author.id)}?aba=sobre${originQuery}#sobre`}
             >
               Sobre o autor
             </Link>
           </li>
-        </ul>
+        </ul></nav>
 
         {activeTab === "artigos" ? (
-          <div role="tabpanel" id="painel-artigos" aria-labelledby="tab-artigos">
+          <div id="painel-artigos">
             {articles.data.length === 0 ? (
               <div className={styles.emptyState}>
                 <p>
@@ -133,7 +133,7 @@ export default async function AuthorPage({
                 {page > 1 ? (
                   <Link
                     className={styles.emptyAction}
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos#artigos`}
+                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
                   >
                     Voltar à primeira página
                   </Link>
@@ -193,7 +193,7 @@ export default async function AuthorPage({
               <nav className={styles.pagination} aria-label="Paginação dos artigos do autor">
                 {articles.meta.hasPreviousPage && (
                   <Link
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page - 1}#artigos`}
+                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page - 1}${originQuery}#artigos`}
                   >
                     ← Anterior
                   </Link>
@@ -204,7 +204,7 @@ export default async function AuthorPage({
                 </span>
                 {articles.meta.hasNextPage && (
                   <Link
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page + 1}#artigos`}
+                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page + 1}${originQuery}#artigos`}
                   >
                     Próxima →
                   </Link>
@@ -213,7 +213,7 @@ export default async function AuthorPage({
             )}
           </div>
         ) : (
-          <div role="tabpanel" id="painel-sobre" aria-labelledby="tab-sobre">
+          <div id="painel-sobre">
             <div className={styles.aboutPanel} id="sobre">
               <h2>Sobre {author.name}</h2>
               {author.bio ? (
@@ -237,7 +237,7 @@ export default async function AuthorPage({
               )}
               <Link
                 className={styles.viewArticlesBtn}
-                href={`/autores/${encodeURIComponent(author.id)}?aba=artigos#artigos`}
+                href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
               >
                 Ver artigos deste autor ({totalArticles}) →
               </Link>

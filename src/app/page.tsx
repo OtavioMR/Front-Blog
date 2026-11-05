@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
 import styles from "./home.module.css";
+import { NewsletterForm } from "./newsletter-form";
 
 type ArticleSummary = {
   id: string;
@@ -175,6 +176,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
           </nav>
         )}
       </section>
+      <NewsletterForm />
       <footer className="footer"><span>entrelinhas.</span><span>UM BLOG PARA LER E SENTIR.</span></footer>
     </main>
   );

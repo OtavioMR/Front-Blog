@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import BackButton from "@/app/_components/back-button";
+import AccountBack from "@/app/conta/account-back";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { emailPayload, requestEmailChange } from "./contracts";
 import styles from "../senha/password.module.css";
@@ -58,7 +58,7 @@ export default function EmailForm() {
   }
 
   return <main className={styles.page}><section className={styles.content}>
-    <BackButton fallback="/conta" /><p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar e-mail.</h1>
+    <AccountBack /><p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar e-mail.</h1>
     {status === "loading" && <p role="status">Verificando sua sessão…</p>}
     {status === "signed-out" && <><p>Entre novamente para alterar seu e-mail.</p><Link className={styles.link} href="/entrar">Entrar</Link></>}
     {status === "error" && <><p role="alert">Não foi possível verificar sua conta.</p><button type="button" onClick={() => void load()}>Tentar novamente</button></>}

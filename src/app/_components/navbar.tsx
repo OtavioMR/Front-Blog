@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import SessionNav from "./session-nav";
-import ThemeControl from "./theme-control";
 import styles from "./navbar.module.css";
 
 const SCROLL_THRESHOLD_DOWN = 20;
@@ -106,7 +105,6 @@ function NavbarForRoute() {
           <Link href="/sobre">Sobre</Link>
           <Link href="/#artigos">Artigos</Link>
           <SessionNav />
-          <ThemeControl />
         </nav>
       </div>
     </header>

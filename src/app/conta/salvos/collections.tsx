@@ -7,41 +7,42 @@ import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@
 import { parseCollection, parseCollections, parseCollectionPosts, type Collection, type CollectionPost } from "./collections-data";
 import styles from "./collections.module.css";
 
-export default function Collections({ saved }: { saved: { id: string; title: string }[] }) {
+export default function Collections({ saved, expectedOwner }: { saved: { id: string; title: string }[]; expectedOwner: string }) {
   const [owner, setOwner] = useState(""); const [collections, setCollections] = useState<Collection[]>([]); const [selected, setSelected] = useState("");
   const [posts, setPosts] = useState<CollectionPost[]>([]); const [page, setPage] = useState(1); const [previous, setPrevious] = useState(false); const [next, setNext] = useState(false);
   const [name, setName] = useState(""); const [postId, setPostId] = useState(""); const [busy, setBusy] = useState(false); const [locked, setLocked] = useState(false); const [message, setMessage] = useState("");
-  const [confirmation, setConfirmation] = useState<{ owner: string; collection: string; post?: string } | null>(null); const revision = useRef(0);
+  const [confirmation, setConfirmation] = useState<{ owner: string; collection: string; post?: string } | null>(null); const revision = useRef(0); const running = useRef(false);
   useEffect(() => {
     let active = true; const counter = revision;
-    async function load() { const current = ++counter.current; setOwner(""); setCollections([]); setSelected(""); setPosts([]); setConfirmation(null); setName(""); setPostId(""); setBusy(false); setLocked(false); setMessage("");
-      try { const profile = await getOwnProfile(); if (!profile || !active || current !== counter.current) return; const response = await authenticatedFetchForSubject(profile.id, "/api/v1/collections"); if (!response.ok) throw new Error(); const result = parseCollections(await response.json()); if (active && current === counter.current) { setOwner(profile.id); setCollections(result); } }
+    async function load() { const current = ++counter.current; running.current = false; setOwner(""); setCollections([]); setSelected(""); setPosts([]); setConfirmation(null); setName(""); setPostId(""); setBusy(false); setLocked(false); setMessage("");
+      try { const profile = await getOwnProfile(); if (!profile || !active || current !== counter.current) return; if (profile.id !== expectedOwner) throw new Error(); const response = await authenticatedFetchForSubject(expectedOwner, "/api/v1/collections"); if (!response.ok) throw new Error(); const result = parseCollections(await response.json()); if (active && current === counter.current) { setOwner(expectedOwner); setCollections(result); } }
       catch { if (active && current === counter.current) setMessage("Não foi possível carregar suas coleções."); }
     }
     const unsubscribe = subscribeSession(() => { void load(); }); void load(); return () => { active = false; counter.current++; unsubscribe(); };
-  }, []);
+  }, [expectedOwner]);
   async function loadPosts(collection: string, target: number) {
-    const current = ++revision.current; setBusy(true); setPosts([]); setMessage("");
+    if (running.current) return;
+    running.current = true; const current = ++revision.current; setBusy(true); setPosts([]); setMessage("");
     try { const response = await authenticatedFetchForSubject(owner, `/api/v1/collections/${collection}/posts?page=${target}&limit=10`); if (!response.ok) throw new Error(); const result = parseCollectionPosts(await response.json(), target); if (current === revision.current) { setSelected(collection); setPage(target); setPosts(result.items); setPrevious(result.previous); setNext(result.next); } }
     catch { if (current === revision.current) { setSelected(""); setMessage("Não foi possível carregar os artigos da coleção."); } }
-    finally { if (current === revision.current) setBusy(false); }
+    finally { if (current === revision.current) { running.current = false; setBusy(false); } }
   }
   async function mutate(path: string, method: "POST" | "PATCH" | "PUT" | "DELETE", body?: { name: string }, expectedId?: string) {
-    if (!owner || busy || locked) return false;
-    const current = ++revision.current; setBusy(true); setMessage("");
+    if (!owner || busy || locked || running.current) return false;
+    running.current = true; const current = ++revision.current; setBusy(true); setMessage("");
     try {
       const response = await authenticatedFetchForSubject(owner, path, { method, ...(body && { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }) });
       if (current !== revision.current) return false;
       if (response.status === 409) { setLocked(true); setMessage("O nome pode estar em uso ou a sessão pode ter mudado. Recarregue antes de continuar."); return false; }
       if ([400, 401, 403, 404, 429].includes(response.status)) { setMessage("Não foi possível concluir. Confira sua sessão e os dados informados."); return false; }
       if ((method === "POST" && response.status === 201) || (method === "PATCH" && response.status === 200)) {
-        const item = parseCollection(await response.json()); if (expectedId && item.id !== expectedId) throw new Error();
+        const item = parseCollection(await response.json()); if (!body || item.name !== body.name || (expectedId && item.id !== expectedId)) throw new Error();
         if (current !== revision.current) return false;
         setCollections(old => method === "POST" ? [item, ...old] : old.map(x => x.id === item.id ? item : x));
       } else if (response.status !== 204 || !["PUT", "DELETE"].includes(method)) throw new Error();
       return true;
     } catch { if (current === revision.current) { setLocked(true); setMessage("Não foi possível confirmar o resultado. Recarregue a página e confira suas coleções antes de tentar novamente."); } return false; }
-    finally { if (current === revision.current) setBusy(false); }
+    finally { if (current === revision.current) { running.current = false; setBusy(false); } }
   }
   async function saveName(event: FormEvent) { event.preventDefault(); const trimmed = name.trim(); if (!trimmed || trimmed.length > 100) { setMessage("Informe um nome de até 100 caracteres."); return; } const ok = await mutate(selected ? `/api/v1/collections/${selected}` : "/api/v1/collections", selected ? "PATCH" : "POST", { name: trimmed }, selected || undefined); if (ok) { setName(""); setMessage(selected ? "Coleção renomeada." : "Coleção criada."); } }
   async function confirmDelete() { const target = confirmation; setConfirmation(null); if (!target || target.owner !== owner || target.collection !== selected) { setMessage("A conta ou a coleção mudou. Verifique antes de continuar."); return; } const ok = await mutate(`/api/v1/collections/${target.collection}${target.post ? `/posts/${target.post}` : ""}`, "DELETE"); if (ok) { if (target.post) setPosts(old => old.filter(x => x.id !== target.post)); else { setCollections(old => old.filter(x => x.id !== target.collection)); setSelected(""); setPosts([]); } setMessage(target.post ? "Artigo removido da coleção; ele continua salvo." : "Coleção excluída; seus artigos continuam salvos."); } }

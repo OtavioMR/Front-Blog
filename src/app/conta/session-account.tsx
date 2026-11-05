@@ -53,7 +53,7 @@ export default function Account() {
           <ul className={account.links}>
             {profile.role === "READER" && <li><Link href="/studio"><strong>Quero ser autor</strong><span>Aceite as regras de publicação e comece a escrever</span></Link></li>}
             {canWrite && <li><Link href="/studio"><strong>Studio de escrita</strong><span>Crie e edite suas publicações</span></Link></li>}
-            {canWrite && <li><Link href={`/autores/${encodeURIComponent(profile.id)}`}><strong>Minhas publicações</strong><span>Veja seu perfil público de autor</span></Link></li>}
+            {canWrite && <li><Link href={`/autores/${encodeURIComponent(profile.id)}?origem=conta`}><strong>Minhas publicações</strong><span>Veja seu perfil público de autor</span></Link></li>}
           </ul></section>}
         <section className={account.panel} aria-labelledby="security-title"><h2 id="security-title">Segurança</h2><p className={account.panelIntro}>Gerencie sua senha, suas sessões e a verificação em duas etapas.</p>
           <ul className={account.links}>

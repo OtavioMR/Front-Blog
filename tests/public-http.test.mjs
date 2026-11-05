@@ -22,6 +22,9 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     response.setHeader("Content-Type", "application/json");
     const meta = { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
     const category = { id: "c1", slug: "cultura", name: "Cultura", description: "Boas ideias", isActive: true };
+    const tag = { id: "t1", slug: "ideias", name: "Ideias" };
+    if (url.pathname === "/api/v1/tags") return response.end(JSON.stringify({ data: [tag], meta }));
+    if (url.pathname === "/api/v1/tags/ideias") return response.end(JSON.stringify(tag));
     if (url.pathname === `/api/v1/authors/${article.author.id}`) return response.end(JSON.stringify({ id: article.author.id, name: article.author.name, profilePhoto: null, bio: "Biografia de teste", websiteUrl: null, socialUrl: null, publicationCount: 1 }));
     if (url.pathname === "/api/v1/categories") {
       if (categoriesDown) { response.statusCode = 503; return response.end("{}"); }
@@ -106,6 +109,14 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.match(await unavailable.text(), /name="robots" content="noindex/);
   assert.equal((await fetch(`${base}/?search=um&search=dois`)).status, 200);
   const categoriesHtml = await (await fetch(`${base}/categorias`)).text();
+  assert.match(categoriesHtml, /href="\/tags"/);
+  const tagsHtml = await (await fetch(`${base}/tags`)).text();
+  assert.match(tagsHtml, /href="\/tags\/ideias"/);
+  const tagPage = await fetch(`${base}/tags/ideias`);
+  assert.equal(tagPage.status, 200);
+  assert.match(await tagPage.text(), /Uma história de teste/);
+  assert.equal(lastPostQuery.get("tagSlug"), "ideias");
+  assert.equal((await fetch(`${base}/tags/inexistente`)).status, 404);
   assert.match(categoriesHtml, /<title>Categorias \| Entrelinhas<\/title>/);
   assert.match(categoriesHtml, /aria-label="Explorar categoria: Cultura"/);
   const categoryHtml = await (await fetch(`${base}/categorias/cultura`)).text();
@@ -117,10 +128,17 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.match(authorHtml, /<title>Autora de teste \| Entrelinhas<\/title>/);
   assert.match(authorHtml, /Biografia de teste/);
   assert.match(authorHtml, /Artigos publicados/);
+  assert.match(authorHtml, /aria-current="page"[^>]*href="[^"]*aba=artigos/);
+  assert.doesNotMatch(authorHtml, /role="tablist"/);
+  assert.match(authorHtml, /<a(?=[^>]*href="\/")(?=[^>]*data-back-button="true")[^>]*>/);
   assert.match(authorHtml, /Uma história de teste/);
   assert.match(authorHtml, /aria-label="Ler artigo: Uma história de teste"/);
   const authorAboutHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=sobre`)).text();
   assert.match(authorAboutHtml, /Sobre .*Autora de teste/);
+  assert.match(authorAboutHtml, /aria-current="page"[^>]*href="[^"]*aba=sobre/);
+  const accountAuthorHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=sobre&origem=conta`)).text();
+  assert.match(accountAuthorHtml, /<a(?=[^>]*href="\/conta")(?=[^>]*data-back-button="true")[^>]*>/);
+  assert.match(accountAuthorHtml, /aba=artigos&amp;origem=conta/);
   assert.equal((await fetch(`${base}/autores/invalido`)).status, 404);
   const sitemap = await fetch(`${base}/sitemap.xml`);
   assert.equal(sitemap.status, 200);

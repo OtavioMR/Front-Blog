@@ -1,0 +1,60 @@
+import assert from "node:assert/strict";
+import { randomBytes, randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { resolve } from "node:path";
+import { test } from "node:test";
+
+// Explicit opt-in: writes one synthetic account to the existing development database.
+// No registration email or publication is generated. The synthetic account is deactivated.
+test("sessão e coleção com API de desenvolvimento e conta sintética", { skip: process.env.BLOG_DEV_SESSION_E2E !== "1", timeout: 30000 }, async t => {
+  const requireBackend = createRequire(resolve("../Backend-Blog/package.json"));
+  const bcrypt = requireBackend("bcrypt");
+  const id = randomUUID(), email = `fixture-${randomUUID()}@example.test`;
+  const password = `${randomBytes(24).toString("base64url")}aA1!`;
+  const hash = await bcrypt.hash(password, 12);
+  assert.match(hash, /^\$2[aby]\$12\$[./A-Za-z0-9]{53}$/);
+  const sql = `INSERT INTO users (id, name, email, password_hash, email_verified) VALUES ('${id}', 'Conta sintetica de teste', '${email}', '${hash}', true)`;
+  execFileSync("docker", ["exec", "blog_postgres", "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "blog_db", "-c", sql], { stdio: "ignore" });
+  let deactivated = false;
+  t.after(() => {
+    if (!deactivated) execFileSync("docker", ["exec", "blog_postgres", "psql", "-v", "ON_ERROR_STOP=1", "-U", "postgres", "-d", "blog_db", "-c", `UPDATE users SET is_active = false, deleted_at = now(), auth_version = auth_version + 1 WHERE id = '${id}' AND email = '${email}'`], { stdio: "ignore" });
+  });
+  const base = "http://127.0.0.1:3000/api/v1";
+  const request = (path, method = "GET", token, body) => fetch(base + path, { method, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { "Content-Type": "application/json" } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(10000) });
+  const login = async (secret = password) => { const r = await request("/auth/login", "POST", undefined, { email, password: secret }); assert.equal(r.status, 200); const data = await r.json(); assert.equal(typeof data.access_token, "string"); return data.access_token; };
+  const token = await login();
+  let response = await request(`/users/${id}`, "GET", token);
+  assert.equal(response.status, 200); assert.equal((await response.json()).id, id);
+  response = await request(`/users/${id}`, "PATCH", token, { name: "Perfil sintetico atualizado", bio: "Biografia de teste" });
+  assert.equal(response.status, 200);
+  response = await request(`/users/${id}`, "GET", token);
+  assert.equal(response.status, 200); const profile = await response.json();
+  assert.equal(profile.name, "Perfil sintetico atualizado"); assert.equal(profile.bio, "Biografia de teste");
+  const otherToken = await login();
+  response = await request("/auth/sessions", "GET", token);
+  assert.equal(response.status, 200); const sessions = await response.json();
+  assert.equal(sessions.length, 2);
+  const otherSession = sessions.find(session => !session.current);
+  assert.ok(otherSession); assert.equal(sessions.filter(session => session.current).length, 1);
+  assert.equal((await request(`/auth/sessions/${otherSession.id}`, "DELETE", token)).status, 204);
+  assert.equal((await request(`/users/${id}`, "GET", otherToken)).status, 401);
+  assert.equal((await request(`/users/${id}`, "GET", token)).status, 200);
+  assert.equal((await request("/reports", "GET", token)).status, 403);
+  response = await request("/collections", "POST", token, { name: "Colecao sintetica" });
+  assert.equal(response.status, 201); const collection = await response.json(); assert.match(collection.id, /^[0-9a-f-]{36}$/i); assert.equal(collection.name, "Colecao sintetica");
+  response = await request(`/collections/${collection.id}`, "PATCH", token, { name: "Colecao renomeada" });
+  assert.equal(response.status, 200); assert.equal((await response.json()).name, "Colecao renomeada");
+  assert.equal((await request(`/collections/${collection.id}`, "DELETE", token)).status, 204);
+  const newPassword = `${randomBytes(24).toString("base64url")}aA1!`;
+  assert.equal((await request(`/users/${id}`, "PATCH", token, { currentPassword: password, password: newPassword })).status, 200);
+  assert.equal((await request(`/users/${id}`, "GET", token)).status, 401);
+  assert.equal((await request("/auth/login", "POST", undefined, { email, password })).status, 401);
+  const changedToken = await login(newPassword);
+  assert.equal((await request("/auth/logout", "POST", changedToken)).status, 200);
+  assert.equal((await request(`/users/${id}`, "GET", changedToken)).status, 401);
+  const secondToken = await login(newPassword);
+  assert.equal((await request(`/users/${id}`, "DELETE", secondToken)).status, 204);
+  deactivated = true;
+  assert.equal((await request(`/users/${id}`, "GET", secondToken)).status, 401);
+});

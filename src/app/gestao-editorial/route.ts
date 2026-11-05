@@ -22,7 +22,7 @@ export async function GET() {
       const actions = ["APPROVED", "REJECTED"].map(decision => `<form method="post" class="inline"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="id" value="${item.id}"><input type="hidden" name="decision" value="${decision}"><button>${decision === "APPROVED" ? "Aprovar e publicar" : "Rejeitar"}</button></form>`).join("");
       return `<article><h2>${escapeHtml(item.title)}</h2>${content}${actions}</article>`;
     }).join("");
-    return page("Revisão editorial", `<p>Os primeiros artigos aguardam decisão.</p>${articles || "<p>Nenhum artigo aguardando revisão.</p>"}<form method="post"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="action" value="logout"><button>Sair</button></form>`);
+    return page("Revisão editorial", `<p>Os primeiros artigos aguardam decisão.</p><p><a href="/gestao-editorial/denuncias">Denúncias pendentes</a> · <a href="/gestao-editorial/categorias">Categorias</a> · <a href="/gestao-editorial/usuarios">Usuários ativos</a> · <a href="/gestao-editorial/indicadores">Indicadores</a></p>${articles || "<p>Nenhum artigo aguardando revisão.</p>"}<form method="post"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="action" value="logout"><button>Sair</button></form>`);
   } catch { return page("Serviço indisponível", "<p>Não foi possível carregar a revisão agora.</p>", 503); }
 }
 export async function POST(request: Request) {
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   if (!session) return denied();
   const form = await formBody(request);
   if (!form || !sameSecret(form.get("csrf") ?? undefined, session.csrf)) return page("Acesso negado", "<p>Solicitação inválida.</p>", 403);
+  if (["csrf", "action", "id", "decision"].some(key => form.getAll(key).length > 1)) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);
   if (form.get("action") === "logout") {
     deleteSession(id); jar.set(cookieName, "", { ...options, maxAge: 0 });
     try { const result = await upstream("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${session.token}` } }); if (!result.ok) throw new Error("uncertain"); }
@@ -43,8 +44,13 @@ export async function POST(request: Request) {
     const response = await upstream(`/post-reviews/${postId}/decision`, { method: "POST", headers: { Authorization: `Bearer ${session.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ decision }) });
     if (response.status === 401) return denied();
     if (response.status === 403) return page("Acesso negado", "<p>Esta conta não possui permissão.</p>", 403);
+    if (response.status === 400) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);
+    if (response.status === 404) return page("Artigo indisponível", "<p>O artigo não foi encontrado. Atualize a fila.</p>", 404);
     if (response.status === 409) return page("Revisão alterada", "<p>O artigo já foi alterado. Atualize a fila.</p>", 409);
-    if (!response.ok) throw new Error("unavailable");
+    if (response.status === 429) return page("Muitas tentativas", "<p>Aguarde antes de tentar novamente.</p>", 429);
+    if (response.status !== 201) throw new Error("uncertain");
+    const result: unknown = await response.json();
+    if (!result || typeof result !== "object" || !("status" in result) || result.status !== decision) throw new Error("uncertain");
     return new Response(null, { status: 303, headers: { Location: "/gestao-editorial", "Cache-Control": "no-store, private" } });
   } catch { return page("Serviço indisponível", "<p>Não foi possível confirmar a decisão. Confira a fila antes de tentar novamente.</p>", 503); }
 }

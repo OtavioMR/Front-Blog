@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseProfile, profilePayload, type ProfileFields } from "./contracts";
-import BackButton from "@/app/_components/back-button";
+import AccountBack from "@/app/conta/account-back";
 import styles from "./profile.module.css";
 
 type Status = "loading" | "ready" | "signed-out" | "error";
@@ -64,7 +64,7 @@ export default function ProfileForm() {
   function change(key: keyof ProfileFields, value: string) { setFields(previous => ({ ...previous, [key]: value })); }
 
   return <main className={styles.page}><section className={styles.content}>
-    <BackButton fallback="/conta" /><p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Seu perfil.</h1>
+    <AccountBack /><p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Seu perfil.</h1>
     {status === "loading" && <p role="status">Carregando perfil…</p>}
     {status === "signed-out" && <><p>Entre novamente para editar seu perfil.</p><Link className={styles.link} href="/entrar">Entrar</Link></>}
     {status === "error" && <><p role="alert">Não foi possível carregar seu perfil.</p><button onClick={() => void load()}>Tentar novamente</button></>}

@@ -1,0 +1,11 @@
+.newsletter { margin: 3rem 0; padding: 2rem; border: 1px solid var(--border, #aaa); border-radius: 1rem; display: flex; gap: 2rem; justify-content: space-between; flex-wrap: wrap; }
+.newsletter h2 { margin: 0 0 .5rem; }
+.newsletter p { margin: 0; }
+.form { flex: 1 1 20rem; max-width: 32rem; }
+.label { display: block; margin-bottom: .5rem; font-weight: 600; }
+.controls { display: flex; gap: .5rem; flex-wrap: wrap; }
+.input { flex: 1 1 12rem; min-width: 0; padding: .75rem; border: 1px solid currentColor; border-radius: .4rem; background: transparent; color: inherit; }
+.submit { padding: .75rem 1rem; border: 1px solid currentColor; border-radius: .4rem; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.submit:disabled { opacity: .6; cursor: wait; }
+.input:focus-visible, .submit:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.form .message { margin-top: .5rem; min-height: 1.5em; }

@@ -82,6 +82,19 @@ test("account deactivation cancellation switch and success", { timeout: 120000 }
     await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Desativar minha conta')"), "settings");
   };
   await loginFirst("READER");
+  await evaluate("document.querySelector('a[href=\"/conta/perfil\"]').click()");
+  await waitFor(() => evaluate("location.pathname === '/conta/perfil' && !!document.querySelector('[data-back-button]')"), "perfil a partir das configurações");
+  await evaluate("document.querySelector('[data-back-button]').click()");
+  await waitFor(() => evaluate("location.pathname === '/conta'"), "perfil retorna à conta sem voltar às configurações");
+  for (const path of ["configuracoes", "perfil", "foto", "email", "senha", "sessoes", "salvos", "feed", "notificacoes"]) {
+    await cdp("Page.navigate", { url: `${base}/conta/${path}` });
+    await waitFor(() => evaluate("!!document.querySelector('[data-back-button]')"), `retorno em ${path}`);
+    assert.equal(await evaluate("document.querySelector('[data-back-button]').getAttribute('href')"), "/conta");
+    await evaluate("document.querySelector('[data-back-button]').click()");
+    await waitFor(() => evaluate("location.pathname === '/conta'"), `retorno de ${path} à conta`);
+  }
+  await cdp("Page.navigate", { url: `${base}/conta/configuracoes` });
+  await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Desativar minha conta')"), "configurações após navegação");
   await click("Desativar minha conta"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "dialog");
   await click("Cancelar"); assert.deepEqual(removed, []);
   await click("Desativar minha conta"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "dialog again");

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, invalidateSessionForSubject, subscribeSession } from "@/lib/session-client";
 import { passwordPayload } from "./contracts";
-import BackButton from "@/app/_components/back-button";
+import AccountBack from "@/app/conta/account-back";
 import styles from "./password.module.css";
 
 type Status = "loading" | "ready" | "signed-out" | "error" | "changed" | "uncertain";
@@ -64,7 +64,7 @@ export default function PasswordForm() {
   }
 
   return <main className={styles.page}><section className={styles.content}>
-    <BackButton fallback="/conta" /><p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar senha.</h1>
+    <AccountBack /><p className={styles.eyebrow}>SEGURANÇA DA CONTA</p><h1>Alterar senha.</h1>
     {status === "loading" && <p role="status">Verificando sua sessão…</p>}
     {status === "signed-out" && <><p>Entre novamente para alterar sua senha.</p><Link className={styles.link} href="/entrar">Entrar</Link></>}
     {status === "error" && <><p role="alert">Não foi possível verificar sua conta.</p><button onClick={() => void load()}>Tentar novamente</button></>}

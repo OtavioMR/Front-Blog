@@ -20,16 +20,23 @@ test("collections create rename add remove and delete", { timeout: 120000 }, asy
 
   const id = "4c781e0d-b963-493c-b2df-0a8fa66c0615", postId = "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", collectionId = "d28beb9c-6a69-4c3a-841c-7593a8a63265";
   const token = `test.${Buffer.from(JSON.stringify({ sub: id, role: "READER" })).toString("base64url")}.test`;
-  let collection = null, included = false;
+  const secondId = "a4df1c58-6a03-4bdf-9b42-1f533e213914";
+  const secondToken = `test.${Buffer.from(JSON.stringify({ sub: secondId, role: "READER" })).toString("base64url")}.test`;
+  let collection = null, included = false, wrongName = false, writes = 0;
   const api = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk; const url = new URL(req.url, "http://localhost");
     const respond = (status, data) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
-    if (url.pathname === "/api/v1/auth/login") { res.setHeader("Set-Cookie", "refreshToken=synthetic; HttpOnly; Path=/api/v1/auth; SameSite=Strict"); return respond(201, { access_token: token, token_type: "Bearer", expires_in: 900 }); }
-    if (url.pathname === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token, token_type: "Bearer", expires_in: 900 }) : respond(401, {});
-    if (req.headers.authorization !== `Bearer ${token}`) return respond(401, {});
+    if (url.pathname === "/api/v1/auth/login") { const second = JSON.parse(body).email === "outra@example.test"; res.setHeader("Set-Cookie", `refreshToken=${second ? "second" : "synthetic"}; HttpOnly; Path=/api/v1/auth; SameSite=Strict`); return respond(201, { access_token: second ? secondToken : token, token_type: "Bearer", expires_in: 900 }); }
+    if (url.pathname === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=second") ? respond(200, { access_token: secondToken, token_type: "Bearer", expires_in: 900 }) : req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token, token_type: "Bearer", expires_in: 900 }) : respond(401, {});
+    const second = req.headers.authorization === `Bearer ${secondToken}`;
+    if (!second && req.headers.authorization !== `Bearer ${token}`) return respond(401, {});
+    if (second && url.pathname === `/api/v1/users/${secondId}`) return respond(200, { id: secondId, role: "READER", name: "Outra pessoa", email: "outra@example.test", emailVerified: true, bio: null });
+    if (second && url.pathname === "/api/v1/posts/saved") return respond(200, { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false } });
+    if (second && url.pathname === "/api/v1/collections" && req.method === "GET") return respond(200, []);
+    if (second) return respond(403, {});
     if (url.pathname === `/api/v1/users/${id}`) return respond(200, { id, role: "READER", name: "Pessoa", email: "pessoa@example.test", emailVerified: true, bio: null });
     if (url.pathname === "/api/v1/posts/saved") return respond(200, { data: [{ id: postId, title: "Artigo sintetico", excerpt: "Resumo", published: true, isActive: true, author: { name: "Autor" } }], meta: { page: 1, limit: 10, total: 1, totalPages: 1, hasPreviousPage: false, hasNextPage: false } });
-    if (url.pathname === "/api/v1/collections") { if (req.method === "POST") { collection = { id: collectionId, name: JSON.parse(body).name, createdAt: "2026-01-01T00:00:00Z" }; return respond(201, collection); } return respond(200, collection ? [collection] : []); }
+    if (url.pathname === "/api/v1/collections") { if (req.method === "POST") { writes++; if (writes === 1) await delay(250); collection = { id: collectionId, name: JSON.parse(body).name, createdAt: "2026-01-01T00:00:00Z" }; return respond(201, wrongName ? { ...collection, name: "Nome divergente" } : collection); } return respond(200, collection ? [collection] : []); }
     if (url.pathname === `/api/v1/collections/${collectionId}`) { if (req.method === "PATCH") { collection.name = JSON.parse(body).name; return respond(200, collection); } if (req.method === "DELETE") { collection = null; res.writeHead(204); return res.end(); } }
     if (url.pathname === `/api/v1/collections/${collectionId}/posts`) return respond(200, { data: included ? [{ id: postId, slug: "artigo-sintetico", title: "Artigo sintetico", excerpt: "Resumo" }] : [], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } });
     if (url.pathname === `/api/v1/collections/${collectionId}/posts/${postId}`) { included = req.method === "PUT"; res.writeHead(204); return res.end(); }
@@ -82,7 +89,7 @@ test("collections create rename add remove and delete", { timeout: 120000 }, asy
   await waitFor(() => evaluate("!!document.querySelector('#email') && Object.keys(document.querySelector('#email')).some(k => k.startsWith('__reactProps'))"), "login");
   await fill("#email", "pessoa@example.test"); await fill("#password", "fixture"); await click("Entrar"); await waitFor(() => evaluate("location.pathname === '/conta'"), "login done");
   await cdp("Page.navigate", { url: `${base}/conta/salvos` }); await waitFor(() => evaluate("!!document.querySelector('#collection-name')"), "collections");
-  await fill("#collection-name", "Lista sintetica"); await click("Criar cole\u00e7\u00e3o"); await waitFor(() => has("Cole\u00e7\u00e3o criada."), "create");
+  await fill("#collection-name", "Lista sintetica"); await evaluate("(() => { const form = document.querySelector('#collection-name').form; form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); })()"); await waitFor(() => has("Cole\u00e7\u00e3o criada."), "create"); assert.equal(writes, 1);
   const select = (selector, value) => evaluate(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,${JSON.stringify(value)}); e.dispatchEvent(new Event('change',{bubbles:true})); })()`);
   await select("#collection-select", collectionId); await waitFor(() => has("Artigos da cole\u00e7\u00e3o"), "select");
   await fill("#collection-name", "Lista renomeada"); await click("Renomear"); await waitFor(() => has("Cole\u00e7\u00e3o renomeada."), "rename"); assert.equal(collection.name, "Lista renomeada");
@@ -90,4 +97,25 @@ test("collections create rename add remove and delete", { timeout: 120000 }, asy
   await click("Remover"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "remove confirmation"); await click("Cancelar"); assert.equal(included, true);
   await click("Remover"); await click("Remover artigo"); await waitFor(() => has("Artigo removido"), "remove"); assert.equal(included, false);
   await click("Excluir cole\u00e7\u00e3o"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "delete confirmation"); await evaluate("document.querySelector('dialog button:last-child').click()"); await waitFor(() => has("Cole\u00e7\u00e3o exclu\u00edda"), "delete"); assert.equal(collection, null);
+  await fill("#collection-name", "Lista da primeira conta"); await click("Criar coleção"); await waitFor(() => has("Coleção criada."), "coleção da primeira conta"); assert.equal(collection.name, "Lista da primeira conta");
+  wrongName = true;
+  await fill("#collection-name", "Nome para conferir"); await click("Criar coleção");
+  await waitFor(() => has("Não foi possível confirmar o resultado."), "nome divergente");
+  assert.equal(await evaluate("document.querySelector('#collection-name').value"), "Nome para conferir");
+  assert.equal(await evaluate("document.querySelector('#collection-name').disabled"), true);
+  assert.equal(writes, 3);
+  const secondTarget = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(base + "/entrar")}`, { method: "PUT" })).json();
+  secondSocket = new WebSocket(secondTarget.webSocketDebuggerUrl); await once(secondSocket, "open");
+  let seq2 = 0; const pending2 = new Map();
+  secondSocket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending2.has(data.id)) { const { resolve, reject } = pending2.get(data.id); pending2.delete(data.id); if (data.error) reject(new Error(data.error.message)); else resolve(data.result); } });
+  const cdp2 = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq2; pending2.set(id, { resolve, reject }); secondSocket.send(JSON.stringify({ id, method, params })); });
+  const eval2 = async expression => { const result = await cdp2("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value; };
+  await waitFor(() => eval2("!!document.querySelector('#email') && Object.keys(document.querySelector('#email')).some(k => k.startsWith('__reactProps'))"), "segunda aba hidratada");
+  for (const [selector, value] of [["#email", "outra@example.test"], ["#password", "fixture"]]) await eval2(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)}); e.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+  await eval2("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Entrar').click()");
+  await waitFor(() => eval2("location.pathname === '/conta'"), "troca de conta");
+  await waitFor(() => has("Você ainda não salvou nenhum artigo."), "salvos da segunda conta");
+  await waitFor(() => has("Você ainda não criou coleções."), "coleções da segunda conta");
+  assert.equal(await has("Artigo sintetico"), false);
+  assert.equal(await has("Lista da primeira conta"), false);
 });

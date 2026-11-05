@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseSessions, type DeviceSession } from "./data";
-import BackButton from "@/app/_components/back-button";
+import AccountBack from "@/app/conta/account-back";
 import styles from "./sessions.module.css";
 
 type State = "loading" | "ready" | "signed-out" | "error" | "uncertain";
@@ -70,7 +70,7 @@ export default function Sessions() {
     } finally { setBusy(false); }
   }
 
-  return <main className={styles.page}><section className={styles.content}><BackButton fallback="/conta" /><p className={styles.eyebrow}>SUA CONTA</p><h1>Sessões e dispositivos.</h1><p>Confira as sessões ativas e encerre as que não reconhecer.</p>
+  return <main className={styles.page}><section className={styles.content}><AccountBack /><p className={styles.eyebrow}>SUA CONTA</p><h1>Sessões e dispositivos.</h1><p>Confira as sessões ativas e encerre as que não reconhecer.</p>
     {state === "loading" && <p role="status">Carregando sessões…</p>}
     {state === "signed-out" && <p role="status">Sua sessão terminou. <Link href="/entrar">Entre novamente</Link>.</p>}
     {state === "error" && <><p role="alert">Não foi possível carregar as sessões agora.</p><button onClick={() => setReload(value => value + 1)}>Tentar novamente</button></>}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AccountBack from "@/app/conta/account-back";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseNotifications, type Notifications, type Notice } from "./data";
@@ -55,7 +56,7 @@ export default function NotificationsView() {
     finally { running.current = false; setBusy(false); }
   }
   return <main className={styles.page}>
-    <Link className={styles.link} href="/conta">← Voltar à conta</Link><h1>Notificações.</h1>
+    <AccountBack /><h1>Notificações.</h1>
     {state === "loading" && <p role="status">Carregando notificações…</p>}
     {state === "signed-out" && <p>Entre para ver suas notificações. <Link className={styles.link} href="/entrar">Entrar</Link></p>}
     {state === "error" && <><p role="alert">Não foi possível carregar suas notificações.</p><button className={styles.button} onClick={() => void load(page)}>Tentar novamente</button></>}

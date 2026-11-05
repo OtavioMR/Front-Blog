@@ -14,6 +14,7 @@ import { CommentSession } from "./comment-session";
 import PostViewTracker from "./post-view-tracker";
 import Interactions from "./interactions";
 import EditArticleLink from "./edit-article-link";
+import { PostReport } from "./report-form";
 import Avatar from "@/app/_components/avatar";
 import { getAuthor } from "../../autores/[id]/data";
 import styles from "./post.module.css";
@@ -74,6 +75,7 @@ export default async function PostPage({ params, searchParams }: Props) {
         <div className={styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
         {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
+        <PostReport postId={post.id} />
         {post.author?.name && <aside className={styles.authorBox} aria-labelledby="author-box-title">
           <Avatar name={post.author.name} src={authorProfile?.profilePhoto} size={72} />
           <div>

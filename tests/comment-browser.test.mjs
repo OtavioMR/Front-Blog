@@ -29,6 +29,10 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   const reply = comment(replyId, rootId, { id: otherId, name: "Outra pessoa" }, "Resposta preservada");
   const ownReply = comment("929e3c76-4032-4a33-8543-01c500153333", rootId, { id: authorId, name: "Leitora" }, "Resposta propria");
   let mutations = 0;
+  const likedBy = new Set();
+  let likeWrites = 0, holdLike = false, releaseLike;
+  const reports = [];
+  const newsletterEmails = [];
   const api = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     let body = ""; for await (const chunk of req) body += chunk;
@@ -45,6 +49,17 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
       return role ? respond(200, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     }
     const role = Object.keys(profiles).find(value => req.headers.authorization === `Bearer ${token(value)}`);
+    if (url.pathname === "/api/v1/reports" && req.method === "POST") {
+      if (!role) return respond(401, {});
+      reports.push({ role, ...JSON.parse(body) });
+      if (reports.at(-1).reason === "Denúncia duplicada") return respond(409, {});
+      if (reports.at(-1).reason === "Falha de rede simulada") { req.socket.destroy(); return; }
+      if (reports.at(-1).reason === "Resposta divergente") return respond(201, { id: "8d779824-0a9f-442f-8652-a81600000002", status: "RESOLVED" });
+      return respond(201, { id: "8d779824-0a9f-442f-8652-a81600000002", status: "PENDING" });
+    }
+    if (url.pathname === "/api/v1/posts") return respond(200, { data: [article], meta: { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false } });
+    if (url.pathname === "/api/v1/categories") return respond(200, { data: [] });
+    if (url.pathname === "/api/v1/newsletter/subscribe" && req.method === "POST") { const email = req.headers["content-type"]?.startsWith("application/json") ? JSON.parse(body).email : new URLSearchParams(body).get("email"); newsletterEmails.push(email); return respond(email === "limite@example.test" ? 429 : email === "falha@example.test" ? 500 : 200, { message: "Solicitação recebida" }); }
     if (url.pathname.startsWith("/api/v1/users/")) {
       const profile = role && profiles[role];
       return profile && url.pathname === `/api/v1/users/${profile.id}` ? respond(200, { ...profile, name: role, email: "pessoa@example.test", emailVerified: true, bio: null }) : respond(403, {});
@@ -52,6 +67,15 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
     if (url.pathname === "/api/v1/posts/uma-historia") return respond(200, article);
     if (url.pathname === "/api/v1/posts/uma-historia/related") return respond(200, []);
     if (url.pathname === `/api/v1/posts/${postId}/comments`) return respond(200, { data: [{ ...root, replies: { data: [reply, ownReply], meta: { total: 2 } } }], meta: { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false } });
+    if (url.pathname === `/api/v1/comments/${rootId}/like` && role) {
+      if (req.method === "GET") return respond(200, { liked: likedBy.has(role), likes: likedBy.size });
+      if (req.method === "PUT") { likedBy.add(role); likeWrites++; req.socket.destroy(); return; }
+      if (req.method === "DELETE" && holdLike) {
+        likeWrites++; likedBy.delete(role);
+        await new Promise(resolve => { releaseLike = resolve; });
+        res.statusCode = 204; return res.end();
+      }
+    }
     if (url.pathname.startsWith("/api/v1/comments/") && role) {
       const target = url.pathname.endsWith(rootId) ? root : url.pathname.endsWith(replyId) ? reply : url.pathname.endsWith(ownReply.id) ? ownReply : null;
       if (!target) return respond(404, {});
@@ -105,6 +129,28 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   const has = text => evaluate(`document.body.innerText.includes(${JSON.stringify(text)})`);
   const click = label => evaluate(`Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === ${JSON.stringify(label)}).click()`);
   const fill = (selector, value) => evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(e.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set.call(e, ${JSON.stringify(value)}); e.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await cdp("Emulation.setScriptExecutionDisabled", { value: true });
+  await cdp("Page.navigate", { url: base });
+  const emailNode = await waitFor(async () => { const root = await cdp("DOM.getDocument"); return (await cdp("DOM.querySelector", { nodeId: root.root.nodeId, selector: "#newsletter-email" })).nodeId; }, "newsletter sem JavaScript");
+  await cdp("DOM.focus", { nodeId: emailNode });
+  await cdp("Input.insertText", { text: "sem-script@example.test" });
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await waitFor(() => newsletterEmails.includes("sem-script@example.test"), "envio nativo sem JavaScript");
+  await cdp("Emulation.setScriptExecutionDisabled", { value: false });
+  await cdp("Emulation.setDeviceMetricsOverride", { width: 360, height: 800, deviceScaleFactor: 1, mobile: true });
+  await cdp("Page.navigate", { url: base });
+  await waitFor(() => evaluate("!!document.querySelector('#newsletter-email') && Object.keys(document.querySelector('#newsletter-email')).some(k => k.startsWith('__reactProps'))"), "newsletter hidratada");
+  assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, "sem rolagem horizontal no celular");
+  await evaluate("document.querySelector('#newsletter-email').focus()");
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+  assert.equal(await evaluate("document.activeElement?.textContent.trim()"), "Inscrever-me");
+  await fill("#newsletter-email", "limite@example.test"); await click("Inscrever-me"); await waitFor(() => has("Muitas tentativas."), "limite newsletter");
+  await fill("#newsletter-email", "falha@example.test"); await click("Inscrever-me"); await waitFor(() => has("Não foi possível confirmar o envio."), "falha newsletter");
+  await fill("#newsletter-email", "leitor@example.test"); await click("Inscrever-me"); await waitFor(() => has("Se a inscrição precisar de confirmação"), "solicitação newsletter");
+  assert.equal(await evaluate("document.querySelector('#newsletter-email').value"), "");
+  await cdp("Emulation.clearDeviceMetricsOverride");
   await cdp("Page.navigate", { url: `${base}/posts/uma-historia` });
   await waitFor(() => has("Comentario original"), "comentario publico");
   await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Ver 2 respostas' && Object.keys(x).some(k => k.startsWith('__reactProps')))"), "hydration");
@@ -117,6 +163,34 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   await waitFor(() => evaluate("location.pathname === '/conta'"), "entrada");
   await cdp("Page.navigate", { url: `${base}/posts/uma-historia` });
   await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Editar')"), "permissao de edicao");
+  await waitFor(() => has("Curtir · 0 curtidas"), "estado inicial da curtida");
+  await click("Curtir · 0 curtidas");
+  await waitFor(() => has("Não foi possível confirmar a curtida."), "resultado incerto da curtida");
+  assert.equal(likeWrites, 1);
+  await click("Atualizar curtidas");
+  await waitFor(() => has("Descurtir · 1 curtida"), "reconciliacao da curtida");
+  assert.equal(likeWrites, 1, "reconciliar não deve repetir a escrita");
+  await click("Denunciar artigo"); await fill("[class*='reportReason']", "Motivo para análise do artigo"); await click("Enviar denúncia");
+  await waitFor(() => has("Denúncia enviada para análise."), "denuncia do artigo");
+  assert.deepEqual(reports[0], { role: "READER", target: "POST", targetId: postId, reason: "Motivo para análise do artigo" });
+  await click("Denunciar comentário"); await fill("[class*='reportReason']:not([readonly])", "Motivo para análise do comentário"); await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Enviar denúncia' && !x.disabled).click()");
+  await waitFor(() => reports.length === 2, "denuncia do comentario");
+  assert.deepEqual(reports[1], { role: "READER", target: "COMMENT", targetId: rootId, reason: "Motivo para análise do comentário" });
+  await cdp("Page.reload"); await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Denunciar artigo')"), "denuncia após recarga");
+  await click("Denunciar artigo"); await fill("[class*='reportReason']", "Denúncia duplicada"); await click("Enviar denúncia");
+  await waitFor(() => has("Já pode existir uma denúncia pendente"), "conflito de denuncia");
+  assert.equal(await evaluate("document.querySelector('[class*=reportReason]').value"), "Denúncia duplicada");
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Enviar denúncia').disabled"), true);
+  await cdp("Page.reload"); await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Denunciar artigo')"), "denuncia após conflito");
+  await click("Denunciar artigo"); await fill("[class*='reportReason']", "Falha de rede simulada"); await click("Enviar denúncia");
+  await waitFor(() => has("Não foi possível confirmar o envio."), "resultado incerto");
+  assert.equal(await evaluate("document.querySelector('[class*=reportReason]').value"), "Falha de rede simulada");
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Enviar denúncia').disabled"), true);
+  await cdp("Page.reload"); await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Denunciar artigo')"), "denuncia após resultado incerto");
+  await click("Denunciar artigo"); await fill("[class*='reportReason']", "Resposta divergente"); await click("Enviar denúncia");
+  await waitFor(() => has("Não foi possível confirmar o envio."), "resposta de denúncia divergente");
+  assert.equal(await evaluate("document.querySelector('[class*=reportReason]').value"), "Resposta divergente");
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Enviar denúncia').disabled"), true);
   await click("Ver 2 respostas");
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() === 'Editar').length"), 2);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).filter(x => x.textContent.trim() === 'Desativar').length"), 2);
@@ -178,14 +252,33 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
     await eval2("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Entrar').click()");
     await waitFor(() => eval2("location.pathname === '/conta'"), `troca para ${role}`);
   };
+  await waitFor(() => has("Descurtir · 1 curtida"), "curtida da leitora antes da troca");
+  holdLike = true;
+  await click("Descurtir · 1 curtida");
+  await waitFor(() => Boolean(releaseLike), "mutação de curtida em andamento");
+  const changingAccount = loginSecond("ADMIN");
+  await delay(300);
+  releaseLike();
+  await changingAccount;
+  await waitFor(() => has("Curtir · 0 curtidas"), "curtida da nova conta");
+  assert.equal(likedBy.has("ADMIN"), false);
+  assert.equal(likeWrites, 2, "troca de conta não repete a mutação");
+  await enter("READER");
+  await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Editar')"), "leitora após teste de curtida");
+  await click("Denunciar artigo"); await fill("[class*='reportReason']", "Motivo preservado na troca");
   await click("Editar"); await fill("textarea:not([id])", "Texto preservado na troca");
   const beforeSwitch = mutations;
+  const reportsBeforeSwitch = reports.length;
   await loginSecond("ADMIN");
   await waitFor(() => evaluate("document.querySelector('textarea:not([id])')?.value === 'Texto preservado na troca'"), "texto preservado");
   await click("Salvar");
   await waitFor(() => has("A conta mudou") || has("Entre novamente"), "troca durante edicao");
   assert.equal(root.content, "Comentario original"); assert.equal(mutations, beforeSwitch);
   assert.equal(await evaluate("document.querySelector('textarea:not([id])').value"), "Texto preservado na troca");
+  await click("Enviar denúncia");
+  await waitFor(() => has("A conta mudou") || has("Já pode existir uma denúncia"), "troca durante denuncia");
+  assert.equal(reports.length, reportsBeforeSwitch);
+  assert.equal(await evaluate("document.querySelector('[class*=reportReason]').value"), "Motivo preservado na troca");
   await enter("READER");
   await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Desativar')"), "leitora antes da confirmacao");
   await click("Desativar"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao aberta");

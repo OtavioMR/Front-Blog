@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AccountBack from "@/app/conta/account-back";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { parseFeed, type Feed } from "./data";
@@ -35,7 +36,7 @@ export default function FeedView() {
     return () => { active = false; generation.current++; unsubscribe(); };
   }, [load]);
   return <main className={styles.page}>
-    <Link className={styles.link} href="/conta">← Voltar à conta</Link><h1>Seu feed.</h1><p>Publicações recentes dos autores que você acompanha.</p>
+    <AccountBack /><h1>Seu feed.</h1><p>Publicações recentes dos autores que você acompanha.</p>
     {state === "loading" && <p role="status">Carregando seu feed…</p>}
     {state === "signed-out" && <p>Entre para ver seu feed. <Link className={styles.link} href="/entrar">Entrar</Link></p>}
     {state === "error" && <><p role="alert">Não foi possível carregar seu feed agora.</p><button className={styles.button} onClick={() => void load(page)}>Tentar novamente</button></>}

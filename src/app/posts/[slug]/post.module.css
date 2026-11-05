@@ -28,6 +28,15 @@
 .commentsList, .replies { list-style: none; padding: 0; }
 .commentsList > li { border-top: 1px solid light-dark(#d8ddd4, #50514f); padding: 22px 0; }
 .comment { overflow-wrap: anywhere; }
+.commentHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.commentMenu { position: relative; flex: none; }
+.commentMenuTrigger { min-width: 44px; min-height: 44px; border: 0; border-radius: 50%; background: transparent; color: inherit; font: inherit; font-size: 24px; cursor: pointer; }
+.commentMenuTrigger:hover, .commentMenuTrigger[aria-expanded="true"] { background: light-dark(#edf0e9, #414540); }
+.commentMenuPanel { position: absolute; z-index: 10; right: 0; top: 100%; min-width: 210px; max-width: min(260px, 80vw); padding: 6px; border: 1px solid light-dark(#c9cfc3, #656a64); border-radius: 8px; background: light-dark(#fffefa, #292c29); box-shadow: 0 8px 24px #0003; }
+.commentMenuAction { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.commentMenuAction:hover { background: light-dark(#edf0e9, #414540); }
+.commentMenuAction:disabled { opacity: .55; cursor: not-allowed; }
+.commentMenuTrigger:focus-visible, .commentMenuAction:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
 .comment strong { margin-right: 14px; }
 .comment time, .comment span, .replyNotice { color: light-dark(#526357, #cfd2cf); font-size: 12px; }
 .comment p { white-space: pre-wrap; line-height: 1.65; margin: 10px 0; }
@@ -88,3 +97,14 @@
 .authorBio { margin: 0 0 14px; color: light-dark(#354b3b, #bec5c0); line-height: 1.7; overflow-wrap: anywhere; }
 .authorLink { color: light-dark(#314c39, #bdc6c0); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
 @media (max-width: 520px) { .authorBox { flex-direction: column; padding: 22px; } }
+.reportForm { display: grid; gap: .5rem; max-width: 36rem; margin: 1rem 0; }
+.reportDialog { width: min(36rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1.5rem; border: 1px solid light-dark(#c9cfc3, #656a64); border-radius: .6rem; background: light-dark(#fffefa, #292c29); color: light-dark(#202b24, #f2f4f1); }
+.reportDialog::backdrop { background: #0009; }
+.reportHeading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.reportHeading h2 { margin: 0; font-size: 1.35rem; }
+.reportClose { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font-size: 1.75rem; cursor: pointer; }
+.reportClose:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
+.reportForm label { font-weight: 600; }
+.reportReason { min-height: 6rem; padding: .75rem; border: 1px solid currentColor; border-radius: .4rem; background: transparent; color: inherit; font: inherit; resize: vertical; }
+.reportReason:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.reportForm p:empty { display: none; }

@@ -11,11 +11,27 @@ Verificação local em 04/11/2026. Backend analisado no commit `f89622ec911fbe69
 
 ## Contratos e topologia a verificar
 
+### Alterações locais desde a referência
+
+Em 05/11/2026, o checkout do backend ainda apontava para `f89622e`, mas tinha alterações não commitadas. A comparação do código identificou `authorId` opcional como UUID v4 no filtro de `GET /api/v1/posts` e sua aplicação na consulta; também identificou `firstPostApproved` na resposta de `GET /api/v1/users/:id` somente quando o solicitante é o próprio titular. O Swagger local descreve esse campo como opcional. Essas alterações são do checkout, não prova de que a imagem da API em execução as contenha. A autorização de publicação continua no backend, e a ausência do campo não comprova elegibilidade.
+
+No checkout atual, `npm.cmd test -- src/modules/posts/dto/find-posts-query.dto.spec.ts src/modules/posts/posts.service.spec.ts src/modules/users/users.service.spec.ts` passou (3 arquivos, 35 testes), e `powershell -ExecutionPolicy Bypass -File ./scripts/check-backend-openapi.ps1` passou (2 testes). São testes isolados e uma verificação parcial do documento em memória, não prova HTTP nem comparação completa do OpenAPI. A auditoria integral de contratos de S0.1 continua pendente.
+
 - A API configura prefixo `/api/v1`; os arquivos são servidos fora desse prefixo em `/uploads/profile-photos/` e `/uploads/post-covers/`. A configuração HTTP aceita credenciais CORS para a origem de `FRONTEND_URL` e define `trust proxy` como 1.
 - Login e refresh retornam access token no corpo e cookie `refreshToken` HttpOnly, SameSite Strict, com caminho `/api/v1/auth`; `Secure` depende de `NODE_ENV=production`. O logout exige Bearer e limpa o cookie. O proxy precisa preservar o caminho, os cabeçalhos `Set-Cookie` e o corpo multipart. HTTPS e cadeia de IPs devem ser comprovados na topologia final.
 - A proposta local usa uma origem pública para Next e `/api/v1`, API em porta distinta e encaminhamento também de `/uploads`. A porta 3000 já estava ocupada na inspeção: identificar o processo antes de reutilizá-la e escolher outra porta livre para a API. O código do backend usa 3000 por padrão, portanto configurar `PORT` explicitamente.
 - Swagger é disponibilizado em `/api/docs` fora de produção. O backend tem testes que geram o documento OpenAPI em memória, mas não foi identificado script no `package.json` para exportá-lo e comparar artefatos em CI. Definir geração reproduzível e verificar schemas com respostas reais antes de gerar tipos definitivos; não presumir que exemplos Swagger comprovem comportamento HTTP.
 - O limite de upload e a preservação de cookies, cabeçalhos e IP precisam de prova na infraestrutura escolhida. A entrega pública de capas de rascunhos também exige decisão antes da publicação do Studio.
+
+### Limites da cadeia de proxy
+
+Em 05/11/2026, a configuração do frontend encaminhava `/api/v1` e `/uploads` por rewrites, e o Proxy do Next verificava a origem das mutações de `/api/v1`. A configuração do Nest mantinha `trust proxy = 1`. O teste isolado `npm.cmd test -- src/common/http-security.spec.ts` passou (4 testes) e demonstra que o rate limit distingue valores de `X-Forwarded-For` apresentados ao Nest; ele não demonstra que esses valores sejam confiáveis na implantação.
+
+Com essa configuração, expor o Nest diretamente a clientes permite que o cabeçalho encaminhado pelo próprio cliente influencie o IP usado pelo Nest. A topologia final precisa restringir o acesso direto à API e garantir que o último proxy confiável substitua cabeçalhos de encaminhamento recebidos de clientes por valores verificados. Deve-se testar a cadeia efetiva, inclusive múltiplos proxies e tentativas de forjar cabeçalhos, antes de confiar no IP para rate limit. O BFF administrativo faz chamadas próprias ao Nest e também precisa ser considerado nessa prova.
+
+O guia local do Next 16.4.5 informa que, quando o Proxy está em uso, o limite padrão de buffer do corpo é 10 MB e excedê-lo não implica resposta de erro automática. Isso não é um limite de upload de segurança: o gateway e o backend devem impor seus próprios limites, considerando a sobrecarga multipart. A passagem de 5 MiB e a rejeição de tamanho excedente continuam exigindo teste na cadeia final.
+
+O manifesto do build local de 05/11/2026 registrou os destinos dos rewrites com a `API_ORIGIN` da compilação (`http://localhost:3000`). Em uma tentativa de teste, definir outra `API_ORIGIN` apenas ao iniciar `next start` não redirecionou o rewrite: uma requisição de login vazia recebeu 400 da API configurada no build, sem criação de dados. A tentativa foi removida. Prepare um build isolado com o upstream sintético configurado na compilação para testar cookie e multipart; não suponha que mudar essa variável apenas no processo de execução atualize os destinos. Isso também deve ser considerado ao promover imagens entre ambientes. Nenhum envio de e-mail ou publicação foi realizado nessa tentativa.
 
 ## Próximos passos para integração isolada
 

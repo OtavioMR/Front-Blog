@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { authenticatedFetchForSubject, getOwnProfile, notifyProfileChanged, subscribeSession } from "@/lib/session-client";
 import Link from "next/link";
 import Avatar from "@/app/_components/avatar";
-import BackButton from "@/app/_components/back-button";
+import AccountBack from "@/app/conta/account-back";
 import { uploadPhoto, validatePhoto } from "./photo-upload";
 import styles from "../perfil/profile.module.css";
 import photo from "./photo.module.css";
@@ -85,7 +85,7 @@ export default function PhotoForm() {
   }
 
   return <main className={styles.page}><section className={styles.content}>
-    <BackButton fallback="/conta" />
+    <AccountBack />
     <p className={styles.eyebrow}>SEU ESPAÇO</p><h1>Foto de perfil.</h1>
     {state === "loading" && <p role="status">Carregando sua conta…</p>}
     {state === "signed-out" && <p>Entre novamente para atualizar sua foto. <Link href="/entrar">Entrar</Link></p>}

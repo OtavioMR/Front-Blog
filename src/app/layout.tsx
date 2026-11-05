@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "./_components/navbar";
 import NavTracker from "./_components/nav-tracker";
 import { BackToTop, ReadingProgress } from "./_components/reading-navigation";
+import Toasts from "./_components/toast";
 
 export const metadata: Metadata = {
   title: "Blog | Um espaço para boas ideias",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <NavTracker />
         <Navbar />
         {children}
+        <Toasts />
         <BackToTop />
       </body>
     </html>

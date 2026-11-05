@@ -10,6 +10,10 @@ A sessão administrativa dura no máximo cinco minutos e é mantida apenas em me
 
 A fila é buscada no Nest a cada leitura; cada decisão é autorizada novamente pelo Nest. Os formulários mutáveis exigem Origin exata e token CSRF; as respostas privadas usam `no-store`, `noindex`, CSP e conteúdo editorial sanitizado. Não há renovação automática, nem alteração do backend. A configuração de sessão proposta em armazenamento compartilhado na seção seguinte é trabalho futuro, não comportamento atual.
 
+A mesma sessão e flag também protegem a fila de denúncias pendentes e as decisões de análise. O backend retorna apenas identificadores do artigo ou comentário na listagem; a tela não afirma mostrar o conteúdo denunciado e a decisão não altera esse conteúdo. O teste HTTP simulado cobre acesso, perda de papel, revogação, CSRF e escape de motivo; a integração real e a topologia segura permanecem pendentes.
+
+Indicadores agregados e gestão de categorias também usam essa sessão. Como a listagem de categorias é pública, a página administrativa consulta antes um endpoint protegido para revalidar ADMIN; cada alteração é autorizada pelo Nest. Somente categorias ativas são listadas, e a criação pode reativar uma categoria desativada. Não há versão ou ETag para impedir edição concorrente. As novas jornadas continuam sob a flag e exigem validação real antes de uso.
+
 Verificações: após `npm run build`, `npm run test:admin` executa os testes de unidade e uma prova HTTP reproduzível com um processo Next e backend **simulado**, com a flag habilitada somente no processo de teste. Exercita visitante, READER, AUTHOR e ADMIN, sanitização, bloqueio de Origin/CSRF, aprovação, perda de papel e logout. A origem HTTPS é simulada no cabeçalho, enquanto o transporte local do teste é HTTP: ele não comprova TLS real. Em um teste anterior separado sem flag, GET e POST das duas rotas retornaram 404. Ainda faltam os testes reais de todos os papéis, revogação, rede, concorrência e HTTPS listados abaixo.
 
 ## Limitação atual
@@ -30,6 +34,8 @@ No Nest, login e refresh retornam access token no corpo e refresh cookie rotativ
 Essa sessão BFF é **separada** da sessão pública atual e cria sua própria sessão Nest: entrar ou sair de uma não implica automaticamente entrar ou sair da outra. A conta poderá revogar as duas pelo contrato existente de sessões, desde que cada cliente lide com 401. Essa escolha simplifica a migração e evita compartilhar o refresh rotativo entre servidor e abas; exige segundo login e infraestrutura estatal. Uma unificação posterior exigiria migrar todos os fluxos para um único proprietário de refresh, com plano de compatibilidade e concorrência. Guardar apenas o access token em cookie assinado ainda o expõe ao servidor, mas precisa de ciclo de renovação e revogação; copiar o refresh cookie para `Path=/` ou usar refresh no servidor e na aba simultaneamente não resolve a coordenação com segurança.
 
 ## CSRF, navegação e cache
+
+As respostas administrativas usam `Referrer-Policy: same-origin`: em Chromium, `no-referrer` gerava `Origin: null` em envios de formulário e inviabilizava a validação estrita. O cabeçalho escolhido não envia referenciador para outras origens; a validação de Origin e CSRF permanece obrigatória.
 
 As mutações BFF usam cookie automático e precisam de defesa CSRF própria. Exigir `Origin` exata da origem pública configurada para todos os métodos mutáveis, rejeitando origem ausente, `null` ou divergente; combinar com token CSRF vinculado à sessão e validar ambos no servidor. Uma eventual exceção para cliente não navegador deve usar canal privado autenticado, nunca ser liberada por ausência de `Origin`. O `src/proxy.ts` atual cobre `/api/v1` apenas: endpoints BFF em outros caminhos precisam da mesma proteção, e Server Actions também precisam de autorização própria. Restringir API upstream para evitar bypass e validar o gateway real.
 

@@ -4,7 +4,53 @@ Referência: `C:/Users/otavv/Downloads/Arquitetura_Frontend_Blog.md` e backend l
 
 O blog público, a conta, o Studio e a administração terão experiências separadas. A interface pública não divulga a administração. O backend deve negar acesso direto e chamadas de API para papéis não autorizados; ocultar o endereço não é proteção.
 
+## Quadro atualizado — 05/11/2026
+
+**Entregas implementadas e verificadas parcialmente** (os itens marcados descrevem trabalho realizado, não o aceite integral das sprints):
+
+- [x] Conta: perfil, foto, senha, sessões, troca de e-mail, desativação, configurações e tema; retorno direto à conta nas telas internas e em “Minhas publicações”. Há provas reais isoladas para troca de e-mail e desativação; demais provas de sessão e perfil seguem abaixo.
+- [x] Leitura e engajamento: home, busca, categorias, perfis, artigo SSR, SEO inicial, comentários, curtidas, salvos, feed, seguidores, coleções e notificações. Cobertura real isolada é parcial; não equivale ao aceite da Sprint 2 ou 6.
+- [x] Studio sob flag: edição, revisão inicial, publicação, agendamento, revisões e séries; exclusão do titular disponível no Studio. Existem provas reais isoladas parciais, com lacunas de navegação, concorrência e segurança de mídia.
+- [x] Administração sob flag: fila editorial, denúncias, categorias, usuários ativos e indicadores com BFF e validação de permissões; verificações existentes são principalmente simuladas e o BFF não está pronto para produção.
+- [x] Newsletter e denúncias: formulários integrados e estados de falha tratados; provas de ponta a ponta reais permanecem pendentes.
+- [x] Inventário por método e rota: [104 operações do backend, 89 com uso no código do frontend e 15 sem chamada explícita](docs/inventario-endpoints.md). Dessas 89, 22 dependem de flags desligadas; presença não significa jornada completa nem validada.
+- [x] Categorias administrativas: criar e editar confirmam status e resposta esperados; retorno incoerente é tratado como resultado incerto. Build, lint direcionado, `test:admin` e `test:editorial-e2e` passaram com API simulada.
+
+**Próximas tarefas, em ordem sugerida:**
+
+**Prioridade atual:** por orientação do usuário, deixar testes e configuração de e-mail para depois e avançar nas demais etapas. Os critérios de e-mail permanecem pendentes e não devem ser considerados concluídos.
+
+**Comentários em andamento:** ações secundárias foram reunidas em menu por comentário, com comparação do titular e checagem de permissão também na mutação. O backend local já restringe edição ao autor do comentário ou ADMIN, e permite ao autor do artigo desativar comentários. Passaram build, lint direcionado, `test:public` (15 testes) e testes de serviço do backend (7 testes). A suíte de navegador existente expirou antes dos cenários de comentários, no envio sem JavaScript; seus seletores de ações também precisam ser atualizados para o menu. Faltam prova do menu em navegador e testes HTTP reais da matriz completa; não considerar a tarefa aceita.
+
+**Denúncia de comentário:** confirmação válida agora fecha o diálogo e apresenta feedback no comentário; cancelamento descarta o formulário e falhas preservam o motivo. Build, lint direcionado e `test:public` passaram, mas esses testes não exercitam o novo diálogo. Ainda é necessário validar sucesso, falhas, duplicidade, foco e respostas aninhadas em navegador; a suíte anterior precisa de adaptação ao menu.
+
+**Toast:** a confirmação de denúncia de comentário usa um componente global novo, com fechamento manual e automático e suporte a quatro tipos. Antes havia mensagem fixa, não um sistema de toast; mensagens inline de formulários continuam com seus próprios estados. Build e lint direcionado passaram; falta validação interativa de empilhamento e tempos no navegador.
+
+**Descoberta por tags implementada:** listagem paginada, detalhe público e artigos filtrados por `tagSlug`, com link a partir das categorias, estados de vazio/erro e 404 para tag ausente. `npm.cmd run build`, `npm.cmd run test:public` (15 testes, API simulada) e lint direcionado passaram. A listagem da API real respondeu 200 com formato paginado; falta validar a jornada completa em navegador com dados de teste. As demais integrações ausentes continuam pendentes.
+
+1. [ ] **Ambiente e Sprint 0:** usar a API e o banco existentes do projeto `backend-blog`, definidos pelo usuário como ambiente de testes, com dados sintéticos identificáveis; executar as integrações viáveis e verificar HTTPS, proxy, IP, cookie e upload. A API usa SMTP externo: controlar o envio antes de testar fluxos de e-mail ou publicação que dispare entregas.
+2. [ ] **Sprint 1 e conta:** completar integração real de sessões, revogação, troca de conta, perfil, foto e senha; repetir cenários multiaba e acessibilidade. Confirmar os critérios completos antes de fechar a sprint.
+3. [ ] **Sprint 2 e 6:** validar SEO, despublicação, visualizações, responsividade, contraste e navegação; testar paginação e concorrência de feed/notificações e falhas das interações. Avaliar, sem assumir necessidade de implementar todas, descoberta por tags, artigos em alta, página pública de série e remoção de capa.
+4. [ ] **Sprint 3:** concluir primeiro ciclo editorial com aprovação e rejeição reais, acesso direto por papel, preservação do conteúdo e botão Voltar do navegador com alterações não salvas. Definir proteção de capas de rascunho e concorrência de séries. Manter flag desligada até o aceite.
+5. [ ] **Sprint 4:** testar BFF contra Nest real para visitante, READER, AUTHOR e ADMIN, revogação, CSRF, concorrência e rede; resolver infraestrutura de sessão e HTTPS antes de habilitar. Projetar política de suspensão/restauração e consulta de suspensos; avaliar trilha de auditoria. OWNER depende de backend e testes próprios.
+6. [ ] **Sprint 5:** executar suíte de integração e E2E completa, revisão de acessibilidade e dispositivos, staging, monitoramento, backups, rollback e smoke de publicação. Não declarar publicação pronta sem os critérios.
+7. [ ] **Evoluções por demanda:** avaliar OAuth, health operacional, endpoints alternativos JSON da newsletter e páginas de descoberta; os GETs de confirmação e cancelamento da newsletter já são atendidos diretamente pelo backend, mas precisam de prova na topologia final. Ver lista completa e classificações em [inventário](docs/inventario-endpoints.md).
+
 ## Sprint 0 — decisões e provas técnicas
+
+**Diretriz atual do usuário:** o banco principal do projeto Docker `backend-blog` é o banco de testes. A API e o banco existentes devem ser usados nas integrações; não é necessário iniciar uma cópia isolada. Registros anteriores sobre não escrever no banco original ou exigir ambiente isolado são históricos e foram substituídos por esta diretriz. Usar dados sintéticos identificáveis, preservar dados e volumes existentes e controlar efeitos externos de SMTP.
+
+**Primeira prova no ambiente escolhido:** em 05/11/2026, API, PostgreSQL e Redis do `backend-blog` estavam saudáveis. `BLOG_DEV_SESSION_E2E=1 node --test tests/development-session-real.test.mjs` passou: uma conta sintética foi criada no banco de testes, autenticada e desativada; leitura do próprio perfil, negação de acesso a denúncias, criação/edição/exclusão de coleção, logout e revogação foram verificados contra a API real. A coleção foi excluída e a conta sintética desativada; não houve cadastro por e-mail nem publicação. Faltam as demais provas e a definição do envio de e-mail de teste, HTTPS e proxy final.
+
+**Verificação em 05/11/2026:** o Compose isolado validou a configuração e PostgreSQL, Redis e Mailpit estavam saudáveis; a porta 3001 estava livre. `npm.cmd run test:session` passou (26 testes) e `npm.cmd run lint` passou com 17 avisos. A revisão automática bloqueou a tentativa de iniciar a cópia temporária da API isolada; portanto, não foram executadas novas provas com a API real. Retomar com a API isolada disponível e verificar HTTPS, IP, cookie, upload e demais critérios na topologia escolhida. As evidências anteriores permanecem parciais e a sprint continua aberta.
+
+**Contratos locais:** comparadas as alterações não commitadas do backend ao commit `f89622e`; o filtro `authorId` e o campo `firstPostApproved` foram registrados em [infraestrutura](docs/sprint-0-infra.md). Passaram 35 testes dos DTOs e serviços envolvidos e 2 testes parciais do Swagger. A imagem em execução e a auditoria completa de contratos ainda não foram verificadas; S0.1 e S0.5 continuam abertas.
+
+**Leitura pública atual:** `npm.cmd run build` passou, incluindo TypeScript, e `npm.cmd run test:public` passou (15 testes). Com API simulada e servidor Next de produção, o teste verificou conteúdo no HTML, artigo ausente com HTTP 404, falha upstream com HTTP 500 e ausência do conteúdo de um rascunho retornado indevidamente. Isso atualiza a evidência de S0.3, mas não substitui a prova completa na topologia final com API real.
+
+**Proxy e IP:** a análise da configuração atual e o teste isolado de segurança HTTP do Nest (4 testes aprovados) foram registrados em [infraestrutura](docs/sprint-0-infra.md). O teste não comprova confiança dos cabeçalhos na infraestrutura final; acesso direto à API, sanitização de encaminhamento, múltiplos proxies e limites de corpo seguem pendentes em S0.2.
+
+**Build e rewrites:** o manifesto do build local fixou a origem upstream no momento da compilação. Uma tentativa de teste com origem sintética definida apenas no `next start` atingiu a API configurada no build (login vazio, HTTP 400); não gerou dados nem mensagens. Preparar build isolado com upstream sintético na compilação para novas provas de proxy. Detalhes em [infraestrutura](docs/sprint-0-infra.md).
 
 **Objetivo:** confirmar contratos e integração antes dos fluxos.
 
@@ -12,7 +58,7 @@ O blog público, a conta, o Studio e a administração terão experiências sepa
 - [ ] S0.2 Definir e validar topologia, mesma origem pública para Next e `/api/v1`, proxy, `/uploads`, HTTPS, upload, IP e CORS.
 - [ ] S0.3 Provar SSR de artigo e 404 real antes do streaming; distinguir indisponibilidade da API.
 - [ ] S0.4 Provar cookie HttpOnly real, login, refresh rotativo, reload e duas abas; verificar `Set-Cookie` e upload de até 5 MiB no proxy.
-- [ ] S0.5 Preparar PostgreSQL, Redis, API, SMTP e contas de teste isoladas; definir geração/checagem OpenAPI e registrar riscos.
+- [ ] S0.5 Usar PostgreSQL, Redis e API existentes e preparar contas sintéticas e SMTP adequado para os testes; definir geração/checagem OpenAPI e registrar riscos.
 
 **Aceite:** artigo presente no HTML, 404 verdadeiro, cookie e upload verificados na topologia escolhida; bloqueios documentados.
 
@@ -94,7 +140,63 @@ Coleções privadas foram implementadas na área de salvos: criação, renomeaç
 
 **Retomada:** etapas 1–4 estão parcialmente implementadas, sem declarar sprints concluídas. Próximas prioridades: validação de erros e acessibilidade nas jornadas novas; terminar filtros, denúncias, newsletter e demais recursos viáveis da missão; depois administração sob BFF autorizado no servidor. Revisar limitações de sessão administrativa, HTTPS e revogação antes de habilitar flags; não expor OWNER inexistente. Tema precisa de revisão visual em todas as telas e compatibilidade de navegadores. Consultar os itens originais das sprints e seus critérios antes de fechar qualquer uma. Serviços isolados `front-blog-sprint0` e API temporária em `localhost:3001` permaneceram ativos; o volume contém somente fixtures sintéticas destes testes. Não apagar volumes nem usar o banco original para testes de escrita.
 
+**Newsletter em andamento:** formulário público de solicitação integrado ao contrato `POST /newsletter/subscribe`, com resposta neutra, limite de tentativas e tratamento de resultado incerto. Build e lint passaram (17 avisos existentes); `test:public` passou (15 testes). Falta validar o formulário em navegador e a confirmação por e-mail com API e SMTP isolados, incluindo comportamento sem JavaScript; não considerar a jornada concluída.
+
+**Denúncias em andamento:** formulário para artigo e comentário usa `POST /reports`, com identidade vinculada à sessão, limite de motivo, tratamento de 401/403/404/409/429 e bloqueio em resultado incerto. `test:comment-browser` passou com API simulada para envio de artigo e comentário, conflito e preservação do motivo; também cobriu solicitação da newsletter e 429. Build e lint direcionado passaram. Faltam falha de rede, troca de conta e provas com API real. Serviços isolados PostgreSQL, Redis e Mailpit foram iniciados sem apagar volumes; a execução da cópia da API foi rejeitada pela política automática, sem motivo mais detalhado. A confirmação da newsletter e as denúncias reais continuam pendentes; não usar o banco original para escrita.
+
+**Fila administrativa de denúncias iniciada:** sob `ENABLE_ADMIN_BFF`, a fila consulta denúncias pendentes paginadas e registra decisão no Nest com validação de sessão, Origin e CSRF. A resposta informa que a decisão não altera o conteúdo e que o contrato de listagem oferece apenas o identificador do alvo. `test:admin` passou com backend simulado para visitante, ADMIN, mudança de papel, revogação, CSRF, escape de conteúdo e decisão; build e lint direcionado passaram. `test:comment-browser` também passou para falha de rede e troca de conta na denúncia. Faltam provas com backend real, paginação, concorrência e HTTPS; a flag permanece desligada e a limitação do BFF em memória continua vigente.
+
+**Indicadores administrativos iniciados:** a rota protegida consulta `/admin/analytics/overview` e valida contagens e data antes de exibir os agregados. `test:admin` passou com API simulada para visitante, ADMIN, papel alterado, revogação e resposta inválida; o mesmo teste cobriu paginação simulada e conflito da fila de denúncias. `test:public` (15 testes), `test:comment-browser`, build e lint direcionado passaram. Falta validação real e permanecem as restrições da sessão administrativa e HTTPS. A newsletter recebeu proteção contra envio simultâneo e mensagem de resultado incerto para erro de servidor; falta prova com SMTP isolado e sem JavaScript.
+
+**Categorias administrativas iniciadas:** listagem de categorias ativas, criação, edição e desativação com confirmação usam a sessão BFF e os contratos do Nest; a tela informa a possível reativação automática de categoria desativada. A listagem pública é precedida por consulta protegida para validar ADMIN e as mutações são autorizadas pelo próprio Nest. `test:admin` passou (4 testes) com backend simulado, incluindo criação, edição, confirmação, desativação, CSRF, troca de papel, revogação e 404 das rotas com flag desligada; build e lint direcionado passaram. A API não fornece versão/ETag para evitar sobrescrita concorrente, nem listagem de categorias inativas; faltam provas com API real, paginação, resultado incerto e acessibilidade em navegador. Não habilitar a flag antes dos critérios administrativos e de infraestrutura.
+
+**Usuários ativos:** consulta administrativa paginada em modo de leitura integrada a `GET /users`; cada acesso revalida a sessão e o papel no Nest. `test:admin` passou com API simulada para acesso autorizado, visitante, papel alterado, revogação e flag desligada. O teste também confirmou tratamento de conflito e resposta perdida na gestão de categorias, sem repetição automática. Build e lint direcionado passaram. A API lista apenas ativos; não há consulta de suspensos. Ações de suspensão/restauração permanecem pendentes da política por alvo, localização de suspensos e provas reais. Nenhuma flag foi habilitada.
+
+**Usabilidade:** a confirmação de desativação consulta e apresenta o nome atual da categoria, após revalidar ADMIN; `test:admin` passou com API simulada. `test:comment-browser` passou em Chromium para a home a 360 px sem rolagem horizontal e para a passagem de foco por Tab entre campo e botão da newsletter, além dos estados 429, 500 e sucesso. Build passou; lint direcionado passou com dois avisos preexistentes no teste de navegador. Isso não substitui revisão abrangente de contraste, navegação administrativa ou prova real de e-mail.
+
+**Correção de formulários administrativos:** em Chromium, `Referrer-Policy: no-referrer` causava `Origin: null` no envio de formulários e bloqueava a entrada e as ações pela validação CSRF. A política foi alterada para `same-origin`, sem envio de referenciador a outras origens; Origin exata e CSRF continuam obrigatórios. `test:editorial-e2e` passou com API simulada para login administrativo no navegador, abertura e cancelamento da confirmação de categoria, foco por Tab e ausência de rolagem horizontal a 360 px. `test:admin` passou (4 testes), incluindo rejeição de origens externas; build e lint direcionado passaram, com um aviso preexistente no teste. HTTPS e backend reais continuam pendentes.
+
+O mesmo teste editorial em Chromium passou também para criação, edição e desativação confirmada de categoria e para decisão de denúncia com nota, usando API simulada e largura de 360 px. Faltam provas contra a API isolada e revisão visual/acessível completa; a flag administrativa permanece desativada.
+
+**Reverificação:** `test:session` (25 testes), `test:studio` (13), `test:theme` (3), `test:admin` (4) e `test:comment-browser` passaram novamente. As suítes de navegador e administração usam API simulada; a execução isolada real permanece bloqueada pela rejeição automática já registrada, e nenhuma sprint atende ainda a todos os critérios de aceite.
+
+**Navbar e ambiente:** o seletor de tema foi removido da navegação principal e permanece em Configurações da conta. Build, lint direcionado e `test:theme` (3 testes) passaram. Os serviços isolados PostgreSQL, Redis e Mailpit estão saudáveis e o banco de teste registra 43 migrations; a porta da API de teste estava livre. Mesmo após autorização do usuário, a política automática rejeitou antes da execução o comando para iniciar a cópia isolada da API, informando apenas `blocked by policy`. As provas reais de newsletter, denúncias e administração continuam pendentes; nenhum dado do banco original foi usado para escrita.
+
+**Autorização atualizada:** o usuário autorizou testes na API e no banco de desenvolvimento existentes. Em verificação sem dados pessoais ou escrita, a API em `localhost:3000` respondeu 200 no health; denúncias, notificações, coleções, revisão editorial e indicadores negaram visitante com 401; inscrição de newsletter sem dados recebeu 400. A instância usa SMTP externo e está em modo de produção; publicação e fluxos de e-mail podem produzir efeitos fora do teste. Não foram criadas contas, inscrições ou artigos nessa instância. As provas autenticadas e de envio continuam pendentes de ambiente que não envie mensagens externas, e o bloqueio automático da cópia isolada permanece.
+
+**Navegação da conta:** as nove telas de conta agora oferecem retorno direto à página da conta, sem depender do histórico. `test:account-browser` passou com API simulada, incluindo entrada pelas configurações e retorno de cada tela; build e lint direcionado passaram.
+
+O perfil público acessado por “Minhas publicações” também oferece retorno direto à conta, preservado ao trocar de aba ou página. Em acesso público comum, o retorno leva ao início. Build, lint direcionado e `test:public` (15 testes com API simulada) passaram; o teste HTTP confirmou os destinos e a preservação da origem na troca de aba.
+
+**Acessibilidade e texto:** as seções do perfil público são links de navegação com `aria-current`, sem anunciar o padrão de abas que exigiria controles de teclado próprios. O texto do link “Minhas séries” no Studio foi corrigido. Build, lint direcionado e `test:public` (15 testes com API simulada) passaram; a revisão de acessibilidade abrangente segue pendente.
+
+**Falhas em categorias administrativas:** os dados enviados em criação e edição permanecem disponíveis para consulta e cópia em erros de validação, conflito, limite de tentativas e resultado incerto; o conteúdo é escapado e nenhuma escrita é repetida automaticamente. `test:admin` passou com backend simulado para conflito, HTML potencialmente perigoso, 429 e resposta perdida; build e lint direcionado passaram. A flag continua desligada e a integração real segue pendente.
+
+**Falhas na análise de denúncias:** notas enviadas ficam disponíveis para cópia em validação, conflito, limite de tentativas e resultado incerto, com escape de HTML e sem reenvio automático. `test:admin` passou com API simulada para conflito, resposta divergente, escape e ausência de cache; build e lint direcionado passaram. A validação real e os critérios de segurança administrativa continuam pendentes.
+
+**Identidade em salvos e coleções:** a leitura de salvos agora usa o titular verificado sob o bloqueio de sessão; coleções só carregam para o mesmo titular da lista. `test:session` passou (26 testes, incluindo sujeito e 409 simulados), `test:collections-browser` passou com API simulada, assim como build e lint direcionado. O novo teste não reproduz a janela de troca entre abas em navegador com API real, que permanece pendente.
+
+O teste `test:collections-browser` foi ampliado com duas contas sintéticas em abas diferentes: após trocar de conta, a primeira aba exibiu a lista e as coleções vazias da segunda, sem mostrar o artigo e a coleção da primeira. O teste passou com API simulada; não controla a troca no instante exato entre as duas consultas nem substitui a prova com API real.
+
+**Resposta de coleções:** criação e renomeação agora exigem que o nome retornado corresponda ao solicitado, além da validação existente de identificador. Em divergência, o nome digitado é preservado e novas ações ficam bloqueadas até recarregar. `test:collections-browser` passou com resposta divergente simulada e confirmou uma única tentativa; build e lint direcionado passaram. Integração real após essa alteração segue pendente.
+
+**Concorrência em coleções:** uma trava síncrona impede que duas ações sejam iniciadas antes da atualização visual do estado ocupado. `test:collections-browser` passou ao disparar dois envios consecutivos com resposta simulada atrasada e confirmou uma única escrita, além dos fluxos existentes; build e lint direcionado passaram. A prova real após essa alteração segue pendente.
+
+**Curtidas de comentários:** `npm.cmd run test:comment-browser` passou com API simulada para resposta perdida após a gravação: a interface sinalizou resultado incerto e a atualização consultou o estado sem repetir a escrita. O teste também cobriu troca de conta em outra aba enquanto a remoção da curtida estava em andamento: a conta seguinte recebeu seu próprio estado e a mutação não foi repetida. A verificação correspondente contra API real continua pendente.
+
+**Paginação administrativa:** `npm.cmd run test:admin` passou com API simulada para duas páginas de categorias e usuários ativos, links de ida e volta e rejeição de parâmetros de página duplicados. A paginação real e as demais verificações de autorização e infraestrutura continuam pendentes; a flag permanece desativada.
+
+**Confirmação de revisão:** a decisão editorial agora exige HTTP 201 e status retornado igual à decisão solicitada; resposta divergente ou inválida é tratada como resultado incerto, sem repetir. A rota também distingue 400, 404 e 429 e rejeita campos duplicados. Build, lint direcionado, `test:admin` e `test:editorial-e2e` passaram com API simulada; a prova real da fila continua pendente.
+
+**Confirmação de denúncia:** a decisão administrativa exige HTTP 200 e resposta com o identificador e o status esperados; resposta divergente é tratada como resultado incerto, sem repetição automática. Build, lint direcionado, `test:admin` e `test:editorial-e2e` passaram com API simulada; a prova real permanece pendente e a flag continua desativada.
+
+O envio de denúncia pelo leitor também valida o identificador e o status `PENDING` retornados na criação. Respostas divergentes preservam o texto e bloqueiam novo envio como resultado incerto. `test:comment-browser` passou com API simulada para esse caso; build e lint direcionado passaram, com dois avisos preexistentes no teste. A integração autenticada real continua pendente.
+
 ## Sprint 1 — fundação e autenticação
+
+**Progresso com a API de teste existente:** `BLOG_DEV_SESSION_E2E=1 node --test tests/development-session-real.test.mjs` passou com conta sintética: alteração e leitura persistida de nome e biografia, duas sessões simultâneas, revogação da outra sessão com 401 para seu token e manutenção da sessão atual, além dos cenários de coleção e logout já registrados. A conta foi desativada ao final. A prova é HTTP direto à API, não teste da interface ou concorrência entre abas; a Sprint 1 continua aberta e os fluxos de e-mail foram adiados pelo usuário.
+
+A mesma prova foi ampliada e passou para alteração de senha: o token anterior deixou de funcionar, a senha antiga foi rejeitada e a nova permitiu entrar, encerrar a sessão e entrar novamente. A conta sintética foi desativada ao final; a jornada em navegador ainda precisa ser verificada.
 
 - [ ] S1.1 Inicializar Next.js App Router, React, TypeScript strict, lint, build, variáveis de exemplo e CI.
 - [ ] S1.2 Criar layouts, tokens, componentes acessíveis, cliente HTTP tipado, erros, 204 e paginação; validar contratos.

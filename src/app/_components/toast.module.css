@@ -1,0 +1,13 @@
+.container { position: fixed; z-index: 1000; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: .65rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; }
+.toast { display: flex; align-items: flex-start; gap: .75rem; padding: .8rem .8rem .8rem 1rem; border: 1px solid light-dark(#b6c8b9, #667a69); border-left: 4px solid #43704e; border-radius: .5rem; background: light-dark(#fffefa, #292d29); color: light-dark(#202b24, #f1f3ef); box-shadow: 0 6px 22px #0003; pointer-events: auto; animation: enter .18s ease-out; }
+.toast p { flex: 1; margin: .35rem 0; line-height: 1.4; }
+.error { border-left-color: #b74740; }
+.warning { border-left-color: #b17a23; }
+.info { border-left-color: #527c9a; }
+.close { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: inherit; font: inherit; font-size: 1.4rem; cursor: pointer; }
+.close:hover { background: light-dark(#e9eee7, #454c45); }
+.close:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
+.closing { animation: exit .18s ease-in forwards; pointer-events: none; }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes exit { to { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .toast, .closing { animation-duration: .001ms; } }
