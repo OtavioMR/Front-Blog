@@ -18,14 +18,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: light-dark(#526357, #c8cdc9);
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .backLink:hover {
-  color: light-dark(#202b24, #b8bbb9);
+  color: var(--brand);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -46,22 +46,22 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.15em;
-  color: light-dark(#8a503c, #dac7c1);
+  color: var(--brand);
   text-transform: uppercase;
 }
 
 .titleHeading {
-  font-family: Georgia, serif;
+  font-family: var(--font-serif, Georgia, serif);
   font-size: clamp(32px, 4vw, 48px);
   font-weight: 400;
   line-height: 1.15;
   margin: 0 0 8px;
-  color: light-dark(#202b24, #b8bbb9);
+  color: var(--text);
 }
 
 .subtitle {
   margin: 0;
-  color: light-dark(#59675d, #cacecb);
+  color: var(--text-muted);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -85,9 +85,9 @@
 }
 
 .feedbackSaving {
-  background: light-dark(#f4f6ea, #313230);
-  border: 1px solid light-dark(#c9d2bf, #4c4e4a);
-  color: light-dark(#314c39, #bdc6c0);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--brand);
 }
 
 .feedbackSuccess {
@@ -103,9 +103,9 @@
 }
 
 .feedbackDirty {
-  background: light-dark(#fbf3ea, #323130);
-  border: 1px solid light-dark(#ebd0b8, #544e48);
-  color: light-dark(#8a4a1d, #dac5b7);
+  background: var(--brand-light);
+  border: 1px solid var(--border);
+  color: var(--brand);
   font-size: 13px;
   padding: 6px 12px;
   border-radius: 999px;
@@ -115,8 +115,8 @@
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid light-dark(#b9c5b4, #494b47);
-  border-top-color: #314c39;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -159,9 +159,10 @@
 
 /* Buttons */
 .btnPrimary {
-  background: #314c39;
+  background: var(--brand);
   color: #ffffff;
-  border: 1px solid #314c39;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
   padding: 12px 22px;
   font: inherit;
   font-size: 14px;
@@ -174,8 +175,8 @@
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: #233729;
-  border-color: #233729;
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 
 .btnPrimary:disabled {
@@ -185,17 +186,19 @@
 
 .btnSecondary {
   background: transparent;
-  color: light-dark(#314c39, #bdc6c0);
-  border: 1px solid #314c39;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 6px;
   padding: 10px 18px;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .btnSecondary:hover:not(:disabled) {
-  background: light-dark(#e8ede1, #30302f);
+  background: var(--brand-light);
 }
 
 .btnSecondary:disabled {
@@ -207,6 +210,7 @@
   background: transparent;
   color: light-dark(#922e25, #dcbcb9);
   border: 1px solid #922e25;
+  border-radius: 6px;
   padding: 8px 14px;
   font: inherit;
   font-size: 13px;
@@ -221,7 +225,7 @@
 .btnPrimary:focus-visible,
 .btnSecondary:focus-visible,
 .btnDanger:focus-visible {
-  outline: 3px solid #b46343;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 
@@ -279,14 +283,15 @@
   font-family: Georgia, serif;
   font-size: clamp(24px, 3vw, 36px);
   padding: 12px 14px;
-  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
-  color: light-dark(#202b24, #b8bbb9);
-  background: light-dark(#fffefa, #333232);
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 6px;
   width: 100%;
 }
 
 .titleInput:focus-visible {
-  outline: 3px solid #b46343;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -295,16 +300,17 @@
   font-size: 17px;
   line-height: 1.75;
   padding: 16px;
-  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
-  color: light-dark(#202b24, #b8bbb9);
-  background: light-dark(#fffefa, #333232);
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 6px;
   width: 100%;
   min-height: 480px;
   resize: vertical;
 }
 
 .contentArea:focus-visible {
-  outline: 3px solid #b46343;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -339,19 +345,19 @@
 }
 
 .sideCard h2 {
-  font-family: Georgia, serif;
+  font-family: var(--font-serif, Georgia, serif);
   font-size: 20px;
   font-weight: 400;
   margin: 0;
-  color: light-dark(#202b24, #b8bbb9);
-  border-bottom: 1px solid light-dark(#d7ddd1, #4f514e);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
 }
 
 .cardHint {
   margin: 0;
   font-size: 13px;
-  color: light-dark(#59675d, #cacecb);
+  color: var(--text-muted);
   line-height: 1.5;
 }
 
@@ -360,8 +366,9 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: light-dark(#d5dcca, #2e2e2c);
-  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   border-radius: 2px;
 }
 
@@ -381,18 +388,20 @@
 
 .fileLabel {
   display: inline-block;
-  background: light-dark(#e8ede1, #30302f);
-  border: 1px solid #314c39;
-  color: light-dark(#314c39, #bdc6c0);
+  background: var(--surface-subtle);
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  color: var(--brand);
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
 }
 
 .fileLabel:hover {
-  background: light-dark(#d8ded0, #2e2f2d);
+  background: var(--brand-light);
 }
 
 .fileLabel input {
@@ -413,7 +422,7 @@
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  color: light-dark(#202b24, #b8bbb9);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -421,7 +430,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #314c39;
+  accent-color: var(--brand);
 }
 
 /* Tags */
@@ -430,13 +439,14 @@
   padding: 10px 12px;
   font: inherit;
   font-size: 14px;
-  border: 1px solid light-dark(#c9cfc3, #4c4e4b);
-  background: light-dark(#ffffff, #333333);
-  color: light-dark(#202b24, #b8bbb9);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .tagInput:focus-visible {
-  outline: 3px solid #b46343;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -461,18 +471,18 @@
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: light-dark(#59675d, #cacecb);
+  color: var(--text-muted);
   gap: 12px;
 }
 
 .infoItem strong {
-  color: light-dark(#202b24, #b8bbb9);
+  color: var(--text);
 }
 
 .reviewSection {
   margin-top: 12px;
   padding-top: 14px;
-  border-top: 1px solid light-dark(#d7ddd1, #4f514e);
+  border-top: 1px solid var(--border);
   display: grid;
   gap: 10px;
 }
@@ -493,7 +503,7 @@
 }
 
 .viewArticleLink {
-  color: light-dark(#314c39, #bdc6c0);
+  color: var(--brand);
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -501,6 +511,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.viewArticleLink:hover {
+  color: var(--brand-hover);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -513,7 +527,7 @@
 }
 
 .scheduleFields { display: grid; gap: 10px; }
-.scheduleFields label { font-size: 13px; font-weight: 700; }
-.scheduleInput { width: 100%; min-width: 0; padding: 10px; border: 1px solid light-dark(#a9b1a4, #606860); background: light-dark(#fffefa, #333232); color: light-dark(#202b24, #e0e5e0); font: inherit; }
-.scheduleInput:focus-visible { outline: 3px solid #b46343; outline-offset: 2px; }
-.revisionPreview { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; border: 1px solid var(--border, #a9b1a4); }
+.scheduleFields label { font-size: 13px; font-weight: 700; color: var(--text); }
+.scheduleInput { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+.scheduleInput:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.revisionPreview { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }

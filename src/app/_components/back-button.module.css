@@ -5,30 +5,38 @@
   min-height: 44px !important;
   padding: 10px 16px !important;
   margin: 0 !important;
-  border: 1px solid light-dark(#809586, #829286) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 6px !important;
-  background: light-dark(#f5f8f2, #303a32) !important;
-  color: light-dark(#244331, #e4eee5) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
   font: inherit !important;
   font-size: 14px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   text-decoration: none !important;
-  transition: background-color 0.15s ease, border-color 0.15s ease !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
 }
 
 .back:hover {
-  background: light-dark(#e1ebe0, #435448) !important;
-  color: light-dark(#1a2f21, #fff) !important;
+  background: var(--brand-light) !important;
+  border-color: var(--brand-accent) !important;
+  color: var(--brand) !important;
   text-decoration: underline !important;
   text-underline-offset: 4px !important;
 }
 
-.back:active { background: light-dark(#d2e1d2, #526657) !important; }
-@media (prefers-reduced-motion: reduce) { .back { transition: none !important; } }
+.back:active {
+  background: var(--brand-light) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none !important;
+  }
+}
 
 .back:focus-visible {
-  outline: 3px solid #b46343 !important;
+  outline: 3px solid var(--focus) !important;
   outline-offset: 3px !important;
 }
 

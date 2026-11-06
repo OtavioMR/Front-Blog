@@ -174,4 +174,6 @@ test("navbar não contém símbolo de estrela ✳ associado ao título do blog",
   assert.ok(!source.includes("✳"), "Símbolo ✳ não deve estar presente no navbar");
   assert.ok(!source.includes("brandMark"), "Classe brandMark não deve estar presente no navbar");
   assert.ok(source.includes("entrelinhas"), "Nome do blog 'entrelinhas' deve estar presente");
+  assert.ok(source.includes("icone-livro-claro.svg"), "Ícone do livro claro deve estar no navbar");
+  assert.ok(source.includes("icone-livro-escuro.svg"), "Ícone do livro escuro deve estar no navbar");
 });

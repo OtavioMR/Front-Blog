@@ -97,7 +97,15 @@ function NavbarForRoute() {
     >
       <div className={styles.inner}>
         <Link className={styles.brand} href="/" aria-label="Entrelinhas, página inicial">
-          entrelinhas<span className={styles.brandDot}>.</span>
+          <span className={styles.brandBookWrap} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/icone-livro-claro.svg" alt="" className={styles.bookIconLight} width="32" height="34" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/icone-livro-escuro.svg" alt="" className={styles.bookIconDark} width="32" height="34" />
+          </span>
+          <span className={styles.brandWordmark}>
+            entrelinhas<span className={styles.brandDot}>.</span>
+          </span>
         </Link>
         <nav className={styles.nav} aria-label="Navegação principal">
           <Link href="/categorias">Categorias</Link>

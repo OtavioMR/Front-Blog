@@ -1,20 +1,23 @@
 .page { max-width: 1300px; padding: 0 6% 80px; margin: auto; }
-.page header { padding: 32px 0; border-bottom: 1px solid light-dark(#c9cfc3, #4c4e4b); }
-.brand { font: bold 29px Georgia, serif; letter-spacing: -.05em; }
+.page header { padding: 32px 0; border-bottom: 1px solid var(--border); }
+.brand { font: bold 29px var(--font-serif, Georgia, serif); letter-spacing: -.05em; color: var(--text); }
 .card { max-width: 520px; margin: 80px auto 0; }
-.card h1 { font-size: clamp(42px, 6vw, 65px); }
-.card > p { color: light-dark(#59695d, #cacfcb); line-height: 1.7; }
-.eyebrow { font-size: 11px; font-weight: bold; letter-spacing: .15em; color: light-dark(#8a503c, #dac7c1) !important; }
+.card h1 { font-family: var(--font-serif, Georgia, serif); font-size: clamp(42px, 6vw, 65px); color: var(--text); margin: 0 0 12px; }
+.card > p { color: var(--text-muted); line-height: 1.7; }
+.eyebrow { font-size: 11px; font-weight: bold; letter-spacing: .15em; color: var(--brand) !important; text-transform: uppercase; margin-bottom: 12px; }
 .form { display: grid; margin-top: 32px; gap: 10px; }
-.form label { font-size: 14px; font-weight: bold; margin-top: 12px; }
-.form label span { font-weight: normal; }
-.form input { width: 100%; padding: 14px; font: inherit; color: inherit; background: light-dark(#fffefa, #333232); border: 1px solid light-dark(#a9b1a4, #454744); border-radius: 2px; }
-.form input:focus-visible, .form button:focus-visible, .button:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
-.form button, .button { font: inherit; background: #314c39; color: white; border: 0; padding: 16px 22px; margin-top: 18px; cursor: pointer; }
+.form label { font-size: 14px; font-weight: bold; margin-top: 12px; color: var(--text); }
+.form label span { font-weight: normal; color: var(--text-muted); }
+.form input { width: 100%; padding: 14px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; transition: border-color 0.15s ease; }
+.form input:focus-visible, .form button:focus-visible, .button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.form button, .button { font: inherit; font-size: 14px; font-weight: 700; background: var(--brand); color: white; border: 0; border-radius: 6px; padding: 16px 22px; margin-top: 18px; cursor: pointer; transition: background 0.16s ease; }
+.form button:hover, .button:hover { background: var(--brand-hover); }
 .form button:disabled, .button:disabled { opacity: .6; cursor: wait; }
-.error { color: light-dark(#922e25, #dcbcb9); line-height: 1.5; }
-.back { display: inline-block; margin-top: 30px; color: light-dark(#526357, #c8cdc9); text-decoration: underline; }
+.error { color: #b74740; line-height: 1.5; font-size: 14px; }
+.back { display: inline-block; margin-top: 30px; color: var(--brand); text-decoration: underline; text-underline-offset: 4px; font-weight: 600; font-size: 14px; }
+.back:hover { color: var(--brand-hover); }
 .passwordRow { display: flex; gap: 8px; align-items: stretch; }
 .passwordRow input { flex: 1; min-width: 0; }
-.form .ghost { background: transparent; color: light-dark(#526357, #c8cdc9); border: 1px solid light-dark(#a9b1a4, #454744); margin-top: 0; padding: 12px 14px; font-size: 14px; }
-.form > .ghost { border: 0; text-decoration: underline; justify-self: start; padding: 4px 0; }
+.form .ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); margin-top: 0; padding: 12px 14px; font-size: 14px; border-radius: 6px; }
+.form .ghost:hover { border-color: var(--brand); color: var(--brand); }
+.form > .ghost { border: 0; text-decoration: underline; justify-self: start; padding: 4px 0; color: var(--brand); }

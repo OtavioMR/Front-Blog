@@ -107,77 +107,128 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
   const cover = (a: ArticleSummary) => Boolean(a.coverImage && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(a.coverImage));
 
   return (
-    <main className="page">
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero-copy">
-          <p className="eyebrow"><span /> HISTÓRIAS QUE CONECTAM</p>
-          <h1 id="hero-title">Sempre existe <em>mais</em> para descobrir.</h1>
-          <p className="introduction">
-            Um lugar para desacelerar, encontrar novas perspectivas e deixar a curiosidade levar você mais longe.
-          </p>
-          <div className="hero-footer"><a href="#artigos">EXPLORAR ARTIGOS <span aria-hidden="true">↘</span></a></div>
-        </div>
-        <div className="artwork" aria-hidden="true">
-          <div className="artwork-sun" />
-          <div className="artwork-hill hill-back" />
-          <div className="artwork-hill hill-front" />
-          <span className="artwork-star">✳</span>
-          <span className="artwork-caption">PARA MENTES<br />CURIOSAS</span>
-        </div>
-      </section>
+    <main className={styles.homeContainer}>
+      <div className={styles.homeInner}>
+        <section className={styles.hero} aria-labelledby="hero-title">
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}><span className={styles.eyebrowLine} /> HISTÓRIAS QUE CONECTAM</p>
+            <h1 id="hero-title" className={styles.heroTitle}>Sempre existe <em>mais</em> para descobrir.</h1>
+            <p className={styles.introduction}>
+              Um lugar para desacelerar, encontrar novas perspectivas e deixar a curiosidade levar você mais longe.
+            </p>
+            <div className={styles.heroFooter}>
+              <a href="#artigos" className={styles.heroCta}>EXPLORAR ARTIGOS <span aria-hidden="true">↘</span></a>
+            </div>
+          </div>
+          <div className={styles.heroArtwork} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/hero-editorial-laranja.svg" alt="" className={styles.heroImgLight} width="850" height="720" fetchPriority="high" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/branding/hero-editorial-laranja-escuro.svg" alt="" className={styles.heroImgDark} width="850" height="720" fetchPriority="high" />
+          </div>
+        </section>
 
-      <section className="articles" id="artigos" aria-labelledby="articles-title">
-        <div className="articles-heading">
-          <div><p className="eyebrow">LEITURAS PARA DESCOBRIR</p><h2 id="articles-title">Ideias para ficar um pouco mais.</h2></div>
-          <form className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
-            <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
-            <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
-            {categories ? <div className={styles.field}><label htmlFor="category">Categoria <span>(opcional)</span></label><select id="category" name="categorySlug" defaultValue={category}><option value="">Todas</option>{category && !categories.some(item => item.slug === category) && <option value={category}>Categoria selecionada</option>}{categories.map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></div> : category ? <input type="hidden" name="categorySlug" value={category} /> : null}
-            <button type="submit">Buscar</button>
-          </form>
-        </div>
-        {filtering && <div className={styles.resultSummary}><p>Resultados{search && <> para <strong>“{search}”</strong></>}{author && <> por <strong>{author}</strong></>}{category && <> em <strong>{categories?.find(item => item.slug === category)?.name || category}</strong></>}</p><Link href="/#artigos">Limpar busca</Link></div>}
-        {articles.data.length === 0 ? (
-          <div className="article-status"><p>{page > 1 ? "Não há artigos nesta página." : filtering ? "Nenhum artigo encontrado para esta busca." : "Ainda não há artigos publicados por aqui."}</p>{page > 1 && <Link href={pageLink(1, search, author, category)}>Voltar à primeira página</Link>}</div>
-        ) : (
-          <>
-            {featured && (
-              <article className={`${styles.featured} article-surface`}>
-                {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
-                <div className={styles.featuredBody}>
-                  <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
-                  <p className="article-category">{featured.categories?.[0]?.name || "LEITURA"}</p>
-                  <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`}>{featured.title}</Link></h3>
-                  <p className="article-excerpt">{featured.excerpt}</p>
-                  <p className="article-meta">{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
-                  <Link className="article-link article-surface-link" prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
-                </div>
-              </article>
-            )}
-            {rest.length > 0 && <div className="article-grid">
-              {rest.map((article) => (
-                <article className={`article-card ${styles.card} article-surface`} key={article.id}>
-                  {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
-                  <p className="article-category">{article.categories?.[0]?.name || "LEITURA"}</p>
-                  <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
-                  <p className="article-excerpt">{article.excerpt}</p>
-                  <p className="article-meta">{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
-                  <Link className="article-link article-surface-link" prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+        <section className={styles.articles} id="artigos" aria-labelledby="articles-title">
+          <div className={styles.articlesHeading}>
+            <div>
+              <p className={styles.eyebrow}><span className={styles.eyebrowLine} /> LEITURAS PARA DESCOBRIR</p>
+              <h2 id="articles-title">Ideias para ficar um pouco mais.</h2>
+            </div>
+            <form className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
+              <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
+              <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
+              {categories ? <div className={styles.field}><label htmlFor="category">Categoria <span>(opcional)</span></label><select id="category" name="categorySlug" defaultValue={category}><option value="">Todas</option>{category && !categories.some(item => item.slug === category) && <option value={category}>Categoria selecionada</option>}{categories.map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></div> : category ? <input type="hidden" name="categorySlug" value={category} /> : null}
+              <button type="submit">Buscar</button>
+            </form>
+          </div>
+
+          {categories && categories.length > 0 && (
+            <nav className={styles.categoryNav} aria-label="Filtrar por categorias">
+              <span className={styles.categoryNavLabel}>Assuntos:</span>
+              <div className={styles.categoryList}>
+                <Link
+                  href={pageLink(1, search, author, "")}
+                  className={`${styles.categoryPill} ${!category ? styles.categoryPillActive : ""}`}
+                >
+                  Todas as categorias
+                </Link>
+                {categories.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={pageLink(1, search, author, item.slug)}
+                    className={`${styles.categoryPill} ${category === item.slug ? styles.categoryPillActive : ""}`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
+
+          {filtering && (
+            <div className={styles.resultSummary}>
+              <div className={styles.filterChips}>
+                <span>Filtrando por:</span>
+                {search && <span className={styles.chip}>Busca: “{search}”</span>}
+                {author && <span className={styles.chip}>Autor: {author}</span>}
+                {category && <span className={styles.chip}>Categoria: {categories?.find(item => item.slug === category)?.name || category}</span>}
+              </div>
+              <Link className={styles.clearFilters} href="/#artigos">Limpar filtros ✕</Link>
+            </div>
+          )}
+
+          {articles.data.length === 0 ? (
+            <div className={styles.articleStatus}>
+              <p className={styles.emptyTitle}>
+                {page > 1 ? "Não há artigos nesta página." : filtering ? "Nenhum artigo encontrado para esta busca." : "Ainda não há artigos publicados por aqui."}
+              </p>
+              {filtering && <p className={styles.emptySubtitle}>Tente pesquisar por outros termos ou explorar outras categorias.</p>}
+              {filtering ? (
+                <Link className={styles.clearSearchBtn} href="/#artigos">Ver todos os artigos</Link>
+              ) : page > 1 ? (
+                <Link className={styles.clearSearchBtn} href={pageLink(1, search, author, category)}>Voltar à primeira página</Link>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {featured && (
+                <article className={`${styles.featured} article-surface`}>
+                  {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
+                  <div className={styles.featuredBody}>
+                    <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
+                    <p className={styles.articleCategory}>{featured.categories?.[0]?.name || "LEITURA"}</p>
+                    <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`}>{featured.title}</Link></h3>
+                    <p className={styles.articleExcerpt}>{featured.excerpt}</p>
+                    <p className={styles.articleMeta}>{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
+                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                  </div>
                 </article>
-              ))}
-            </div>}
-          </>
-        )}
-        {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
-          <nav className="pagination" aria-label="Paginação dos artigos">
-            {articles.meta.hasPreviousPage && <Link href={pageLink(page - 1, search, author, category)}>← Anterior</Link>}
-            <span>Página {articles.meta.page}{articles.meta.totalPages > 0 && ` de ${articles.meta.totalPages}`}</span>
-            {articles.meta.hasNextPage && <Link href={pageLink(page + 1, search, author, category)}>Próxima →</Link>}
-          </nav>
-        )}
-      </section>
-      <NewsletterForm />
-      <footer className="footer"><span>entrelinhas.</span><span>UM BLOG PARA LER E SENTIR.</span></footer>
+              )}
+              {rest.length > 0 && <div className={styles.articleGrid}>
+                {rest.map((article) => (
+                  <article className={`${styles.card} article-surface`} key={article.id}>
+                    {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
+                    <p className={styles.articleCategory}>{article.categories?.[0]?.name || "LEITURA"}</p>
+                    <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
+                    <p className={styles.articleExcerpt}>{article.excerpt}</p>
+                    <p className={styles.articleMeta}>{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
+                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                  </article>
+                ))}
+              </div>}
+            </>
+          )}
+          {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
+            <nav className={styles.pagination} aria-label="Paginação dos artigos">
+              {articles.meta.hasPreviousPage && <Link href={pageLink(page - 1, search, author, category)}>← Anterior</Link>}
+              <span>Página {articles.meta.page}{articles.meta.totalPages > 0 && ` de ${articles.meta.totalPages}`}</span>
+              {articles.meta.hasNextPage && <Link href={pageLink(page + 1, search, author, category)}>Próxima →</Link>}
+            </nav>
+          )}
+        </section>
+        <NewsletterForm />
+        <footer className={styles.footer}><span className={styles.footerBrand}>entrelinhas<span className={styles.brandDot}>.</span></span><span>UM BLOG PARA LER E SENTIR.</span></footer>
+      </div>
     </main>
   );
 }

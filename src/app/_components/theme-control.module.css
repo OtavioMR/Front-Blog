@@ -1,3 +1,4 @@
-.control { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 12px; }
-.control select { min-height: 40px; max-width: 110px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
-.control select:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
+.control { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; font-weight: 500; }
+.control select { min-height: 40px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; transition: border-color 0.15s ease; }
+.control select:hover { border-color: var(--brand); }
+.control select:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

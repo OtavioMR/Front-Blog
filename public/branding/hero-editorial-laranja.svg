@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 720" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FAF6F2"/><stop offset="0.63" stop-color="#F3ECE5"/><stop offset="1" stop-color="#F7F1EB"/></linearGradient>
+ <linearGradient id="sun" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#EAA17B"/><stop offset="0.5" stop-color="#D96F43"/><stop offset="1" stop-color="#C0532B"/></linearGradient>
+ <linearGradient id="orangePaper" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#EFA37D"/><stop offset="1" stop-color="#BF522C"/></linearGradient>
+ <linearGradient id="paper" x1="0" y1="0" x2="1" y2="0.6"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#F6EFE7"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+ <clipPath id="clip"><rect x="0" y="0" width="850" height="720"/></clipPath>
+</defs>
+<g clip-path="url(#clip)">
+<rect width="850" height="720" fill="url(#bg)"/>
+<circle cx="730" cy="125" r="260" fill="url(#sun)" opacity=".92"/>
+<path d="M0 575 C207 527 368 619 560 557 C674 520 759 491 850 517 L850 720 L0 720Z" fill="#E2BAA0" opacity=".32"/>
+<path d="M35 90 L260 90 M35 110 L180 110 M35 130 L210 130" fill="none" stroke="#C47E60" stroke-width="3" opacity=".35" stroke-linecap="round"/>
+<path d="M585 18 C471 140 560 260 690 293 C810 319 817 410 720 510" fill="none" stroke="#F0C7B0" stroke-width="3" opacity=".80"/>
+<ellipse cx="440" cy="639" rx="310" ry="49" fill="#753D27" opacity=".14" filter="url(#shadow)"/>
+<!-- loose editorial pages floating -->
+<g transform="translate(229,90) rotate(-17 190 240)">
+  <rect x="45" y="18" width="360" height="475" rx="12" fill="#733824" opacity=".18" filter="url(#shadow)"/>
+  <rect x="44" y="16" width="360" height="475" rx="10" fill="url(#orangePaper)"/>
+  <path d="M70 78 H240 M70 94 H340" stroke="#FFE9D8" stroke-width="5" opacity=".60"/>
+</g>
+<g transform="translate(170,92) rotate(10 250 265)">
+  <rect x="78" y="60" width="390" height="500" rx="10" fill="#994D2B" opacity=".16" filter="url(#shadow)"/>
+  <rect x="78" y="60" width="390" height="500" rx="10" fill="url(#paper)"/>
+  <path d="M111 117 H343 M111 142 H404 M111 166 H381 M111 190 H401" stroke="#99705B" stroke-width="5" opacity=".40" stroke-linecap="round"/>
+  <path d="M111 226 H400 M111 250 H393 M111 274 H351" stroke="#99705B" stroke-width="5" opacity=".25" stroke-linecap="round"/>
+  <path d="M111 435 H329 M111 459 H400 M111 483 H370" stroke="#99705B" stroke-width="5" opacity=".32" stroke-linecap="round"/>
+  <path d="M403 60 L468 125 L403 125Z" fill="#ECCBB6"/>
+  <path d="M403 60 V125 H468" fill="none" stroke="#D39F82" stroke-width="3"/>
+</g>
+<!-- pen-like abstract strokes: the 'between' lines -->
+<path d="M72 514 C180 410 263 386 368 427 C479 471 562 412 658 311" fill="none" stroke="#D96236" stroke-width="19" stroke-linecap="round"/>
+<path d="M81 555 C191 450 269 431 372 467 C486 511 562 449 681 342" fill="none" stroke="#EAA17D" stroke-width="9" stroke-linecap="round"/>
+<path d="M112 601 C204 510 279 480 394 513 C510 546 606 487 718 376" fill="none" stroke="#9D4629" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+<!-- tiny designed orange bookmark motif -->
+<g transform="translate(604 150) rotate(14)"><path d="M0 0 H43 V106 L22 90 L0 106Z" fill="#F0C7AF"/><path d="M12 27 H31 M12 44 H31 M12 61 H27" stroke="#A64B2D" stroke-width="3" stroke-linecap="round"/></g>
+<circle cx="139" cy="236" r="14" fill="#C8592F"/><circle cx="164" cy="254" r="5" fill="#E89B72"/>
+<path d="M33 685 H247 M33 669 H160" fill="none" stroke="#A85736" opacity=".38" stroke-width="3"/>
+</g>
+</svg>

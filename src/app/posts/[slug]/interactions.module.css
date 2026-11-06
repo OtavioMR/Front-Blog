@@ -1,7 +1,8 @@
-.interactions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid light-dark(#c9cfc3, #4c4e4b); border-bottom: 1px solid light-dark(#c9cfc3, #4c4e4b); padding: 20px 0; margin: 48px auto 0; max-width: 700px; color: light-dark(#526357, #c8cdc9); font-size: 14px; }
+.interactions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 20px 0; margin: 48px auto 0; max-width: 700px; color: var(--text-muted); font-size: 14px; }
 .interactions p { line-height: 1.6; margin: 0; }
-.interactions a { text-decoration: underline; }
-.interactions button { border: 1px solid #718373; padding: 10px 16px; background: transparent; color: light-dark(#314c39, #bdc6c0); font: inherit; cursor: pointer; }
-.interactions button[aria-pressed="true"] { background: #314c39; color: #fff; }
+.interactions a { text-decoration: underline; color: var(--brand); }
+.interactions button { border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+.interactions button:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-light); }
+.interactions button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(178, 67, 28, 0.25); }
 .interactions button:disabled { opacity: .6; cursor: wait; }
-.interactions button:focus-visible { outline: 3px solid #b46343; outline-offset: 3px; }
+.interactions button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
