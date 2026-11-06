@@ -97,7 +97,6 @@ function NavbarForRoute() {
     >
       <div className={styles.inner}>
         <Link className={styles.brand} href="/" aria-label="Entrelinhas, página inicial">
-          <span className={styles.brandMark} aria-hidden="true">✳</span>
           entrelinhas<span className={styles.brandDot}>.</span>
         </Link>
         <nav className={styles.nav} aria-label="Navegação principal">

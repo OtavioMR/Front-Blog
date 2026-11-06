@@ -8,7 +8,6 @@ a:focus-visible { outline: 3px solid #b46343; outline-offset: 5px; }
 .page { max-width: 1500px; margin: 0 auto; padding: 0 6%; }
 .header { height: 104px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid light-dark(#c9cfc3, #4c4e4b); }
 .brand { font-family: Georgia, serif; font-size: 30px; font-weight: bold; letter-spacing: -1.5px; }
-.brand-mark { display: inline-block; color: light-dark(#cc704e, #efd1c6); font-size: 28px; margin-right: 9px; }
 .brand-dot { color: light-dark(#c26b4b, #ebd0c5); }
 .header-note, .eyebrow, .hero-footer, .artwork-caption, .footer { font-size: 10px; font-weight: 700; letter-spacing: .16em; }
 .header-nav { display: flex; gap: 28px; color: light-dark(#526357, #c8cdc9); font-size: 13px; font-weight: bold; }

@@ -41,7 +41,12 @@ export default async function PostPage({ params, searchParams }: Props) {
   if (!post) notFound();
   if (slug !== post.slug) permanentRedirect(`/posts/${post.slug}`);
   const requestedPage = commentsPage((await searchParams).commentsPage);
-  const [related, comments, authorProfile, series] = await Promise.all([getRelatedPosts(post.slug), getComments(post.id, requestedPage), post.author?.id ? getAuthor(post.author.id).catch(() => null) : Promise.resolve(null), getPublicSeries(post.id, post.slug)]);
+  const [related, comments, authorProfile, series] = await Promise.all([
+    getRelatedPosts({ slug: post.slug, id: post.id, authorId: post.author?.id }),
+    getComments(post.id, requestedPage),
+    post.author?.id ? getAuthor(post.author.id).catch(() => null) : Promise.resolve(null),
+    getPublicSeries(post.id, post.slug),
+  ]);
 
   const content = sanitizeHtml(post.content, {
     allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"],
