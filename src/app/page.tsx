@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Form from "next/form";
 import type { Metadata } from "next";
 import Image from "next/image";
 import styles from "./home.module.css";
@@ -80,7 +81,7 @@ async function getArticles(page: number, search: string, author: string, categor
 
 async function getCategories(): Promise<{ slug: string; name: string }[] | null> {
   try {
-    const response = await fetch(`${process.env.API_ORIGIN || "http://localhost:3001"}/api/v1/categories?limit=100`, {
+    const response = await fetch(`${process.env.API_ORIGIN || "http://localhost:3001"}/api/v1/categories?limit=6`, {
       cache: "no-store", signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return null;
@@ -128,42 +129,31 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
           </div>
         </section>
 
+        <section className={styles.discovery} aria-label="Encontrar leituras">
+          <Form key={`${search}|${author}|${category}`} className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
+            <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
+            <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
+            {category && <input type="hidden" name="categorySlug" value={category} />}
+            <button type="submit">Buscar</button>
+          </Form>
+          <nav className={styles.categoryNav} aria-label="Filtrar por categorias">
+            <span className={styles.categoryNavLabel}>Assuntos:</span>
+            <div className={styles.categoryList}>
+              {categories?.map((item) => <Link key={item.slug} href={pageLink(1, search, author, item.slug)} aria-current={category === item.slug ? "true" : undefined} className={`${styles.categoryPill} ${category === item.slug ? styles.categoryPillActive : ""}`}>{item.name}</Link>)}
+              <Link className={styles.categoryPill} href={`/categorias?${new URLSearchParams({ ...(search && { articleSearch: search }), ...(author && { author }) })}`}>Ver todas as categorias →</Link>
+            </div>
+            {!categories && <span>Não foi possível carregar os assuntos em destaque.</span>}
+            {categories && categories.length === 0 && <span>Ainda não há categorias cadastradas.</span>}
+          </nav>
+        </section>
+
         <section className={styles.articles} id="artigos" aria-labelledby="articles-title">
           <div className={styles.articlesHeading}>
             <div>
               <p className={styles.eyebrow}><span className={styles.eyebrowLine} /> LEITURAS PARA DESCOBRIR</p>
               <h2 id="articles-title">Ideias para ficar um pouco mais.</h2>
             </div>
-            <form className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
-              <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
-              <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
-              {categories ? <div className={styles.field}><label htmlFor="category">Categoria <span>(opcional)</span></label><select id="category" name="categorySlug" defaultValue={category}><option value="">Todas</option>{category && !categories.some(item => item.slug === category) && <option value={category}>Categoria selecionada</option>}{categories.map(item => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></div> : category ? <input type="hidden" name="categorySlug" value={category} /> : null}
-              <button type="submit">Buscar</button>
-            </form>
           </div>
-
-          {categories && categories.length > 0 && (
-            <nav className={styles.categoryNav} aria-label="Filtrar por categorias">
-              <span className={styles.categoryNavLabel}>Assuntos:</span>
-              <div className={styles.categoryList}>
-                <Link
-                  href={pageLink(1, search, author, "")}
-                  className={`${styles.categoryPill} ${!category ? styles.categoryPillActive : ""}`}
-                >
-                  Todas as categorias
-                </Link>
-                {categories.map((item) => (
-                  <Link
-                    key={item.slug}
-                    href={pageLink(1, search, author, item.slug)}
-                    className={`${styles.categoryPill} ${category === item.slug ? styles.categoryPillActive : ""}`}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            </nav>
-          )}
 
           {filtering && (
             <div className={styles.resultSummary}>

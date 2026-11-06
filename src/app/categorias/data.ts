@@ -25,8 +25,8 @@ export function pageNumber(value: unknown): number {
   return Number.isSafeInteger(number) && number > 0 ? number : 1;
 }
 
-export async function getCategories(page: number): Promise<Page<Category>> {
-  return parsePage(await request(`/categories?page=${page}&limit=12`), category);
+export async function getCategories(page: number, search = ""): Promise<Page<Category>> {
+  return parsePage(await request(`/categories?${new URLSearchParams({ page: String(page), limit: "12", ...(search && { search }) })}`), category);
 }
 
 export async function getCategory(value: string): Promise<Category | null> {

@@ -16,6 +16,7 @@ const article = {
 test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }, async (t) => {
   let lastPostQuery;
   let categoriesDown = false;
+  let categoryCount = 1;
   let seriesState = "ok";
   const api = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
@@ -28,7 +29,12 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     if (url.pathname === `/api/v1/authors/${article.author.id}`) return response.end(JSON.stringify({ id: article.author.id, name: article.author.name, profilePhoto: null, bio: "Biografia de teste", websiteUrl: null, socialUrl: null, publicationCount: 1 }));
     if (url.pathname === "/api/v1/categories") {
       if (categoriesDown) { response.statusCode = 503; return response.end("{}"); }
-      return response.end(JSON.stringify({ data: [category], meta }));
+      const all = categoryCount === 1 ? [category] : Array.from({ length: categoryCount }, (_, i) => ({ id: `c${i}`, slug: `assunto-${i}`, name: `Assunto ${String(i).padStart(3, "0")}`, description: null, isActive: true }));
+      const term = url.searchParams.get("search") || "";
+      const matches = all.filter(item => item.name.toLowerCase().includes(term.toLowerCase()));
+      const page = Number(url.searchParams.get("page") || 1), limit = Number(url.searchParams.get("limit") || 10);
+      const totalPages = Math.ceil(matches.length / limit);
+      return response.end(JSON.stringify({ data: matches.slice((page - 1) * limit, page * limit), meta: { page, totalPages, hasNextPage: page < totalPages, hasPreviousPage: page > 1 } }));
     }
     if (url.pathname === "/api/v1/categories/cultura") return response.end(JSON.stringify(category));
     if (url.pathname === "/api/v1/categories/cultura/posts") return response.end(JSON.stringify({ data: [article], meta }));
@@ -94,9 +100,23 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.equal(lastPostQuery.get("author"), "Ana");
   assert.equal(lastPostQuery.get("categorySlug"), "cultura");
   assert.match(searchHtml, /name="robots" content="noindex/);
-  assert.match(searchHtml, /Limpar busca/);
+  assert.match(searchHtml, /Limpar filtros/);
   assert.match(searchHtml, /search=paginar&amp;author=Ana&amp;categorySlug=cultura&amp;page=2#artigos/);
-  assert.match(searchHtml, /<option value="cultura" selected="">Cultura<\/option>/);
+  assert.match(searchHtml, /name="categorySlug" value="cultura"/);
+  for (const count of [0, 5, 20, 60, 105]) {
+    categoryCount = count;
+    const html = await (await fetch(base)).text();
+    assert.equal((html.match(/href="\/\?categorySlug=assunto-/g) || []).length, Math.min(count, 6));
+    const directory = await (await fetch(`${base}/categorias`)).text();
+    if (!count) assert.match(directory, /Ainda n.o h. categorias cadastradas/);
+    if (count > 12) assert.match(directory, /Pr.xima/);
+  }
+  categoryCount = 105;
+  const directorySearch = await (await fetch(`${base}/categorias?search=104&articleSearch=ideias&author=Ana`)).text();
+  assert.match(directorySearch, /Assunto 104/);
+  assert.match(directorySearch, /search=ideias&amp;author=Ana&amp;categorySlug=assunto-104#artigos/);
+  assert.match(await (await fetch(`${base}/categorias?search=inexistente`)).text(), /Nenhuma categoria encontrada para esta busca/);
+  categoryCount = 1;
   categoriesDown = true;
   const fallback = await fetch(`${base}/?categorySlug=cultura`);
   assert.equal(fallback.status, 200);
