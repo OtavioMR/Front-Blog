@@ -70,13 +70,13 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
     const loginPage = await start.text(), loginCsrf = loginPage.match(/name="csrf" value="([^"]+)"/)?.[1];
     const loginCookie = start.headers.getSetCookie().find(value => value.startsWith("__Host-editorial-login="))?.split(";")[0];
     assert.ok(loginCsrf && loginCookie);
-    const panelLogin = await form("/gestao-editorial/entrar", { csrf: loginCsrf, email: account.email, password }, loginCookie);
+    const panelLogin = await form("/gestao-editorial/entrar/sessao", { csrf: loginCsrf, email: account.email, password }, loginCookie);
     const authorized = ["ADMIN", "SUPER_ADMIN"].includes(account.role);
     assert.equal(panelLogin.status, authorized ? 303 : 403, `entrada BFF ${account.role}`);
     if (authorized) {
       const sessionCookie = panelLogin.headers.getSetCookie().find(value => value.startsWith("__Host-editorial-session="))?.split(";")[0];
       assert.ok(sessionCookie);
-      for (const [path, label] of [["/admin", "O Grifório em números"], ["/admin/users", "Contas da plataforma"], ["/admin/comments", "Comentários"], ["/admin/posts", "Artigos da plataforma"], ["/admin/reports", "Central de denúncias"], ["/admin/analytics", "Movimentação da plataforma"], ["/admin/newsletter", "Inscrições e entregas"], ["/admin/audit-logs", "Ações registradas"], ["/admin/categories", "Categorias editoriais"], ["/admin/tags", "Tags da plataforma"]]) {
+      for (const [path, label] of [["/gestao-editorial", "O Grifório em números"], ["/gestao-editorial/usuarios", "Contas da plataforma"], ["/gestao-editorial/comentarios", "Comentários"], ["/gestao-editorial/artigos", "Artigos da plataforma"], ["/gestao-editorial/denuncias", "Central de denúncias"], ["/gestao-editorial/estatisticas", "Movimentação da plataforma"], ["/gestao-editorial/newsletter", "Inscrições e entregas"], ["/gestao-editorial/auditoria", "Ações registradas"], ["/gestao-editorial/categorias", "Categorias editoriais"], ["/gestao-editorial/tags", "Tags da plataforma"]]) {
         const response = await frontRequest(path, { headers: { Cookie: sessionCookie } });
         assert.equal(response.status, 200, path);
         assert.ok((await response.text()).includes(label), `resposta válida ${path}`);
@@ -86,64 +86,54 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
       assert.ok(csrf);
       if (account.role === "ADMIN") {
         const target = accounts.find(a => a.role === "READER"), path = `/gestao-editorial/usuarios/${target.id}`;
-        const deniedRole = await frontRequest(`/admin/users/${target.id}/role`, { headers: { Cookie: sessionCookie } });
+        const deniedRole = await frontRequest(`/gestao-editorial/usuarios/${target.id}/funcao`, { headers: { Cookie: sessionCookie } });
         assert.doesNotMatch(await deniedRole.text(), /Nova função/);
-        assert.equal((await form(`/admin/users/${target.id}/role/change`, { csrf, role: "ADMIN", reason: "Teste sintetico", code: "123456" }, sessionCookie)).status, 403);
-        const confirm = async (action, extra = {}) => {
-          const response = await form(path, { csrf, step: "confirm", action, ...extra }, sessionCookie);
-          assert.equal(response.status, 200);
-          const html = await response.text(), values = {};
-          for (const name of ["csrf", "step", "action", "reason", "endsAt", "timestamp", "nonce", "signature"]) {
-            const match = html.match(new RegExp(`name="${name}" value="([^"]*)"`));
-            assert.ok(match, `campo ${name}`); values[name] = match[1];
-          }
-          return values;
-        };
-        const suspension = await confirm("suspend", { reason: "Teste administrativo sintetico" });
-        assert.equal((await form(path, suspension, sessionCookie)).status, 303);
+        assert.equal((await form(`/gestao-editorial/usuarios/${target.id}/funcao/alterar`, { csrf, role: "ADMIN", reason: "Teste sintetico", code: "123456" }, sessionCookie)).status, 403);
+        const moderatePath = `/gestao-editorial/usuarios/${target.id}/moderar`;
+        const suspension = await form(moderatePath, { csrf, action: "suspend", reason: "Teste administrativo sintetico" }, sessionCookie);
+        assert.equal(suspension.status, 204);
         let detail = await frontRequest(path, { headers: { Cookie: sessionCookie } });
-        assert.match(await detail.text(), /Situação: Suspensa/);
-        assert.equal((await form(path, suspension, sessionCookie)).status, 400);
-        const restoration = await confirm("restore");
-        assert.equal((await form(path, restoration, sessionCookie)).status, 303);
+        assert.match(await detail.text(), /Suspensa/);
+        const restoration = await form(moderatePath, { csrf, action: "restore" }, sessionCookie);
+        assert.equal(restoration.status, 204);
         detail = await frontRequest(path, { headers: { Cookie: sessionCookie } });
-        assert.match(await detail.text(), /Situação: Ativa/);
+        assert.match(await detail.text(), /Ativa/);
         assert.equal(syntheticPosts.length, 2);
-        const reject = await form(`/admin/posts/${syntheticPosts[0]}/review`, { csrf, decision: "REJECTED", reason: "Rejeicao sintetica para teste" }, sessionCookie);
+        const reject = await form(`/gestao-editorial/artigos/${syntheticPosts[0]}/revisar`, { csrf, decision: "REJECTED", reason: "Rejeicao sintetica para teste" }, sessionCookie);
         assert.equal(reject.status, 204);
         const pendingSubscribers = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", "SELECT count(*) FROM newsletter_subscribers WHERE confirmed = true"], { encoding: "utf8" }).trim();
         assert.equal(pendingSubscribers, "0", "Publicação de teste exige ausência de destinatários externos.");
-        const approve = await form(`/admin/posts/${syntheticPosts[1]}/review`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie);
+        const approve = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/revisar`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie);
         assert.equal(approve.status, 204);
-        const approvedDetail = await frontRequest(`/admin/posts/${syntheticPosts[1]}`, { headers: { Cookie: sessionCookie } });
+        const approvedDetail = await frontRequest(`/gestao-editorial/artigos/${syntheticPosts[1]}`, { headers: { Cookie: sessionCookie } });
         assert.match(await approvedDetail.text(), /Publicado/);
 
         // Moderação de artigo (ocultar e restaurar)
-        const hidePost = await form(`/admin/posts/${syntheticPosts[1]}/moderate`, { csrf, action: "hide", reason: "Ocultacao sintetica para teste" }, sessionCookie);
+        const hidePost = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/moderar`, { csrf, action: "hide", reason: "Ocultacao sintetica para teste" }, sessionCookie);
         assert.equal(hidePost.status, 204);
-        const restorePost = await form(`/admin/posts/${syntheticPosts[1]}/moderate`, { csrf, action: "restore", reason: "Restauracao sintetica para teste" }, sessionCookie);
+        const restorePost = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/moderar`, { csrf, action: "restore", reason: "Restauracao sintetica para teste" }, sessionCookie);
         assert.equal(restorePost.status, 204);
 
         // Revogação de sessões e moderação de usuário via BFF React
-        const revoke = await form(`/admin/users/${target.id}/moderate`, { csrf, action: "revoke-sessions", reason: "Revogacao preventiva de teste" }, sessionCookie);
+        const revoke = await form(`/gestao-editorial/usuarios/${target.id}/moderar`, { csrf, action: "revoke-sessions", reason: "Revogacao preventiva de teste" }, sessionCookie);
         assert.equal(revoke.status, 204);
-        const suspendUser = await form(`/admin/users/${target.id}/moderate`, { csrf, action: "suspend", reason: "Suspensao moderada via React BFF" }, sessionCookie);
+        const suspendUser = await form(`/gestao-editorial/usuarios/${target.id}/moderar`, { csrf, action: "suspend", reason: "Suspensao moderada via React BFF" }, sessionCookie);
         assert.equal(suspendUser.status, 204);
-        const restoreUser = await form(`/admin/users/${target.id}/moderate`, { csrf, action: "restore" }, sessionCookie);
+        const restoreUser = await form(`/gestao-editorial/usuarios/${target.id}/moderar`, { csrf, action: "restore" }, sessionCookie);
         assert.equal(restoreUser.status, 204);
 
         // Gestão de categorias
         const catName = `Cat-${randomUUID().slice(0, 8)}`;
-        const createCat = await form("/admin/categories/action", { csrf, action: "create", name: catName, description: "Descricao sintetica" }, sessionCookie);
+        const createCat = await form("/gestao-editorial/categorias/acao", { csrf, action: "create", name: catName, description: "Descricao sintetica" }, sessionCookie);
         assert.equal(createCat.status, 204);
         const catId = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", `SELECT id FROM categories WHERE name = '${catName}'`], { encoding: "utf8" }).trim();
         assert.ok(catId);
         syntheticCategories.push(catId);
-        const editCat = await form("/admin/categories/action", { csrf, action: "edit", id: catId, name: `${catName} Editada`, slug: `slug-${randomUUID().slice(0, 8)}`, description: "Nova desc" }, sessionCookie);
+        const editCat = await form("/gestao-editorial/categorias/acao", { csrf, action: "edit", id: catId, name: `${catName} Editada`, slug: `slug-${randomUUID().slice(0, 8)}`, description: "Nova desc" }, sessionCookie);
         assert.equal(editCat.status, 204);
-        const deleteCat = await form("/admin/categories/action", { csrf, action: "delete", id: catId }, sessionCookie);
+        const deleteCat = await form("/gestao-editorial/categorias/acao", { csrf, action: "delete", id: catId }, sessionCookie);
         assert.equal(deleteCat.status, 204);
-        const reactivateCat = await form("/admin/categories/action", { csrf, action: "reactivate", id: catId }, sessionCookie);
+        const reactivateCat = await form("/gestao-editorial/categorias/acao", { csrf, action: "reactivate", id: catId }, sessionCookie);
         assert.equal(reactivateCat.status, 204);
         const catState = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", `SELECT is_active FROM categories WHERE id = '${catId}'`], { encoding: "utf8" }).trim();
         assert.equal(catState, "t");
@@ -151,39 +141,31 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
         // Gestão de tags
         const tagName1 = `Tag1-${randomUUID().slice(0, 8)}`;
         const tagName2 = `Tag2-${randomUUID().slice(0, 8)}`;
-        assert.equal((await form("/admin/tags/action", { csrf, action: "create", name: tagName1 }, sessionCookie)).status, 204);
-        assert.equal((await form("/admin/tags/action", { csrf, action: "create", name: tagName2 }, sessionCookie)).status, 204);
+        assert.equal((await form("/gestao-editorial/tags/acao", { csrf, action: "create", name: tagName1 }, sessionCookie)).status, 204);
+        assert.equal((await form("/gestao-editorial/tags/acao", { csrf, action: "create", name: tagName2 }, sessionCookie)).status, 204);
         const tag1Id = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", `SELECT id FROM tags WHERE name = '${tagName1}'`], { encoding: "utf8" }).trim();
         const tag2Id = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", `SELECT id FROM tags WHERE name = '${tagName2}'`], { encoding: "utf8" }).trim();
         assert.ok(tag1Id && tag2Id);
         syntheticTags.push(tag1Id, tag2Id);
-        assert.equal((await form("/admin/tags/action", { csrf, action: "edit", id: tag1Id, name: `${tagName1}-edit` }, sessionCookie)).status, 204);
-        assert.equal((await form("/admin/tags/action", { csrf, action: "merge", id: tag1Id, targetId: tag2Id }, sessionCookie)).status, 204);
-        assert.equal((await form("/admin/tags/action", { csrf, action: "delete", id: tag2Id }, sessionCookie)).status, 204);
+        assert.equal((await form("/gestao-editorial/tags/acao", { csrf, action: "edit", id: tag1Id, name: `${tagName1}-edit` }, sessionCookie)).status, 204);
+        assert.equal((await form("/gestao-editorial/tags/acao", { csrf, action: "merge", id: tag1Id, targetId: tag2Id }, sessionCookie)).status, 204);
+        assert.equal((await form("/gestao-editorial/tags/acao", { csrf, action: "delete", id: tag2Id }, sessionCookie)).status, 204);
 
         // Atribuição e resolução de denúncia
         const reportId = randomUUID();
         sql(`INSERT INTO reports (id, reporter_id, post_id, reason, status) VALUES ('${reportId}', '${accounts[0].id}', '${syntheticPosts[1]}', 'Denúncia sintética de teste', 'PENDING')`);
         syntheticReports.push(reportId);
-        assert.equal((await form(`/admin/reports/${reportId}/assign`, { csrf, moderatorId: account.id }, sessionCookie)).status, 204);
-        assert.equal((await form(`/admin/reports/${reportId}/resolve`, { csrf, status: "RESOLVED", action: "NONE", note: "Denúncia resolvida no teste sintético" }, sessionCookie)).status, 204);
+        assert.equal((await form(`/gestao-editorial/denuncias/${reportId}/atribuir`, { csrf, moderatorId: account.id }, sessionCookie)).status, 204);
+        assert.equal((await form(`/gestao-editorial/denuncias/${reportId}/resolver`, { csrf, status: "RESOLVED", action: "NONE", note: "Denúncia resolvida no teste sintético" }, sessionCookie)).status, 204);
       }
       if (account.role === "SUPER_ADMIN") {
         const target = accounts.find(a => a.role === "ADMIN"), path = `/gestao-editorial/usuarios/${target.id}`;
-        const confirm = async (action, extra = {}) => {
-          const response = await form(path, { csrf, step: "confirm", action, ...extra }, sessionCookie);
-          assert.equal(response.status, 200);
-          const html = await response.text(), values = {};
-          for (const name of ["csrf", "step", "action", "reason", "endsAt", "timestamp", "nonce", "signature"]) {
-            const match = html.match(new RegExp(`name="${name}" value="([^"]*)"`)); assert.ok(match, `campo ${name}`); values[name] = match[1];
-          }
-          return values;
-        };
-        assert.equal((await form(path, await confirm("suspend", { reason: "Teste sintetico de administracao" }), sessionCookie)).status, 303);
-        assert.equal((await form(path, await confirm("restore"), sessionCookie)).status, 303);
+        const moderatePath = `/gestao-editorial/usuarios/${target.id}/moderar`;
+        assert.equal((await form(moderatePath, { csrf, action: "suspend", reason: "Teste sintetico de administracao" }, sessionCookie)).status, 204);
+        assert.equal((await form(moderatePath, { csrf, action: "restore" }, sessionCookie)).status, 204);
       }
-      assert.equal((await form("/gestao-editorial", { csrf, action: "logout" }, sessionCookie)).status, 303);
-      assert.equal((await frontRequest("/gestao-editorial", { headers: { Cookie: sessionCookie } })).status, 401);
+      assert.equal((await form("/gestao-editorial/sair", { csrf }, sessionCookie)).status, 303);
+      assert.equal((await frontRequest("/gestao-editorial", { headers: { Cookie: sessionCookie } })).status, 307);
     }
     const login = await fetch("http://127.0.0.1:3000/api/v1/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: account.email, password }), signal: AbortSignal.timeout(10000) });
     assert.equal(login.status, 200, `login ${account.role}`);
@@ -214,19 +196,19 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
       const begin = await frontRequest("/gestao-editorial/entrar"), html = await begin.text();
       const csrf = html.match(/name="csrf" value="([^"]+)"/)?.[1], cookie = begin.headers.getSetCookie().find(v => v.startsWith("__Host-editorial-login="))?.split(";")[0];
       assert.ok(csrf && cookie);
-      const nextLogin = await form("/gestao-editorial/entrar", { csrf, email: account.email, password, totpCode: totp(secret) }, cookie);
+      const nextLogin = await form("/gestao-editorial/entrar/sessao", { csrf, email: account.email, password, totpCode: totp(secret) }, cookie);
       assert.equal(nextLogin.status, 303);
       const session = nextLogin.headers.getSetCookie().find(v => v.startsWith("__Host-editorial-session="))?.split(";")[0]; assert.ok(session);
       const editorial = await frontRequest("/gestao-editorial", { headers: { Cookie: session } });
       const sessionCsrf = (await editorial.text()).match(/name="csrf" value="([^"]+)"/)?.[1]; assert.ok(sessionCsrf);
-      const target = accounts.find(a => a.role === "READER"), page = await frontRequest(`/admin/users/${target.id}/role`, { headers: { Cookie: session } });
+      const target = accounts.find(a => a.role === "READER"), page = await frontRequest(`/gestao-editorial/usuarios/${target.id}/funcao`, { headers: { Cookie: session } });
       assert.match(await page.text(), /Nova função/);
       const code = totp(secret, 1), change = { csrf: sessionCsrf, role: "ADMIN", reason: "Promocao sintetica para teste", code };
-      assert.equal((await form(`/admin/users/${target.id}/role/change`, change, session)).status, 204);
-      assert.equal((await form(`/admin/users/${target.id}/role/change`, change, session)).status, 401);
+      assert.equal((await form(`/gestao-editorial/usuarios/${target.id}/funcao/alterar`, change, session)).status, 204);
+      assert.equal((await form(`/gestao-editorial/usuarios/${target.id}/funcao/alterar`, change, session)).status, 401);
       const updated = await frontRequest(`/gestao-editorial/usuarios/${target.id}`, { headers: { Cookie: session } });
-      assert.match(await updated.text(), /Papel: ADMIN/);
-      assert.equal((await form("/gestao-editorial", { csrf: sessionCsrf, action: "logout" }, session)).status, 303);
+      assert.match(await updated.text(), />ADMIN</);
+      assert.equal((await form("/gestao-editorial/sair", { csrf: sessionCsrf }, session)).status, 303);
     } else {
       const logout = await fetch("http://127.0.0.1:3000/api/v1/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
       assert.equal(logout.status, 200);

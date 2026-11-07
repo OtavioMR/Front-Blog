@@ -36,8 +36,16 @@ export function getSession(id?: string): Session | null {
   return value;
 }
 export function deleteSession(id?: string) { if (id) sessions.delete(hash(id)); }
+export type AdminActorInfo = {
+  id: string;
+  role: "ADMIN" | "SUPER_ADMIN";
+  name?: string;
+  email?: string;
+  profilePhoto?: string | null;
+};
+
 // O sub apenas seleciona o perfil; o Nest valida o token e fornece a role atual.
-export async function adminActor(token: string): Promise<{ id: string; role: "ADMIN" | "SUPER_ADMIN" } | null> {
+export async function adminActor(token: string): Promise<AdminActorInfo | null> {
   try {
     const parts = token.split(".");
     if (parts.length !== 3 || parts[1].length > 4096) return null;
@@ -47,7 +55,10 @@ export async function adminActor(token: string): Promise<{ id: string; role: "AD
     if (!response.ok) return null;
     const value: unknown = await response.json();
     if (!value || typeof value !== "object" || !("id" in value) || value.id !== payload.sub || !("role" in value) || (value.role !== "ADMIN" && value.role !== "SUPER_ADMIN")) return null;
-    return { id: payload.sub, role: value.role };
+    const name = "name" in value && typeof value.name === "string" ? value.name : undefined;
+    const email = "email" in value && typeof value.email === "string" ? value.email : undefined;
+    const profilePhoto = "profilePhoto" in value && (typeof value.profilePhoto === "string" || value.profilePhoto === null) ? value.profilePhoto : null;
+    return { id: payload.sub, role: value.role, name, email, profilePhoto };
   } catch { return null; }
 }
 export function consumeConfirmation(session: Session, signature: string): boolean {
