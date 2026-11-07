@@ -23,9 +23,9 @@
 }
 
 .intro h1 {
-  font-family: var(--font-serif, 'EB Garamond', Georgia, serif);
+  font-family: var(--font-serif);
   font-size: clamp(3rem, 6.5vw, 5.5rem);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -.04em;
   line-height: 1.04;
   margin: 14px 0 18px;
@@ -84,8 +84,8 @@
 }
 
 .card h2 {
-  font-family: var(--font-serif, 'EB Garamond', Georgia, serif);
-  font-weight: 400;
+  font-family: var(--font-serif);
+  font-weight: 600;
   font-size: 1.75rem;
   line-height: 1.2;
   margin: 0 0 14px;

@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import SessionNav from "@/app/_components/session-nav";
 import styles from "./sobre.module.css";
 
 export const metadata: Metadata = {
-  title: "Sobre nós | Entrelinhas",
-  description: "Conheça o Entrelinhas, um espaço para compartilhar histórias e descobrir novas ideias.",
+  title: "Sobre nós | Grifório",
+  description: "Conheça o Grifório, um espaço para compartilhar histórias e descobrir novas ideias.",
 };
 
 export default function SobrePage() {
@@ -13,9 +12,9 @@ export default function SobrePage() {
     <main className={styles.page}>
       <section className={styles.intro} aria-labelledby="sobre-titulo">
         <div className={styles.introCopy}>
-          <p className={styles.eyebrow}>SOBRE O ENTRELINHAS</p>
+          <p className={styles.eyebrow}>SOBRE O GRIFÓRIO</p>
           <h1 id="sobre-titulo">Boas ideias merecem <em>ser compartilhadas.</em></h1>
-          <p>O Entrelinhas é um espaço para quem gosta de descobrir, aprender e enxergar o mundo por outras perspectivas.</p>
+          <p>O Grifório é um espaço para quem gosta de descobrir, aprender e enxergar o mundo por outras perspectivas.</p>
           <Link className={styles.primaryLink} href="/#artigos">Explore os artigos <span aria-hidden="true">↗</span></Link>
         </div>
         <div className={styles.art} aria-hidden="true">
@@ -45,7 +44,6 @@ export default function SobrePage() {
         <div><p className={styles.eyebrow}>A PRÓXIMA HISTÓRIA ESPERA POR VOCÊ</p><h2>Vamos descobrir juntos?</h2></div>
         <Link className={styles.primaryLink} href="/#artigos">Encontrar uma leitura <span aria-hidden="true">↗</span></Link>
       </section>
-      <footer className={styles.footer}><Link href="/">entrelinhas.</Link><span>UM BLOG PARA LER E SENTIR.</span></footer>
     </main>
   );
 }

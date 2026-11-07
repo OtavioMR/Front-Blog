@@ -7,11 +7,11 @@ import styles from "../categories.module.css";
 
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> }): Promise<Metadata> {
   const category = await getCategory((await params).slug);
-  if (!category) return { title: "Categoria não encontrada | Entrelinhas", robots: { index: false } };
+  if (!category) return { title: "Categoria não encontrada | Grifório", robots: { index: false } };
   const page = pageNumber((await searchParams).page);
   return {
-    title: `${category.name}${page > 1 ? ` — página ${page}` : ""} | Entrelinhas`,
-    description: category.description || `Explore artigos sobre ${category.name} no Entrelinhas.`,
+    title: `${category.name}${page > 1 ? ` — página ${page}` : ""} | Grifório`,
+    description: category.description || `Explore artigos sobre ${category.name} no Grifório.`,
   };
 }
 

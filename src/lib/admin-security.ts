@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
-type Session = { token: string; csrf: string; expires: number };
+type Session = { token: string; csrf: string; expires: number; usedConfirmations: Set<string> };
 const state = globalThis as typeof globalThis & { __editorialSessions?: Map<string, Session> };
 const sessions = state.__editorialSessions ??= new Map();
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -21,7 +21,7 @@ export function createSession(token: string, seconds: number) {
   for (const [key, session] of sessions) if (session.expires <= Date.now()) sessions.delete(key);
   if (sessions.size >= 1000) throw new Error("capacity");
   const id = randomSecret();
-  const session = { token, csrf: randomSecret(), expires: Date.now() + Math.min(300, seconds - 10) * 1000 };
+  const session: Session = { token, csrf: randomSecret(), expires: Date.now() + Math.min(300, seconds - 10) * 1000, usedConfirmations: new Set() };
   if (session.expires <= Date.now()) throw new Error("expired");
   const key = hash(id);
   sessions.set(key, session);
@@ -36,6 +36,25 @@ export function getSession(id?: string): Session | null {
   return value;
 }
 export function deleteSession(id?: string) { if (id) sessions.delete(hash(id)); }
+// O sub apenas seleciona o perfil; o Nest valida o token e fornece a role atual.
+export async function adminActor(token: string): Promise<{ id: string; role: "ADMIN" | "SUPER_ADMIN" } | null> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3 || parts[1].length > 4096) return null;
+    const payload: unknown = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    if (!payload || typeof payload !== "object" || !("sub" in payload) || typeof payload.sub !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return null;
+    const response = await upstream(`/users/${payload.sub}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    if (!value || typeof value !== "object" || !("id" in value) || value.id !== payload.sub || !("role" in value) || (value.role !== "ADMIN" && value.role !== "SUPER_ADMIN")) return null;
+    return { id: payload.sub, role: value.role };
+  } catch { return null; }
+}
+export function consumeConfirmation(session: Session, signature: string): boolean {
+  if (session.usedConfirmations.size >= 1000 || session.usedConfirmations.has(signature)) return false;
+  session.usedConfirmations.add(signature);
+  return true;
+}
 
 export async function upstream(path: string, init: RequestInit = {}): Promise<Response> {
   const origin = process.env.API_ORIGIN || "http://localhost:3001";

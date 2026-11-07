@@ -40,12 +40,22 @@ export function ReadingProgress() {
 
 export function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const [footerOffset, setFooterOffset] = useState(0);
 
   useEffect(() => {
-    const update = () => setVisible(window.scrollY > 400);
+    const update = () => {
+      const footer = document.querySelector("body > footer");
+      const footerTop = footer?.getBoundingClientRect().top ?? window.innerHeight;
+      setFooterOffset(Math.max(0, window.innerHeight - footerTop));
+      setVisible(window.scrollY > 800 && footerTop >= 64);
+    };
     window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
     update();
-    return () => window.removeEventListener("scroll", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   function goToTop() {
@@ -62,5 +72,5 @@ export function BackToTop() {
     }
   }
 
-  return <button type="button" className={`${styles.top} ${visible ? styles.visible : ""}`} onClick={goToTop} tabIndex={visible ? 0 : -1} aria-hidden={!visible}>↑ <span>Voltar ao topo</span></button>;
+  return <button type="button" className={`${styles.top} ${visible ? styles.visible : ""}`} style={{ bottom: `max(${footerOffset + 16}px, env(safe-area-inset-bottom))` }} onClick={goToTop} tabIndex={visible ? 0 : -1} aria-hidden={!visible} aria-label="Voltar ao topo" title="Voltar ao topo">↑</button>;
 }

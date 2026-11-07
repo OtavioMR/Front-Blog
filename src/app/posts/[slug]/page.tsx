@@ -111,7 +111,6 @@ export default async function PostPage({ params, searchParams }: Props) {
           <Link className={`${styles.relatedLink} article-surface-link`} href={`/posts/${encodeURIComponent(item.slug)}`} aria-label={`Ler artigo: ${item.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
         </article>)}</div>
       </section>}
-      <footer className={styles.footer}><Link href="/">entrelinhas.</Link><span>UM BLOG PARA LER E SENTIR.</span></footer>
     </main>
   );
 }

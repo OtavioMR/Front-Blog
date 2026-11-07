@@ -27,7 +27,7 @@ type QueryParams = { search?: string | string[]; author?: string | string[]; cat
 export async function generateMetadata({ searchParams }: { searchParams: Promise<QueryParams> }): Promise<Metadata> {
   const { search, author, categorySlug } = await searchParams;
   if ([search, author, categorySlug].some((value) => typeof value === "string" && value.trim())) return { title: "Busca de artigos", robots: { index: false, follow: true } };
-  return { title: "Entrelinhas | Um espaço para boas ideias" };
+  return { title: "Grifório | Um espaço para boas ideias" };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -217,7 +217,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
           )}
         </section>
         <NewsletterForm />
-        <footer className={styles.footer}><span className={styles.footerBrand}>entrelinhas<span className={styles.brandDot}>.</span></span><span>UM BLOG PARA LER E SENTIR.</span></footer>
       </div>
     </main>
   );

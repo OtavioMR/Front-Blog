@@ -72,9 +72,9 @@
 }
 
 .heroTitle {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: clamp(48px, 6.2vw, 88px);
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.03;
   margin: 0;
   letter-spacing: -.035em;
@@ -180,9 +180,9 @@
 }
 
 .articlesHeading h2 {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: clamp(32px, 3.2vw, 46px);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -.03em;
   margin: 0;
   color: var(--home-color);
@@ -366,9 +366,9 @@
 }
 
 .emptyTitle {
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--font-serif);
   font-size: 26px;
-  font-weight: 400;
+  font-weight: 600;
   color: var(--home-color);
   margin: 0 0 8px;
 }
@@ -469,7 +469,7 @@
 }
 
 .featuredBody h3 {
-  font: 400 clamp(28px, 3.2vw, 44px)/1.12 'EB Garamond', Georgia, serif;
+  font: 400 clamp(28px, 3.2vw, 44px)/1.12 var(--font-serif);
   letter-spacing: -.03em;
   margin: 10px 0 12px;
   color: var(--home-color);
@@ -552,7 +552,7 @@
 }
 
 .card h3 {
-  font: 400 28px/1.18 'EB Garamond', Georgia, serif;
+  font: 400 28px/1.18 var(--font-serif);
   letter-spacing: -.03em;
   margin: 12px 0 10px;
   color: var(--home-color);
@@ -587,31 +587,6 @@
 .pagination a:focus-visible {
   outline: 3px solid #BD532B;
   outline-offset: 3px;
-}
-
-/* FOOTER */
-.footer {
-  border-top: 1px solid var(--home-border);
-  padding: 30px 0 36px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--home-meta-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .16em;
-}
-
-.footerBrand {
-  font-family: 'EB Garamond', Georgia, serif;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -.04em;
-  color: var(--home-color);
-}
-
-.brandDot {
-  color: light-dark(#BD532B, #D97349) !important;
 }
 
 /* RESPONSIVE */
@@ -651,9 +626,6 @@
   }
   .search {
     width: 100%;
-  }
-  .footer span:last-child {
-    display: none;
   }
 }
 

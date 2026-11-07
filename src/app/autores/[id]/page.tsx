@@ -25,14 +25,14 @@ export async function generateMetadata({
   const { id } = await params;
   const author = await getAuthor(id);
   if (!author) {
-    return { title: "Autor não encontrado | Entrelinhas", robots: { index: false } };
+    return { title: "Autor não encontrado | Grifório", robots: { index: false } };
   }
   const query = await searchParams;
   const page = pageNumber(query?.page);
   const pageSuffix = page > 1 ? ` — página ${page}` : "";
   return {
-    title: `${author.name}${pageSuffix} | Entrelinhas`,
-    description: author.bio ? author.bio.slice(0, 160) : `Conheça ${author.name} e suas publicações no Entrelinhas.`,
+    title: `${author.name}${pageSuffix} | Grifório`,
+    description: author.bio ? author.bio.slice(0, 160) : `Conheça ${author.name} e suas publicações no Grifório.`,
   };
 }
 
@@ -134,7 +134,7 @@ export default async function AuthorPage({
                   </Link>
                 ) : (
                   <Link className={styles.emptyAction} href="/#artigos">
-                    Explorar outros artigos no Entrelinhas →
+                    Explorar outros artigos no Grifório →
                   </Link>
                 )}
               </div>

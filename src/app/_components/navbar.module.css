@@ -34,7 +34,7 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
   text-decoration: none !important;
   flex-shrink: 0;
   line-height: 1;
@@ -44,55 +44,49 @@
   text-decoration: none !important;
 }
 
+.brand:hover .wordmark {
+  color: var(--brand);
+}
+
 .brand:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 4px;
 }
 
-.brandBookWrap {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.bookIconLight,
-.bookIconDark {
+.logoLight,
+.logoDark {
   display: block;
-  height: 34px;
-  width: auto;
+  width: 47px;
+  height: auto;
 }
 
-.bookIconDark {
+.logoDark {
   display: none;
 }
 
-:root[data-theme="dark"] .bookIconLight {
+.wordmark {
+  font-family: var(--font-serif);
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--logo-text);
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .logoLight {
   display: none;
 }
-:root[data-theme="dark"] .bookIconDark {
+:root[data-theme="dark"] .logoDark {
   display: block;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .bookIconLight {
+  :root:not([data-theme]) .logoLight {
     display: none;
   }
-  :root:not([data-theme]) .bookIconDark {
+  :root:not([data-theme]) .logoDark {
     display: block;
   }
-}
-
-.brandWordmark {
-  font-family: var(--font-serif, 'EB Garamond', Georgia, serif);
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  color: var(--text) !important;
-  line-height: 1;
-}
-
-.brandDot {
-  color: var(--brand-dot) !important;
 }
 
 .nav {
@@ -134,16 +128,11 @@
     padding: 14px 6%;
     gap: 14px;
   }
-  .brandWordmark {
-    font-size: 26px;
+  .logoLight,
+  .logoDark {
+    width: 38px;
   }
-  .bookIconLight,
-  .bookIconDark {
-    height: 28px;
-  }
-  .brand {
-    gap: 8px;
-  }
+  .wordmark { font-size: 25px; }
   .nav {
     gap: 16px;
     font-size: 12px;

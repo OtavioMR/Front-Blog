@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Navbar from "./_components/navbar";
-import NavTracker from "./_components/nav-tracker";
-import { BackToTop, ReadingProgress } from "./_components/reading-navigation";
-import Toasts from "./_components/toast";
+import { SiteHeader, SiteFooter } from "./_components/site-chrome";
 
 export const metadata: Metadata = {
-  title: "Blog | Um espaço para boas ideias",
+  title: "Grifório | Um espaço para boas ideias",
   description: "Um espaço para histórias, ideias e novas perspectivas.",
 };
 
@@ -15,12 +12,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt-BR" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem("entrelinhas-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var b=localStorage.getItem("entrelinhas-bg-tone");document.documentElement.dataset.bgTone=(b==="warm"?"warm":"neutral");}catch(e){}})()` }} /></head>
       <body>
-        <ReadingProgress />
-        <NavTracker />
-        <Navbar />
+        <SiteHeader />
         {children}
-        <Toasts />
-        <BackToTop />
+        <SiteFooter />
       </body>
     </html>
   );

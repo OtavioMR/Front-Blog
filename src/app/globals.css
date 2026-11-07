@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&display=swap');
+@import "./fonts.css";
 
 * { box-sizing: border-box; }
 
@@ -19,7 +19,10 @@
   --brand-light: #FBF3EE;
   --brand-dot: #BD532B;
   --focus: #BD532B;
-  --font-serif: 'EB Garamond', Georgia, serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-reading: 'Lora', Georgia, serif;
+  --font-interface: 'Inter', Arial, sans-serif;
+  --logo-text: #221A18;
 }
 
 :root[data-bg-tone="warm"] {
@@ -37,6 +40,7 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --logo-text: #FAF7F0;
   --bg: #121212;
   --surface: #1A1A1A;
   --surface-subtle: #242424;
@@ -70,6 +74,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
+  --logo-text: #FAF7F0;
     --bg: #121212;
     --surface: #1A1A1A;
     --surface-subtle: #242424;
@@ -103,11 +108,16 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-interface);
   transition: background 0.25s ease, color 0.25s ease;
 }
+
+body > main { flex: 1; width: 100%; min-width: 0; }
 
 a {
   color: inherit;
@@ -121,7 +131,7 @@ a:focus-visible {
 
 h1, h2, h3, h4 {
   font-family: var(--font-serif);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -.03em;
   color: var(--text);
 }
@@ -170,3 +180,5 @@ h1, h2, h3, h4 {
     transition: none;
   }
 }
+
+button, input, select, textarea { font-family: var(--font-interface); }

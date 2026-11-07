@@ -4,7 +4,7 @@ import ThemeControl from "@/app/_components/theme-control";
 import BackgroundToneControl from "@/app/_components/bg-tone-control";
 import styles from "../conta/configuracoes/settings.module.css";
 
-export const metadata: Metadata = { title: "Configurações | Entrelinhas", robots: { index: false, follow: true } };
+export const metadata: Metadata = { title: "Configurações | Grifório", robots: { index: false, follow: true } };
 
 export default function SiteSettings() {
   return (

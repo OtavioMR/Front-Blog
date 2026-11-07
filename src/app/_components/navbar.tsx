@@ -96,16 +96,12 @@ function NavbarForRoute() {
       aria-label="Navegação do site"
     >
       <div className={styles.inner}>
-        <Link className={styles.brand} href="/" aria-label="Entrelinhas, página inicial">
-          <span className={styles.brandBookWrap} aria-hidden="true">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/branding/icone-livro-claro.svg" alt="" className={styles.bookIconLight} width="32" height="34" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/branding/icone-livro-escuro.svg" alt="" className={styles.bookIconDark} width="32" height="34" />
-          </span>
-          <span className={styles.brandWordmark}>
-            entrelinhas<span className={styles.brandDot}>.</span>
-          </span>
+        <Link className={styles.brand} href="/" aria-label="Grifório, página inicial">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/branding/griforio/symbol-light.svg" alt="" className={styles.logoLight} width="130" height="135" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/branding/griforio/symbol-dark.svg" alt="" className={styles.logoDark} width="130" height="135" />
+          <span className={styles.wordmark}>Grifório</span>
         </Link>
         <nav className={styles.nav} aria-label="Navegação principal">
           <Link href="/categorias">Categorias</Link>

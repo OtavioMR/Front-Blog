@@ -19,7 +19,7 @@ export async function GET() {
     if (!Array.isArray(data) || data.length > 100 || data.some(item => !item || typeof item !== "object" || !idPattern.test(item.id) || typeof item.title !== "string" || typeof item.content !== "string")) throw new Error("invalid");
     const articles = data.map(item => {
       const content = sanitizeHtml(item.content, { allowedTags: ["p", "br", "strong", "em", "ul", "ol", "li", "blockquote", "h2", "h3"], allowedAttributes: {} });
-      const actions = ["APPROVED", "REJECTED"].map(decision => `<form method="post" class="inline"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="id" value="${item.id}"><input type="hidden" name="decision" value="${decision}"><button>${decision === "APPROVED" ? "Aprovar e publicar" : "Rejeitar"}</button></form>`).join("");
+      const actions = ["APPROVED", "REJECTED"].map(decision => `<form method="post" class="inline"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="id" value="${item.id}"><input type="hidden" name="decision" value="${decision}">${decision === "REJECTED" ? `<label for="reason-${item.id}">Justificativa da rejeição</label><textarea id="reason-${item.id}" name="reason" required minlength="5" maxlength="1000"></textarea>` : ""}<button>${decision === "APPROVED" ? "Aprovar e publicar" : "Rejeitar"}</button></form>`).join("");
       return `<article><h2>${escapeHtml(item.title)}</h2>${content}${actions}</article>`;
     }).join("");
     return page("Revisão editorial", `<p>Os primeiros artigos aguardam decisão.</p><p><a href="/gestao-editorial/denuncias">Denúncias pendentes</a> · <a href="/gestao-editorial/categorias">Categorias</a> · <a href="/gestao-editorial/usuarios">Usuários ativos</a> · <a href="/gestao-editorial/indicadores">Indicadores</a></p>${articles || "<p>Nenhum artigo aguardando revisão.</p>"}<form method="post"><input type="hidden" name="csrf" value="${session.csrf}"><input type="hidden" name="action" value="logout"><button>Sair</button></form>`);
@@ -31,17 +31,17 @@ export async function POST(request: Request) {
   if (!session) return denied();
   const form = await formBody(request);
   if (!form || !sameSecret(form.get("csrf") ?? undefined, session.csrf)) return page("Acesso negado", "<p>Solicitação inválida.</p>", 403);
-  if (["csrf", "action", "id", "decision"].some(key => form.getAll(key).length > 1)) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);
+  if (["csrf", "action", "id", "decision", "reason"].some(key => form.getAll(key).length > 1)) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);
   if (form.get("action") === "logout") {
     deleteSession(id); jar.set(cookieName, "", { ...options, maxAge: 0 });
     try { const result = await upstream("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${session.token}` } }); if (!result.ok) throw new Error("uncertain"); }
     catch { return page("Saída local concluída", "<p>Não foi possível confirmar a revogação no servidor.</p>", 503); }
     return new Response(null, { status: 303, headers: { Location: "/gestao-editorial/entrar", "Cache-Control": "no-store, private" } });
   }
-  const postId = form.get("id") || "", decision = form.get("decision") || "";
-  if (!idPattern.test(postId) || !["APPROVED", "REJECTED"].includes(decision)) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);
+  const postId = form.get("id") || "", decision = form.get("decision") || "", reason = (form.get("reason") || "").trim();
+  if (!idPattern.test(postId) || !["APPROVED", "REJECTED"].includes(decision) || (decision === "REJECTED" && (reason.length < 5 || reason.length > 1000)) || (decision === "APPROVED" && reason)) return page("Solicitação inválida", "<p>Confira a decisão e a justificativa.</p>", 400);
   try {
-    const response = await upstream(`/post-reviews/${postId}/decision`, { method: "POST", headers: { Authorization: `Bearer ${session.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ decision }) });
+    const response = await upstream(`/post-reviews/${postId}/decision`, { method: "POST", headers: { Authorization: `Bearer ${session.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ decision, ...(decision === "REJECTED" && { reason }) }) });
     if (response.status === 401) return denied();
     if (response.status === 403) return page("Acesso negado", "<p>Esta conta não possui permissão.</p>", 403);
     if (response.status === 400) return page("Solicitação inválida", "<p>Confira a decisão.</p>", 400);

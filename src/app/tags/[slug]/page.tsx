@@ -8,7 +8,7 @@ import styles from "../../categorias/categories.module.css";
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ page?: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tag = await getTag((await params).slug);
-  return tag ? { title: `${tag.name} | Entrelinhas`, description: `Artigos sobre ${tag.name}.` } : { title: "Tag não encontrada | Entrelinhas", robots: { index: false } };
+  return tag ? { title: `${tag.name} | Grifório`, description: `Artigos sobre ${tag.name}.` } : { title: "Tag não encontrada | Grifório", robots: { index: false } };
 }
 export default async function TagPage({ params, searchParams }: Props) {
   const tag = await getTag((await params).slug);
