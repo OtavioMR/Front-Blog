@@ -11,7 +11,6 @@ import styles from "./editor.module.css";
 import backStyles from "../_components/back-button.module.css";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import Revisions from "./revisions";
-import ImageCrop, { cropImage, defaultCrop } from "@/app/_components/image-crop";
 
 type State = "loading" | "ready" | "signed-out" | "denied" | "error";
 type Category = { id: string; name: string; slug?: string; isActive?: boolean };
@@ -52,8 +51,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const [saved, setSaved] = useState({ title: "", content: "", excerpt: "", categoryIds: [] as string[], tags: [] as string[] });
   const [categories, setCategories] = useState<Category[]>([]);
   const [cover, setCover] = useState<string | null>(null);
-  const [pendingCover, setPendingCover] = useState<File | null | undefined>(undefined);
-  const [coverCrop, setCoverCrop] = useState({ ...defaultCrop, original: true });
   const [confirmSave, setConfirmSave] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
@@ -86,10 +83,9 @@ export default function Editor({ initialId }: { initialId?: string }) {
     content !== saved.content ||
     excerpt !== saved.excerpt ||
     !sameList(categoryIds, saved.categoryIds) ||
-    !sameList(parsedCurrentTags, saved.tags) ||
-    pendingCover !== undefined;
+    !sameList(parsedCurrentTags, saved.tags);
 
-  const isReadOnly = busy || revisionUncertain || status === "PENDING";
+  const isReadOnly = busy || coverBusy || revisionUncertain || status === "PENDING";
   const isEditMode = Boolean(id);
   const publicationAccess = reviewProfile ? publicationEligibility(reviewProfile.role, owner, authorId, reviewProfile.firstPostApproved) : "unknown";
   const reviewAccess = reviewProfile ? reviewEligibility(reviewProfile.role, owner, authorId, reviewProfile.firstPostApproved) : "unknown";
@@ -288,7 +284,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
     setFeedback({ type: "saving", text: "Salvando alterações..." });
 
     try {
-      const preparedCover = pendingCover ? await cropImage(pendingCover, 16 / 9, coverCrop) : pendingCover;
       if (operation !== revision.current) return;
       const payload = {
         title: title.trim(),
@@ -351,19 +346,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
       if (id && draft.id !== id) throw new Error();
 
       apply(draft);
-      if (preparedCover !== undefined) {
-        try {
-          const nextCover = await changeCover(draft.id, preparedCover);
-          if (operation !== revision.current) return;
-          setCover(nextCover);
-          setPendingCover(undefined);
-        } catch {
-          setPublicationUncertain(true);
-          setRevisionUncertain(true);
-          setFeedback({ type: "error", text: "O texto foi salvo, mas não foi possível confirmar a alteração da capa. Recarregue o editor e verifique antes de tentar novamente." });
-          return;
-        }
-      }
 
       if (!id) {
         window.history.replaceState(window.history.state, "", `/studio/${draft.id}`);
@@ -404,6 +386,25 @@ export default function Editor({ initialId }: { initialId?: string }) {
       if ((file && next === null) || (!file && next !== null)) throw new Error();
       return next;
     } finally { setCoverBusy(false); }
+  }
+
+  async function updateCover(file: File | null) {
+    if (!id || isReadOnly || running.current) return;
+    const operation = revision.current;
+    running.current = true;
+    setFeedback({ type: "saving", text: file ? "Enviando capa..." : "Removendo capa..." });
+    try {
+      const nextCover = await changeCover(id, file);
+      if (operation !== revision.current) return;
+      setCover(nextCover);
+      setFeedback({ type: "success", text: file ? "Capa atualizada com sucesso." : "Capa removida com sucesso." });
+    } catch {
+      if (operation === revision.current) {
+        setRevisionUncertain(true);
+        setPublicationUncertain(true);
+        setFeedback({ type: "error", text: "N?o foi poss?vel confirmar a altera??o da capa. Recarregue o editor e verifique antes de tentar novamente." });
+      }
+    } finally { running.current = false; }
   }
 
   // Submit draft for review
@@ -695,10 +696,10 @@ export default function Editor({ initialId }: { initialId?: string }) {
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
                 <label htmlFor="article-excerpt">Descrição do artigo</label>
-                <span className={styles.fieldCounter}>{excerpt.length} / 500</span>
+                <span className={styles.fieldCounter}>{excerpt.length} / 200</span>
               </div>
               <textarea id="article-excerpt" name="excerpt" className={`${styles.contentArea} ${styles.excerptArea}`}
-                placeholder="Apresente seu artigo em poucas palavras..." maxLength={500} rows={3}
+                placeholder="Apresente seu artigo em poucas palavras..." maxLength={200} rows={3}
                 value={excerpt} onChange={event => { setExcerpt(event.target.value); setConfirmSubmit(false); }}
                 readOnly={isReadOnly} />
               <p>Uma breve apresentação exibida abaixo do título e nas listagens.</p>
@@ -791,8 +792,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
                     </p>
                   )}
 
-                  {pendingCover instanceof File && <ImageCrop file={pendingCover} ratio={16 / 9} value={coverCrop} onChange={setCoverCrop} allowOriginal />}
-                  {pendingCover !== undefined && <p role="status">{pendingCover ? "Nova capa selecionada." : "Remoção da capa selecionada."} Salve e confirme as alterações para aplicar. <button type="button" className={styles.btnSecondary} onClick={() => setPendingCover(undefined)}>Desfazer alteração da capa</button></p>}
                   <div className={styles.coverActions}>
                     <label className={styles.fileLabel}>
                       {cover ? "Substituir capa" : "Selecionar imagem"}
@@ -806,7 +805,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
                           if (file) {
                             const problem = validatePhoto(file);
                             if (problem) setFeedback({ type: "error", text: problem });
-                            else { setPendingCover(file); setCoverCrop({ ...defaultCrop, original: true }); }
+                            else { void updateCover(file); }
                           }
                         }}
                       />
@@ -817,7 +816,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
                         type="button"
                         className={styles.btnDanger}
                         disabled={coverBusy || isReadOnly}
-                        onClick={() => setPendingCover(null)}
+                        onClick={() => void updateCover(null)}
                       >
                         Remover
                       </button>
@@ -943,7 +942,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
                     {reviewAccess === "unknown" ? (
                       <p className={styles.cardHint}>Não foi possível verificar a elegibilidade para revisão. Recarregue a página para tentar novamente.</p>
                     ) : reviewAccess === "ineligible" ? (
-                      <p className={styles.cardHint}>O envio para revisão está disponível apenas para o primeiro artigo do próprio autor.</p>
+                      publicationAccess === "eligible" ? null : <p className={styles.cardHint}>{isAdmin ? "Não foi possível liberar a publicação deste artigo para esta conta. Verifique se o artigo pertence a você e se o servidor está atualizado." : "O envio para revisão está disponível apenas para o primeiro artigo do próprio autor."}</p>
                     ) : scheduledAt ? (
                       <p className={styles.cardHint}>
                         Artigos agendados não podem ser enviados para revisão.

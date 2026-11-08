@@ -3,6 +3,7 @@ export type RelatedPost = {
   slug: string;
   title: string;
   excerpt: string;
+  coverImage: string | null;
   readingTimeMinutes: number;
   author?: { name: string; id?: string };
 };
@@ -58,6 +59,7 @@ function toRelatedPost(value: unknown): RelatedPost | null {
     slug: value.slug,
     title: value.title,
     excerpt: value.excerpt,
+    coverImage: typeof value.coverImage === "string" ? value.coverImage : null,
     readingTimeMinutes: readingTime,
     author,
   };

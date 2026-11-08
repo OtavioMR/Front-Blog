@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, notifyProfileChanged, subscribeSession } from "@/lib/session-client";
 import Link from "next/link";
-import ImageCrop, { cropImage, defaultCrop } from "@/app/_components/image-crop";
 import Avatar from "@/app/_components/avatar";
 import AccountBack from "@/app/conta/account-back";
 import { uploadPhoto, validatePhoto } from "./photo-upload";
@@ -18,7 +17,6 @@ export default function PhotoForm() {
   const [name, setName] = useState("");
   const [current, setCurrent] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [crop, setCrop] = useState(defaultCrop);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -58,7 +56,7 @@ export default function PhotoForm() {
     if (problem) { clearSelection(); setFailed(true); setMessage(problem); return; }
     if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
     previewUrl.current = URL.createObjectURL(selected);
-    setCrop(defaultCrop); setPreview(previewUrl.current); setFile(selected);
+    setPreview(previewUrl.current); setFile(selected);
   }
 
   async function upload(event: FormEvent<HTMLFormElement>) {
@@ -68,10 +66,8 @@ export default function PhotoForm() {
     pending.current = true; setBusy(true); setMessage(""); setFailed(false);
     let sent = false;
     try {
-      const cropped = await cropImage(file, 1, crop);
-      if (generation !== revision.current) return;
       sent = true;
-      const result = await uploadPhoto(subject, cropped, authenticatedFetchForSubject);
+      const result = await uploadPhoto(subject, file, authenticatedFetchForSubject);
       if (generation !== revision.current) return;
       if (result.kind === "signed-out") { setState("signed-out"); return; }
       if (result.kind === "account-changed") { void load(); return; }
@@ -104,7 +100,6 @@ export default function PhotoForm() {
       <form className={styles.form} onSubmit={upload} aria-busy={busy}>
         <label htmlFor="photo">{current ? "Trocar imagem" : "Imagem"}</label>
         <input ref={input} id="photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || uncertain} onChange={event => choose(event.target.files?.[0] || null)} />
-        {file && <ImageCrop file={file} ratio={1} value={crop} onChange={setCrop} />}
         <div className={photo.actions}>
           <button disabled={busy || uncertain || !file}>{busy ? "Enviando…" : "Salvar foto"}</button>
           {file && !busy && <button type="button" className={photo.secondary} onClick={() => { clearSelection(); setMessage(""); }}>Cancelar</button>}

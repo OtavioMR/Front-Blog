@@ -413,7 +413,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 0;
-  margin-top: 38px;
+  max-width: 960px;
+  margin: 38px auto 0;
   background: var(--home-surface-subtle);
   border: 1px solid var(--home-border);
   border-radius: 10px;
@@ -432,10 +433,11 @@
   display: block;
   position: relative;
   min-height: 260px;
+  overflow: hidden;
   background: var(--home-cover-bg);
 }
 
-.featuredCover img {
+.featuredCover img, .cardCover img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -443,11 +445,19 @@
   object-fit: contain;
 }
 
+.featuredCover .coverBackdrop, .cardCover .coverBackdrop {
+  object-fit: cover;
+  filter: blur(24px) brightness(.55);
+  transform: scale(1.12);
+}
+
+.featuredCover img:not(.coverBackdrop), .cardCover img:not(.coverBackdrop) { z-index: 1; }
+
 .featuredBody {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(24px, 4vw, 48px);
+  padding: clamp(20px, 3vw, 36px);
 }
 
 .leadLabel {
@@ -469,11 +479,13 @@
 }
 
 .featuredBody h3 {
-  font: 400 clamp(28px, 3.2vw, 44px)/1.12 var(--font-serif);
+  font: 400 clamp(24px, 2.6vw, 36px)/1.15 var(--font-serif);
   letter-spacing: -.03em;
   margin: 10px 0 12px;
   color: var(--home-color);
 }
+
+.featuredBody .articleExcerpt { font-size: 14px; line-height: 1.6; }
 
 .featuredBody h3 a:hover {
   text-decoration: underline;
@@ -538,18 +550,14 @@
 
 .cardCover {
   display: block;
+  position: relative;
   overflow: hidden;
   margin-bottom: 18px;
   aspect-ratio: 16 / 9;
   background: var(--home-cover-bg);
 }
 
-.cardCover img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
+.cardCover img { position: absolute; inset: 0; }
 
 .card h3 {
   font: 400 28px/1.18 var(--font-serif);
@@ -612,7 +620,8 @@
   }
   .featuredCover {
     min-height: 0;
-    aspect-ratio: 16 / 9;
+    height: 220px;
+    aspect-ratio: auto;
   }
   .articleGrid {
     grid-template-columns: 1fr;

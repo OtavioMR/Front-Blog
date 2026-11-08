@@ -183,7 +183,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
             <>
               {featured && (
                 <article className={`${styles.featured} article-surface`}>
-                  {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
+                  {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" unoptimized /><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
                   <div className={styles.featuredBody}>
                     <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
                     <p className={styles.articleCategory}>{featured.categories?.[0]?.name || "LEITURA"}</p>
@@ -197,7 +197,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
               {rest.length > 0 && <div className={styles.articleGrid}>
                 {rest.map((article) => (
                   <article className={`${styles.card} article-surface`} key={article.id}>
-                    {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
+                    {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
                     <p className={styles.articleCategory}>{article.categories?.[0]?.name || "LEITURA"}</p>
                     <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
                     <p className={styles.articleExcerpt}>{article.excerpt}</p>

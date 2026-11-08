@@ -79,7 +79,7 @@ export default async function PostPage({ params, searchParams }: Props) {
           </div>
           <EditArticleLink postId={post.id} authorId={post.author?.id} />
         </div>
-        {cover && <div className={styles.cover}><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
+        {cover && <div className={styles.cover}><Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized /><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
         <div className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
         {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
@@ -106,6 +106,7 @@ export default async function PostPage({ params, searchParams }: Props) {
       {related && related.length > 0 && <section className={styles.related} aria-labelledby="related-title">
         <p className={styles.category}>CONTINUE A LEITURA</p><h2 id="related-title">Mais histórias para descobrir.</h2>
         <div className={styles.relatedGrid}>{related.map(item => <article className={`${styles.relatedCard} article-surface`} key={item.slug}>
+          {publicCoverPath(item.coverImage) && <Link href={`/posts/${encodeURIComponent(item.slug)}`} className={styles.relatedCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={publicCoverPath(item.coverImage)!} alt="" width={960} height={540} sizes="(max-width: 600px) 100vw, (max-width: 1000px) 50vw, 25vw" unoptimized /><Image src={publicCoverPath(item.coverImage)!} alt="" width={960} height={540} sizes="(max-width: 600px) 100vw, (max-width: 1000px) 50vw, 25vw" unoptimized /></Link>}
           <h3><Link href={`/posts/${encodeURIComponent(item.slug)}`}>{item.title}</Link></h3>
           {item.excerpt && <p>{item.excerpt}</p>}
           <p className={styles.relatedMeta}>{item.author?.name || "Equipe editorial"} · {item.readingTimeMinutes} min de leitura</p>
