@@ -1199,3 +1199,7 @@
 .auditActions a:hover, .auditActions a:focus-visible { text-decoration: underline; border-color: currentColor; }
 .auditCard details { color: var(--text-muted); font-size: .85rem; overflow-wrap: anywhere; }
 .auditCard summary { cursor: pointer; width: fit-content; }
+
+.reportExplanation { color: var(--text-muted); font-size: 0.875rem; margin: 0 0 1rem; }
+.reportQuote { border-left: 4px solid var(--brand, #b2431c); background: var(--surface-subtle); padding: 1rem; border-radius: 0.35rem; overflow-wrap: anywhere; }
+.reportQuote p, .reportQuoteText { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0.5rem 0 0; line-height: 1.6; }

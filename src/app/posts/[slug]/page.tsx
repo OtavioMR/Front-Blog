@@ -54,6 +54,7 @@ export default async function PostPage({ params, searchParams }: Props) {
     allowedSchemes: ["http", "https", "mailto"],
     allowProtocolRelative: false,
   });
+  const plainText = !/<[a-z][\s\S]*?>/i.test(content);
   const cover = publicCoverPath(post.coverImage);
   const authorPath = publicAuthorPath(post.author?.id);
   const { jsonLd } = postSeo(post);
@@ -79,7 +80,7 @@ export default async function PostPage({ params, searchParams }: Props) {
           <EditArticleLink postId={post.id} authorId={post.author?.id} />
         </div>
         {cover && <div className={styles.cover}><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
-        <div className={styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
+        <div className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
         {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
         <PostReport postId={post.id} />

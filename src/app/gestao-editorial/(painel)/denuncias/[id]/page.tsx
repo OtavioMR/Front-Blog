@@ -164,11 +164,10 @@ export default async function ReportDetailPage({
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {/* Motivo e Informações */}
           <section className={styles.panel} style={{ margin: 0 }}>
-            <h2>Motivo e descrição</h2>
+            <h2>Relato de quem denunciou</h2>
+            <p className={styles.reportExplanation}>Texto enviado pela pessoa que fez a denúncia.</p>
             <div style={{ display: "grid", gap: "0.75rem", fontSize: "0.92rem", lineHeight: 1.5 }}>
-              <p style={{ margin: 0 }}>
-                <strong>Motivo informado:</strong> {String(detail.reason)}
-              </p>
+              <div className={styles.reportQuote}><strong>O que a pessoa escreveu</strong><p>{String(detail.reason)}</p></div>
               {detail.reasonCategory ? (
                 <p style={{ margin: 0 }}>
                   <strong>Categoria:</strong>{" "}
@@ -204,6 +203,7 @@ export default async function ReportDetailPage({
           {/* Conteúdo Denunciado */}
           <section className={styles.panel} style={{ margin: 0 }}>
             <h2>Conteúdo denunciado</h2>
+            <p className={styles.reportExplanation}>Este é o conteúdo denunciado, separado do relato acima.</p>
             {target ? (
               <div style={{ display: "grid", gap: "0.75rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -245,11 +245,13 @@ export default async function ReportDetailPage({
                   </div>
                 )}
 
+                {targetType === "COMMENT" && !target.content && <p>O texto do comentário não está disponível.</p>}
                 {targetType === "COMMENT" && target.content && (
                   <div style={{ padding: "1rem", borderRadius: "0.6rem", border: "1px solid var(--border)", background: "var(--surface)" }}>
                     <p><Avatar name={target.author?.name || "Usuário removido"} src={target.author?.profilePhoto || null} size={24} /> <strong>Autor:</strong> {target.author?.name || "Usuário removido"}</p>
                     <p><strong>Artigo:</strong> {target.post?.title || "Conteúdo indisponível"}</p>
-                    <p className={styles.commentText} style={{ margin: 0, fontSize: "0.92rem" }}>
+                    <strong>Texto do comentário denunciado</strong>
+                    <p className={`${styles.commentText} ${styles.reportQuoteText}`}>
                       {String(target.content)}
                     </p>
                   </div>

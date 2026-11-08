@@ -59,6 +59,7 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
       return response.end(JSON.stringify({ id: "8d779824-0a9f-442f-8652-a81600000002", title: "Série de teste", description: "Sequência pública", posts, privateToken: "TOKEN PRIVADO" }));
     }
     if (url.pathname === "/api/v1/posts/uma-historia/related") return response.end(JSON.stringify([{ ...article, slug: "outra-historia", title: "Outra leitura" }]));
+    if (url.pathname === "/api/v1/posts/conto-formatado") return response.end(JSON.stringify({ ...article, slug: "conto-formatado", content: "Primeira linha\n  Segunda linha\n\nFim" }));
     if (url.pathname === "/api/v1/posts/rascunho") return response.end(JSON.stringify({ ...article, published: false, content: "CONTEUDO PRIVADO" }));
     if (url.pathname === "/api/v1/posts/antigo" || url.pathname === "/api/v1/posts/uma-historia") return response.end(JSON.stringify(article));
     response.statusCode = 404;
@@ -178,6 +179,12 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
   assert.doesNotMatch(html, /href="javascript:/);
   seriesState = "draft";
+  const plainPost = await fetch(`${base}/posts/conto-formatado`);
+  const plainHtml = await plainPost.text();
+  assert.match(plainHtml, /class="[^"]*plainContent[^"]*" data-reading-body/);
+  assert.match(plainHtml, /Primeira linha\n  Segunda linha\n\nFim/);
+  assert.doesNotMatch(html, /class="[^"]*plainContent[^"]*" data-reading-body/);
+
   const unsafeSeries = await fetch(`${base}/posts/uma-historia`);
   const unsafeHtml = await unsafeSeries.text();
   assert.equal(unsafeSeries.status, 200);
