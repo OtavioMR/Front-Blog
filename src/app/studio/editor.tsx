@@ -560,7 +560,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
           data-back-button="true"
           onNavigate={event => preventUnsavedNavigation(event, "/studio")}
         >
-          ← Voltar ao Studio
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" /></svg><span>Voltar ao Studio</span>
         </Link>
 
         {state === "ready" && (
@@ -604,31 +604,12 @@ export default function Editor({ initialId }: { initialId?: string }) {
               </Link>
             )}
 
-            <button
-              type="submit"
-              form="article-form"
-              className={styles.btnPrimary}
-              disabled={isReadOnly}
-              aria-busy={busy}
-              onClick={save}
-            >
-              {busy ? (
-                <>
-                  <span className={styles.spinner} aria-hidden="true" />
-                  Salvando alterações...
-                </>
-              ) : published ? (
-                "Salvar alterações"
-              ) : (
-                "Salvar rascunho"
-              )}
-            </button>
           </div>
         )}
       </nav>
 
       {/* Notifications / Feedback Banner */}
-      {feedback && (
+      {feedback && state !== "ready" && (
         <div
           role={feedback.type === "error" ? "alert" : "status"}
           className={`${styles.feedbackBanner} ${
@@ -840,6 +821,43 @@ export default function Editor({ initialId }: { initialId?: string }) {
               )}
             </section>
 
+          </aside>
+          </div>
+          <div className={styles.bottomActions}>
+            <button
+              type="submit"
+              form="article-form"
+              className={styles.btnPrimary}
+              disabled={isReadOnly}
+              aria-busy={busy}
+            >
+              {busy ? (
+                <>
+                  <span className={styles.spinner} aria-hidden="true" />
+                  Salvando alterações...
+                </>
+              ) : published ? (
+                "Salvar alterações"
+              ) : (
+                "Salvar rascunho"
+              )}
+            </button>
+          </div>
+      {feedback && (
+        <div
+          role={feedback.type === "error" ? "alert" : "status"}
+          className={`${styles.feedbackBanner} ${
+            feedback.type === "saving"
+              ? styles.feedbackSaving
+              : feedback.type === "success"
+              ? styles.feedbackSuccess
+              : styles.feedbackError
+          }`}
+        >
+          {feedback.type === "saving" && <span className={styles.spinner} aria-hidden="true" />}
+          <span>{feedback.text}</span>
+        </div>
+      )}
             {/* Publication / Review Actions Card */}
             {id && (
               <section className={styles.sideCard} aria-labelledby="pub-card-title">
@@ -948,8 +966,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
                 )}
               </section>
             )}
-          </aside>
-          </div>
         </>
       )}
     </main>

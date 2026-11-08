@@ -116,7 +116,7 @@ test("autor gerencia series e protege alteracoes no navegador", { timeout: 12000
   await waitFor(() => has("Criar s\u00e9rie"), "gestao de series");
   await fill("form input", "Serie sintetica");
   assert.equal(await evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});window.dispatchEvent(e);return e.defaultPrevented})()"), true);
-  await evaluate("document.querySelector('a[href=\"/studio\"]').click()");
+  await evaluate("document.querySelector('main a[href=\"/studio\"]').click()");
   await waitFor(() => has("Sair sem salvar?"), "confirmacao de saida"); await click("Cancelar");
   assert.equal(await evaluate("document.querySelector('form input').value"), "Serie sintetica");
   await click("Criar s\u00e9rie"); await waitFor(() => has("S\u00e9rie criada."), "criacao");
@@ -126,7 +126,7 @@ test("autor gerencia series e protege alteracoes no navegador", { timeout: 12000
   assert.equal(items.length, 0); await click("Salvar ordem");
   await waitFor(() => has("Ordem dos artigos salva."), "ordem salva"); assert.equal(items[0].id, postId);
   await click("Remover");
-  await evaluate("document.querySelector('a[href=\"/studio\"]').click()");
+  await evaluate("document.querySelector('main a[href=\"/studio\"]').click()");
   await waitFor(() => has("Sair sem salvar?"), "confirmacao ao remover"); await click("Cancelar");
   assert.equal(items.length, 1);
   await click("Descartar altera\u00e7\u00f5es");

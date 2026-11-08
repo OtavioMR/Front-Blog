@@ -11,5 +11,6 @@ export const eventTitles: Record<string, string> = {
   "category.reactivated": "Categoria reativada",
   "tag.created": "Tag criada", "tag.updated": "Tag alterada", "tag.deleted": "Tag removida", "tag.merged": "Tags unificadas",
   "auth.session_created": "Sessão iniciada", "auth.session_revoked": "Sessão encerrada", "auth.totp_enabled": "Autenticação em duas etapas ativada", "auth.totp_disabled": "Autenticação em duas etapas desativada",
+  "auth.recovery_code_used": "Código de recuperação utilizado", "auth.recovery_codes_regenerated": "Códigos de recuperação renovados",
   "auth.password_reset": "Senha redefinida", "auth.social_linked": "Conta social vinculada", "auth.social_registered": "Conta social cadastrada",
 };

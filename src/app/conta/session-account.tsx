@@ -29,7 +29,7 @@ export default function Account() {
   const canWrite = canWriteArticles(profile?.role);
   const isAdmin = canAccessAdmin(profile?.role);
   return <main className={account.page}>
-    <p className={account.eyebrow}>SEU ESPAÇO</p><h1 className={account.title}>Minha conta.</h1>
+    <div className={account.heading}><p className={account.eyebrow}>SEU ESPAÇO</p><h1 className={account.title}>Minha conta.</h1></div>
     {state === "loading" && <div className={account.skeleton} role="status" aria-label="Carregando"><span /><span /><span />Verificando sua sessão…</div>}
     {state === "busy" && <p role="status">Saindo…</p>}
     {state === "signed-in" && profile && <div className={account.layout}>

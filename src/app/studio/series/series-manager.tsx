@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
 import { canManageSeries } from "@/lib/permissions";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
+import backStyles from "@/app/_components/back-button.module.css";
 import { parseOwnArticles, type OwnArticles } from "../contracts";
 import { confirmedItems, parseDetail, parseSeries, parseSeriesList, type Detail, type Item, type Series } from "./contracts";
 import styles from "./series.module.css";
@@ -136,7 +137,7 @@ export default function SeriesManager() {
   function move(index: number, direction: number) { setItems(previous => { const next = [...previous], target = index + direction; if (target < 0 || target >= next.length) return previous; [next[index], next[target]] = [next[target], next[index]]; return next; }); }
 
   return <main className={styles.page}>
-    <Link href="/studio" className={styles.back} onNavigate={event => { if (dirty) { event.preventDefault(); setConfirmLeave(true); } }}>← Voltar ao Studio</Link><h1>Minhas séries.</h1>
+    <Link href="/studio" className={backStyles.back} onNavigate={event => { if (dirty) { event.preventDefault(); setConfirmLeave(true); } }}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" /></svg><span>Voltar ao Studio</span></Link><h1>Minhas séries.</h1>
     {view === "loading" && <p role="status">Carregando séries…</p>}
     {view === "signed-out" && <p>Entre novamente para acessar suas séries. <Link href="/entrar">Entrar</Link></p>}
     {view === "denied" && <p role="alert">Este espaço é disponível para autores.</p>}

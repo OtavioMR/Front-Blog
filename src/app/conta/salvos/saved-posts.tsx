@@ -7,6 +7,7 @@ import { loadOwnedSavedPage, type SavedPage } from "./data";
 import AccountBack from "@/app/conta/account-back";
 import Collections from "./collections";
 import styles from "../sessoes/sessions.module.css";
+import navigation from "./navigation.module.css";
 
 type State = "loading" | "ready" | "signed-out" | "forbidden" | "error";
 export default function SavedPosts() {
@@ -41,8 +42,15 @@ export default function SavedPosts() {
     {state === "signed-out" && <p role="status">Sua sessão terminou. <Link href="/entrar">Entre novamente</Link>.</p>}
     {state === "forbidden" && <p role="alert">Sua conta não tem acesso a esta lista.</p>}
     {state === "error" && <><p role="alert">Não foi possível carregar seus artigos salvos agora.</p><button type="button" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button></>}
-    {state === "ready" && result && <>{result.data.length === 0 ? <p>{page === 1 ? "Você ainda não salvou nenhum artigo." : "Nenhum artigo encontrado nesta página."}</p> : <ul className={styles.list}>{result.data.map(post => <li className={styles.item} key={post.id}><article className="article-surface"><h2><Link className="article-surface-link" prefetch={false} href={`/posts/${post.id}`}>{post.title}</Link></h2><p>{post.excerpt}</p><p>{post.author.name}</p></article></li>)}</ul>}
+    {state === "ready" && result && <>
+      <nav className={navigation.shortcuts} aria-label="Navegação das suas leituras">
+        <a href="#saved-articles"><strong>Artigos salvos</strong><span>Volte às suas leituras</span></a>
+        <a href="#collections-title"><strong>Coleções privadas</strong><span>Organize e encontre seus artigos</span></a>
+      </nav>
+      <section aria-labelledby="saved-articles"><h2 id="saved-articles">Artigos salvos</h2>
+      {result.data.length === 0 ? <p>{page === 1 ? "Você ainda não salvou nenhum artigo." : "Nenhum artigo encontrado nesta página."}</p> : <ul className={styles.list}>{result.data.map(post => <li className={styles.item} key={post.id}><article className="article-surface"><h2><Link className="article-surface-link" prefetch={false} href={`/posts/${post.id}`}>{post.title}</Link></h2><p>{post.excerpt}</p><p>{post.author.name}</p></article></li>)}</ul>}
       {(result.meta.hasPreviousPage || result.meta.hasNextPage) && <nav aria-label="Paginação dos artigos salvos"><button type="button" disabled={!result.meta.hasPreviousPage} onClick={() => setPage(value => value - 1)}>← Anteriores</button> <span>Página {page} de {result.meta.totalPages || 1}</span> <button type="button" disabled={!result.meta.hasNextPage} onClick={() => setPage(value => value + 1)}>Próximos →</button></nav>}
+      </section>
       <Collections saved={result.data} expectedOwner={owner} />
     </>}
     

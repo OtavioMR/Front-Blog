@@ -531,3 +531,9 @@
 .scheduleInput { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
 .scheduleInput:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .revisionPreview { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+
+.bottomActions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 24px 0;
+}

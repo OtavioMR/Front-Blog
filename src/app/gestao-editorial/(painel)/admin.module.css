@@ -1183,3 +1183,19 @@
     padding: 1rem;
   }
 }
+.auditHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.auditHeading span { color: var(--text-muted); font-size: .875rem; }
+.auditList { display: grid; gap: 1rem; }
+.auditCard { border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; min-width: 0; }
+.auditCardHeader { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.auditCardHeader h3 { margin: .45rem 0 0; font-size: 1.05rem; }
+.auditCardHeader time { color: var(--text-muted); font-size: .85rem; }
+.auditBadge { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: .2rem .65rem; font-size: .75rem; font-weight: 600; }
+.auditPeople { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; margin: 1.2rem 0; }
+.auditPeople div { display: grid; gap: .25rem; min-width: 0; overflow-wrap: anywhere; }
+.auditPeople span, .auditPeople small { color: var(--text-muted); font-size: .85rem; }
+.auditActions { display: flex; gap: .65rem; flex-wrap: wrap; margin: 1rem 0; }
+.auditActions a { display: inline-block; border: 1px solid var(--border); border-radius: 7px; padding: .5rem .75rem; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.auditActions a:hover, .auditActions a:focus-visible { text-decoration: underline; border-color: currentColor; }
+.auditCard details { color: var(--text-muted); font-size: .85rem; overflow-wrap: anywhere; }
+.auditCard summary { cursor: pointer; width: fit-content; }

@@ -13,6 +13,9 @@ const validDay = (day: string) =>
   Number.isFinite(Date.parse(`${day}T00:00:00.000Z`)) &&
   new Date(`${day}T00:00:00.000Z`).toISOString().slice(0, 10) === day;
 
+const roleLabels: Record<string, string> = { READER: "Leitor", AUTHOR: "Autor", ADMIN: "Administrador", SUPER_ADMIN: "Superadministrador" };
+const statusLabels: Record<string, string> = { RESOLVED: "Resolvida", DISMISSED: "Improcedente", APPROVED: "Aprovado", REJECTED: "Rejeitado", PENDING: "Pendente" };
+
 const resourceLabels: Record<string, string> = { user: "Usuário", post: "Artigo", comment: "Comentário", report: "Denúncia", category: "Categoria", tag: "Tag", session: "Sessão" };
 
 export default async function AuditPage({
@@ -130,19 +133,21 @@ export default async function AuditPage({
     <AdminShell title="Auditoria" current="audit">
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Histórico</p>
-        <h2>Ações registradas</h2>
-        <p>Eventos administrativos em ordem decrescente de data. O filtro de datas usa UTC.</p>
+        <h2>Histórico de atividades</h2>
+        <p>Acompanhe acessos, alterações e decisões de moderação. Os eventos mais recentes aparecem primeiro.</p>
       </div>
 
       {/* Painel de Filtros */}
       <section className={styles.panel}>
+        <h2>Encontrar atividades</h2>
+        <p>Busque por nome, e-mail ou conteúdo e combine os filtros para refinar os resultados. As datas usam UTC.</p>
         <Form className={styles.filters} action="/gestao-editorial/auditoria" prefetch={false}>
           <label>
-            Pesquisar por pessoa, conteúdo ou ação
+            Pesquisar por nome, e-mail ou conteúdo
             <input name="search" defaultValue={search} maxLength={100} />
           </label>
           <label>
-            Responsável
+            Administrador responsável
             <select name="actorId" defaultValue={actorId}>
               <option value="">Todos</option>
               {actorId && !moderators.some(row => row.id === actorId) && <option value={actorId}>Responsável selecionado</option>}
@@ -190,8 +195,9 @@ export default async function AuditPage({
 
           <button type="submit">
             <IconFilter size={15} style={{ verticalAlign: "middle", marginRight: "0.3rem" }} />
-            Filtrar
+            Aplicar filtros
           </button>
+          <Link className={styles.btnSecondary} href="/gestao-editorial/auditoria">Limpar filtros</Link>
         </Form>
         {(Number(moderatorPage) > 1 || moreModerators) && <nav className={styles.pagination} aria-label="Paginação de responsáveis">
           {Number(moderatorPage) > 1 && <Link href={moderatorHref(Number(moderatorPage) - 1)} prefetch={false}>Responsáveis anteriores</Link>}
@@ -200,27 +206,39 @@ export default async function AuditPage({
         </nav>}
       </section>
 
-      {/* Tabela de Logs */}
       <section className={styles.panel}>
-        <div className={styles.list}>
+        <div className={styles.auditHeading}><div><h2>Atividades registradas</h2><p>Abra um registro relacionado ou consulte outras atividades da mesma pessoa ou recurso.</p></div><span>Página {page}</span></div>
+        <div className={styles.auditList}>
           {value.data.map(row => {
             const details = record(row.details) ? row.details : {};
             const reason = typeof details.reason === "string" ? details.reason : typeof details.note === "string" ? details.note : null;
             const resource = resourceLabels[String(row.targetType)] ?? "Recurso";
-            return <article key={String(row.id)} style={{ padding: "1rem 0", borderBottom: "1px solid var(--border)" }}>
-              <h3>{eventTitles[String(row.action)] ?? "Evento administrativo registrado"}</h3>
-              <p><strong>Responsável:</strong> {typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}</p>
-              <p><strong>{resource}:</strong> {typeof row.targetLabel === "string" && row.targetLabel ? row.targetLabel : "Detalhes não disponíveis"}</p>
-              {typeof details.previousRole === "string" && typeof details.role === "string" && <p><strong>Alteração:</strong> {details.previousRole} → {details.role}</p>}
-              {typeof details.status === "string" && <p><strong>Resultado registrado:</strong> {({ RESOLVED: "Resolvido", DISMISSED: "Improcedente", APPROVED: "Aprovado", REJECTED: "Rejeitado" } as Record<string, string>)[details.status] ?? details.status}</p>}
+            const targetLabel = typeof row.targetLabel === "string" && row.targetLabel ? row.targetLabel : typeof details.name === "string" && details.name ? details.name : null;
+            const result = typeof details.status === "string" ? details.status : typeof details.decision === "string" ? details.decision : null;
+            const paths: Record<string, string> = { user: "usuarios", post: "artigos", comment: "comentarios", report: "denuncias" };
+            const targetPath = paths[String(row.targetType)];
+            return <article key={String(row.id)} className={styles.auditCard}>
+              <div className={styles.auditCardHeader}><div><span className={styles.auditBadge}>{resource}</span><h3>{eventTitles[String(row.action)] ?? "Evento registrado"}</h3></div><time dateTime={String(row.createdAt)}>{new Date(String(row.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</time></div>
+              <div className={styles.auditPeople}>
+                <div><span>Quem realizou</span><strong>{typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}</strong>{typeof row.actorEmail === "string" && <small>{row.actorEmail}</small>}</div>
+                {row.targetType !== "session" && <div><span>{resource} afetado</span><strong>{targetLabel ?? "Registro indisponível"}</strong>{typeof row.targetEmail === "string" && <small>{row.targetEmail}</small>}</div>}
+              </div>
+              {typeof details.previousRole === "string" && typeof details.role === "string" && <p><strong>Alteração:</strong> {roleLabels[details.previousRole] ?? details.previousRole} → {roleLabels[details.role] ?? details.role}</p>}
+              {result && <p><strong>Resultado:</strong> {statusLabels[result] ?? result}</p>}
+              {typeof details.provider === "string" && <p><strong>Provedor:</strong> {details.provider}</p>}
+              {typeof details.endsAt === "string" && Number.isFinite(Date.parse(details.endsAt)) && <p><strong>Suspensão até:</strong> {new Date(details.endsAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>}
               {reason && <p><strong>Justificativa:</strong> {reason}</p>}
-              <p><strong>Data:</strong> {new Date(String(row.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>
+              <div className={styles.auditActions}>
+                {row.actorId && <Link href={`/gestao-editorial/auditoria?actorId=${row.actorId}`} prefetch={false}>Atividades desta pessoa →</Link>}
+                {targetPath && targetLabel && <Link href={`/gestao-editorial/${targetPath}/${row.targetId}`} prefetch={false}>Abrir {resource.toLowerCase()} →</Link>}
+                <Link href={`/gestao-editorial/auditoria?targetId=${row.targetId}`} prefetch={false}>Histórico deste recurso →</Link>
+              </div>
+              {typeof details.reportId === "string" && uuid.test(details.reportId) && <p><Link href={`/gestao-editorial/denuncias/${details.reportId}`} prefetch={false}>Ver denúncia relacionada</Link></p>}
               <details><summary>Detalhes técnicos</summary>
                 <p>Ação: {String(row.action)} · Tipo: {String(row.targetType)} · Identificador: {String(row.targetId)}</p>
                 {row.actorId && <p>Identificador do responsável: {String(row.actorId)}</p>}
-                <p><Link href={`/gestao-editorial/auditoria?targetId=${row.targetId}`} prefetch={false}>Ver eventos deste recurso</Link></p>
-                {typeof details.reportId === "string" && uuid.test(details.reportId) && <p><Link href={`/gestao-editorial/denuncias/${details.reportId}`} prefetch={false}>Ver denúncia relacionada</Link></p>}
-                <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{JSON.stringify(details, null, 2)}</pre>
+
+
               </details>
             </article>;
           })}
@@ -228,7 +246,7 @@ export default async function AuditPage({
 
         {value.data.length === 0 && (
           <p style={{ padding: "1.5rem 0", textAlign: "center", color: "var(--text-muted)" }}>
-            Nenhum evento nesta página.
+            Nenhuma atividade encontrada. Tente ajustar ou limpar os filtros.
           </p>
         )}
 
