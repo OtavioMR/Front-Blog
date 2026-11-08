@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getOwnProfile, logout, subscribeSession, type OwnProfile } from "@/lib/session-client";
+import { canWriteArticles, canAccessAdmin, formatRoleName } from "@/lib/permissions";
 import Avatar from "@/app/_components/avatar";
 import TotpSettings from "./totp-settings";
 import account from "./account.module.css";
@@ -25,8 +26,8 @@ export default function Account() {
     return () => { active = false; revisionRef.current++; unsubscribe(); };
   }, [retry]);
   async function signOut() { revision.current++; setProfile(null); setState("busy"); const confirmed = await logout().catch(() => false); setState(confirmed ? "signed-out" : "uncertain"); }
-  const roles: Record<string, string> = { READER: "Leitor", AUTHOR: "Autor", ADMIN: "Administrador" };
-  const canWrite = profile?.role === "AUTHOR" || profile?.role === "ADMIN";
+  const canWrite = canWriteArticles(profile?.role);
+  const isAdmin = canAccessAdmin(profile?.role);
   return <main className={account.page}>
     <p className={account.eyebrow}>SEU ESPAÇO</p><h1 className={account.title}>Minha conta.</h1>
     {state === "loading" && <div className={account.skeleton} role="status" aria-label="Carregando"><span /><span /><span />Verificando sua sessão…</div>}
@@ -35,11 +36,15 @@ export default function Account() {
       <section className={account.summary} aria-labelledby="summary-title">
         <Avatar name={profile.name} src={profile.profilePhoto} size={72} />
         <h2 id="summary-title">{profile.name}</h2><p className={account.muted}>{profile.email}</p>
-        <p><span className={account.badge}>{roles[profile.role] || profile.role}</span> <span className={profile.emailVerified ? account.badgeOk : account.badgeWarn}>E-mail {profile.emailVerified ? "confirmado" : "pendente"}</span></p>
+        <p><span className={account.badge}>{formatRoleName(profile.role)}</span> <span className={profile.emailVerified ? account.badgeOk : account.badgeWarn}>E-mail {profile.emailVerified ? "confirmado" : "pendente"}</span></p>
         {profile.bio ? <p className={account.bio}>{profile.bio}</p> : <p className={account.muted}>Você ainda não escreveu uma biografia.</p>}
         <div className={account.actions}><Link className={account.primary} href="/conta/perfil">Editar perfil</Link><button className={account.secondary} onClick={signOut}>Sair da conta</button></div>
       </section>
       <div className={account.main}>
+        {isAdmin && <section className={account.panel} aria-labelledby="admin-title"><h2 id="admin-title">Administração</h2><p className={account.panelIntro}>Acesso exclusivo às ferramentas editoriais e de governança do Grifório.</p>
+          <ul className={account.links}>
+            <li><Link href="/gestao-editorial"><strong>Painel Administrativo</strong><span>Gestão editorial, moderação de publicações e permissões</span></Link></li>
+          </ul></section>}
         <section className={account.panel} aria-labelledby="manage-title"><h2 id="manage-title">Seu perfil e suas leituras</h2><p className={account.panelIntro}>Cuide das informações que você compartilha e encontre seus artigos salvos.</p>
           <ul className={account.links}>
             <li><Link href="/conta/perfil"><strong>Informações pessoais</strong><span>Nome, biografia e links públicos</span></Link></li>
@@ -60,7 +65,7 @@ export default function Account() {
             <li><Link href="/conta/senha"><strong>Alterar senha</strong><span>Exige a senha atual e encerra as sessões</span></Link></li>
             <li><Link href="/conta/sessoes"><strong>Sessões e dispositivos</strong><span>Revise onde sua conta está conectada</span></Link></li>
           </ul>
-          <h3>Verificação em duas etapas</h3><TotpSettings userId={profile.id} /></section>
+          <h3>Verificação em duas etapas</h3><TotpSettings userId={profile.id} initialTotpEnabled={profile.totpEnabled ?? false} /></section>
       </div>
     </div>}
     {state === "signed-out" && <div className={account.notice}><p>Entre novamente para acessar sua conta.</p><Link className={account.primary} href="/entrar">Entrar</Link></div>}

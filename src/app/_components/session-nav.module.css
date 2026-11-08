@@ -1,6 +1,10 @@
+.wrapper { display: inline-flex; align-items: center; gap: 8px; }
 .user { display: inline-flex; align-items: center; gap: 8px; }
 .account { padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); text-decoration: none; font-size: 13px; font-weight: 700; transition: border-color 0.15s ease, color 0.15s ease; }
 .account:hover { border-color: var(--brand); color: var(--brand); text-decoration: none; }
 .account:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.write { padding: 8px 14px; border-radius: 6px; color: var(--background, #fff); background: var(--brand, #000); text-decoration: none; font-size: 13px; font-weight: 700; transition: opacity 0.15s ease; }
+.write:hover { opacity: 0.9; text-decoration: none; }
+.write:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .user span:last-child { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .placeholder { display: inline-block; width: 64px; height: 28px; background: var(--surface-subtle); border-radius: 14px; }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
 import styles from "../../admin.module.css";
 
 export default function UserModerationActions({
@@ -25,17 +26,19 @@ export default function UserModerationActions({
   const [pending, setPending] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
+  const [confirmModal, setConfirmModal] = useState<"suspend" | "restore" | "revoke" | null>(null);
 
-  async function handleSuspend(e: React.FormEvent<HTMLFormElement>) {
+  function requestSuspend(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const cleanReason = reason.trim();
     if (busy.current || uncertain || cleanReason.length < 5 || cleanReason.length > 1000) return;
-    if (
-      !window.confirm(
-        `Confirmar suspensão da conta de "${userName}"? As sessões ativas serão invalidadas imediatamente.`
-      )
-    )
-      return;
+    setConfirmModal("suspend");
+  }
+
+  async function executeSuspend() {
+    setConfirmModal(null);
+    const cleanReason = reason.trim();
+    if (busy.current || uncertain || cleanReason.length < 5 || cleanReason.length > 1000) return;
 
     busy.current = true;
     setPending(true);
@@ -67,9 +70,9 @@ export default function UserModerationActions({
     }
   }
 
-  async function handleRestore() {
+  async function executeRestore() {
+    setConfirmModal(null);
     if (busy.current || uncertain) return;
-    if (!window.confirm(`Restaurar o acesso da conta de "${userName}"?`)) return;
 
     busy.current = true;
     setPending(true);
@@ -93,16 +96,17 @@ export default function UserModerationActions({
     }
   }
 
-  async function handleRevokeSessions(e: React.FormEvent<HTMLFormElement>) {
+  function requestRevokeSessions(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const cleanReason = reason.trim();
     if (busy.current || uncertain || cleanReason.length < 5 || cleanReason.length > 1000) return;
-    if (
-      !window.confirm(
-        `Revogar todas as sessões ativas de "${userName}"? O usuário precisará fazer login novamente em todos os dispositivos.`
-      )
-    )
-      return;
+    setConfirmModal("revoke");
+  }
+
+  async function executeRevokeSessions() {
+    setConfirmModal(null);
+    const cleanReason = reason.trim();
+    if (busy.current || uncertain || cleanReason.length < 5 || cleanReason.length > 1000) return;
 
     busy.current = true;
     setPending(true);
@@ -144,7 +148,7 @@ export default function UserModerationActions({
         {canModerate && isSuspended && (
           <button
             type="button"
-            onClick={handleRestore}
+            onClick={() => setConfirmModal("restore")}
             disabled={pending || uncertain}
             className={styles.btnPrimary}
           >
@@ -163,7 +167,7 @@ export default function UserModerationActions({
       </div>
 
       {activeForm === "suspend" && (
-        <form className={styles.moderate} onSubmit={handleSuspend} style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid rgba(185, 28, 28, 0.3)", background: "rgba(185, 28, 28, 0.04)" }}>
+        <form className={styles.moderate} onSubmit={requestSuspend} style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid rgba(185, 28, 28, 0.3)", background: "rgba(185, 28, 28, 0.04)" }}>
           <p style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", color: "var(--text)" }}>
             <strong>Atenção:</strong> A suspensão bloqueia o acesso à conta e invalida todas as sessões ativas imediatamente. Se a data de término não for informada, o bloqueio será por tempo indeterminado.
           </p>
@@ -198,7 +202,7 @@ export default function UserModerationActions({
       )}
 
       {activeForm === "revoke" && (
-        <form className={styles.moderate} onSubmit={handleRevokeSessions} style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid var(--border)", background: "var(--surface-subtle)" }}>
+        <form className={styles.moderate} onSubmit={requestRevokeSessions} style={{ marginTop: "1.25rem", padding: "1.25rem", borderRadius: "0.75rem", border: "1px solid var(--border)", background: "var(--surface-subtle)" }}>
           <p style={{ margin: "0 0 0.5rem", fontSize: "0.85rem", color: "var(--text-muted)" }}>
             A revogação de sessões encerra imediatamente todos os tokens emitidos para esta conta. O cadastro não é afetado, e o titular precisará autenticar novamente.
           </p>
@@ -237,6 +241,39 @@ export default function UserModerationActions({
         >
           {message}
         </p>
+      )}
+
+      {confirmModal === "suspend" && (
+        <ConfirmDialog
+          title={`Suspender conta de "${userName}"?`}
+          description="As sessões ativas serão invalidadas imediatamente e o titular perderá acesso à plataforma enquanto durar a suspensão."
+          confirmLabel="Confirmar suspensão"
+          variant="danger"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeSuspend}
+        />
+      )}
+
+      {confirmModal === "restore" && (
+        <ConfirmDialog
+          title={`Restaurar o acesso da conta de "${userName}"?`}
+          description="A suspensão será cancelada e o titular poderá voltar a utilizar sua conta normalmente."
+          confirmLabel="Restaurar conta"
+          variant="primary"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeRestore}
+        />
+      )}
+
+      {confirmModal === "revoke" && (
+        <ConfirmDialog
+          title={`Revogar todas as sessões de "${userName}"?`}
+          description="O titular será desconectado de todos os seus dispositivos e precisará fazer login novamente."
+          confirmLabel="Revogar sessões"
+          variant="danger"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeRevokeSessions}
+        />
       )}
     </div>
   );

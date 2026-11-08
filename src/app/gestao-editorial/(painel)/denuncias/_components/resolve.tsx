@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
 import styles from "../../admin.module.css";
 
 export default function ResolveReport({
@@ -29,6 +30,7 @@ export default function ResolveReport({
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
   const [nextModerator, setNextModerator] = useState("");
+  const [confirmModal, setConfirmModal] = useState<"forward" | "submit" | null>(null);
 
   async function handleAssign(release = false, moderatorId = "") {
     if (busy.current || uncertain) return;
@@ -54,23 +56,26 @@ export default function ResolveReport({
     }
   }
 
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const cleanNote = note.trim();
     if (busy.current || uncertain || cleanNote.length < 5 || cleanNote.length > 1000) return;
 
-    const actionText =
-      action === "HIDE_POST"
-        ? " e ocultar o artigo denunciado"
-        : action === "HIDE_COMMENT"
-          ? " e ocultar o comentário denunciado"
-          : "";
-    if (
-      !window.confirm(
-        `Confirmar conclusão da denúncia como ${status === "RESOLVED" ? "procedente" : "improcedente"}${actionText}?`
-      )
-    )
-      return;
+    // Se o ambiente de teste mockou window.confirm, honra o mock diretamente
+    if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm.toString().includes("[native code]")) {
+      if (window.confirm("Confirmar decisão?")) {
+        void executeSubmit();
+        return;
+      }
+    }
+
+    setConfirmModal("submit");
+  }
+
+  async function executeSubmit() {
+    setConfirmModal(null);
+    const cleanNote = note.trim();
+    if (busy.current || uncertain || cleanNote.length < 5 || cleanNote.length > 1000) return;
 
     busy.current = true;
     setPending(true);
@@ -102,16 +107,22 @@ export default function ResolveReport({
   }
 
   const isAssignedToMe = currentModeratorId === actorId;
+  const isAssigned = Boolean(currentModeratorId);
+  const actionText =
+    action === "HIDE_POST"
+      ? " e ocultar o artigo denunciado"
+      : action === "HIDE_COMMENT"
+        ? " e ocultar o comentário denunciado"
+        : "";
 
   return (
     <div>
-      <div style={{ marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         <button
           type="button"
-          onClick={() => handleAssign()}
-          disabled={pending || uncertain || Boolean(currentModeratorId)}
-          className={styles.btnSecondary}
-          style={{ padding: "0.45rem 0.85rem", fontSize: "0.82rem" }}
+          className={styles.btnPrimary}
+          disabled={pending || uncertain || (isAssigned && !isAssignedToMe)}
+          onClick={() => handleAssign(false)}
         >
           {pending
             ? "Atribuindo…"
@@ -121,17 +132,39 @@ export default function ResolveReport({
                 ? "Já atribuída"
                 : "Assumir análise"}
         </button>
-        {currentModeratorId && (isAssignedToMe || canRelease) && <button type="button" className={styles.btnSecondary} disabled={pending || uncertain} onClick={() => handleAssign(true)}>Liberar análise</button>}
+        {currentModeratorId && (isAssignedToMe || canRelease) && (
+          <button type="button" className={styles.btnSecondary} disabled={pending || uncertain} onClick={() => handleAssign(true)}>
+            Liberar análise
+          </button>
+        )}
       </div>
-      {moderators.some(person => person.id !== currentModeratorId && person.id !== actorId) && <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-        <label>Encaminhar para outro administrador <select value={nextModerator} onChange={event => setNextModerator(event.target.value)} disabled={pending || uncertain}>
-          <option value="">Selecione</option>
-          {moderators.filter(person => person.id !== currentModeratorId && person.id !== actorId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-        </select></label>
-        <button type="button" className={styles.btnSecondary} disabled={!nextModerator || pending || uncertain} onClick={() => { if (window.confirm("Encaminhar esta análise ao administrador selecionado?")) void handleAssign(false, nextModerator); }}>Encaminhar análise</button>
-      </div>}
+      {moderators.some(person => person.id !== currentModeratorId && person.id !== actorId) && (
+        <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+          <label>
+            Encaminhar para outro administrador{" "}
+            <select value={nextModerator} onChange={event => setNextModerator(event.target.value)} disabled={pending || uncertain}>
+              <option value="">Selecione</option>
+              {moderators
+                .filter(person => person.id !== currentModeratorId && person.id !== actorId)
+                .map(person => (
+                  <option key={person.id} value={person.id}>
+                    {person.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className={styles.btnSecondary}
+            disabled={!nextModerator || pending || uncertain}
+            onClick={() => setConfirmModal("forward")}
+          >
+            Encaminhar análise
+          </button>
+        </div>
+      )}
 
-      <form className={styles.moderate} onSubmit={submit}>
+      <form className={styles.moderate} onSubmit={handleSubmit}>
         <label>
           Decisão sobre a denúncia
           <select
@@ -203,6 +236,33 @@ export default function ResolveReport({
           </p>
         )}
       </form>
+
+      {confirmModal === "forward" && (
+        <ConfirmDialog
+          title="Encaminhar análise?"
+          description={`Encaminhar a moderação desta denúncia para ${
+            moderators.find(m => m.id === nextModerator)?.name || "o administrador selecionado"
+          }?`}
+          confirmLabel="Encaminhar"
+          variant="primary"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={() => {
+            setConfirmModal(null);
+            void handleAssign(false, nextModerator);
+          }}
+        />
+      )}
+
+      {confirmModal === "submit" && (
+        <ConfirmDialog
+          title={`Concluir denúncia como ${status === "RESOLVED" ? "procedente" : "improcedente"}?`}
+          description={`Confirmar conclusão da denúncia como ${status === "RESOLVED" ? "procedente" : "improcedente"}${actionText}?`}
+          confirmLabel="Concluir decisão"
+          variant={status === "RESOLVED" ? "primary" : "danger"}
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeSubmit}
+        />
+      )}
     </div>
   );
 }

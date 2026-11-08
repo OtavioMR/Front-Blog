@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
+import { canWriteArticles, canAccessAdmin } from "@/lib/permissions";
 import { validatePhoto } from "../conta/foto/photo-upload";
 import { isPendingResponse, parseDraft, parsePublicationResponse, parseScheduleResponse, parseUpdatedDraft, publicationEligibility, reviewEligibility, scheduleToIso, validDraftId, type Draft } from "./editor-contracts";
 import styles from "./editor.module.css";
@@ -135,11 +136,11 @@ export default function Editor({ initialId }: { initialId?: string }) {
           setState("signed-out");
           return;
         }
-        if (profile.role !== "AUTHOR" && profile.role !== "ADMIN") {
+        if (!canWriteArticles(profile.role)) {
           setState("denied");
           return;
         }
-        const userIsAdmin = profile.role === "ADMIN";
+        const userIsAdmin = canAccessAdmin(profile.role);
         setOwner(profile.id);
         setReviewProfile({ role: profile.role, firstPostApproved: profile.firstPostApproved });
         setIsAdmin(userIsAdmin);

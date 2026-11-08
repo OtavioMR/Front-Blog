@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
+import { canWriteArticles } from "@/lib/permissions";
 import { acceptedRules, parseOwnArticles, parseRules, type OwnArticles, type Rules } from "./contracts";
 import BackButton from "@/app/_components/back-button";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
@@ -36,7 +37,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         if (!response.ok) throw new Error();
         const value = parseRules(await response.json());
         if (current === revision.current) { setSubject(profile.id); setRules(value); setView("reader"); }
-      } else if (profile.role === "AUTHOR" || profile.role === "ADMIN") {
+      } else if (canWriteArticles(profile.role)) {
         const response = await authenticatedFetchForSubject(profile.id, `/api/v1/posts/me?page=${requestedPage}&limit=10`, { cache: "no-store" });
         if (current !== revision.current) return;
         if (response.status === 409) { setView("error"); return; }

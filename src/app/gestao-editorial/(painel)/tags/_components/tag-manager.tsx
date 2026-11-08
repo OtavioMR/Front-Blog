@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
 import styles from "../../admin.module.css";
 
 export function TagCreateForm({ csrf }: { csrf: string }) {
@@ -65,6 +66,7 @@ export function TagRowActions({
   const [pending, setPending] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
+  const [confirmModal, setConfirmModal] = useState<"alert_in_use" | "delete" | "merge" | null>(null);
 
   async function handleEdit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -90,13 +92,18 @@ export function TagRowActions({
     }
   }
 
-  async function handleDelete() {
+  function onRequestDelete() {
     if (busy.current || uncertain) return;
     if (postCount > 0) {
-      alert(`A tag possui ${postCount} artigo(s) associado(s). Mescle a tag em outra antes de excluí-la.`);
+      setConfirmModal("alert_in_use");
       return;
     }
-    if (!window.confirm(`Excluir a tag "${currentName}"? Esta ação é definitiva.`)) return;
+    setConfirmModal("delete");
+  }
+
+  async function executeDelete() {
+    setConfirmModal(null);
+    if (busy.current || uncertain) return;
     busy.current = true; setPending(true); setMessage("");
     try {
       const body = new URLSearchParams({ csrf, action: "delete", id });
@@ -116,11 +123,17 @@ export function TagRowActions({
     }
   }
 
-  async function handleMerge(e: React.FormEvent<HTMLFormElement>) {
+  function onRequestMerge(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const cleanTarget = targetId.trim();
     if (busy.current || uncertain || !cleanTarget || cleanTarget === id) return;
-    if (!window.confirm(`Mesclar a tag "${currentName}" no identificador de destino? Todos os artigos associados serão transferidos e esta tag será excluída.`)) return;
+    setConfirmModal("merge");
+  }
+
+  async function executeMerge() {
+    setConfirmModal(null);
+    const cleanTarget = targetId.trim();
+    if (busy.current || uncertain || !cleanTarget || cleanTarget === id) return;
     busy.current = true; setPending(true); setMessage("");
     try {
       const body = new URLSearchParams({ csrf, action: "merge", id, targetId: cleanTarget });
@@ -150,7 +163,7 @@ export function TagRowActions({
         <button type="button" onClick={() => setMode(mode === "merge" ? "idle" : "merge")} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer" }}>
           {mode === "merge" ? "Cancelar" : "Mesclar"}
         </button>
-        <button type="button" onClick={handleDelete} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: postCount > 0 ? "var(--border)" : "#733" }}>
+        <button type="button" onClick={onRequestDelete} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: postCount > 0 ? "var(--border)" : "#733" }}>
           {pending ? "…" : "Excluir"}
         </button>
       </div>
@@ -166,7 +179,7 @@ export function TagRowActions({
       )}
 
       {mode === "merge" && (
-        <form className={styles.moderate} onSubmit={handleMerge} style={{ marginTop: "0.5rem" }}>
+        <form className={styles.moderate} onSubmit={onRequestMerge} style={{ marginTop: "0.5rem" }}>
           <label>
             ID da tag de destino (para onde os artigos serão transferidos)
             <input required pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" placeholder="UUID da tag de destino" value={targetId} onChange={e => setTargetId(e.target.value)} disabled={pending || uncertain} />
@@ -176,6 +189,39 @@ export function TagRowActions({
       )}
 
       {message && <p role="status" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0" }}>{message}</p>}
+
+      {confirmModal === "alert_in_use" && (
+        <ConfirmDialog
+          title="Tag em uso"
+          description={`A tag possui ${postCount} artigo(s) associado(s). Mescle a tag em outra antes de excluí-la.`}
+          confirmLabel="Entendido"
+          isAlert={true}
+          variant="primary"
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+
+      {confirmModal === "delete" && (
+        <ConfirmDialog
+          title={`Excluir a tag "${currentName}"?`}
+          description="Esta ação é definitiva e removerá a tag permanentemente."
+          confirmLabel="Excluir tag"
+          variant="danger"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeDelete}
+        />
+      )}
+
+      {confirmModal === "merge" && (
+        <ConfirmDialog
+          title={`Mesclar a tag "${currentName}"?`}
+          description="Todos os artigos associados serão transferidos para a tag de destino informada e esta tag será excluída."
+          confirmLabel="Mesclar artigos e excluir tag"
+          variant="primary"
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={executeMerge}
+        />
+      )}
     </div>
   );
 }

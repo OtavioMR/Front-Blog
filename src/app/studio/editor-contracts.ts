@@ -47,7 +47,7 @@ export function reviewEligibility(role: string, requesterId: string, authorId: s
 }
 
 export function publicationEligibility(role: string, requesterId: string, authorId: string, firstPostApproved: boolean | undefined): "eligible" | "ineligible" | "unknown" {
-  if (!["AUTHOR", "ADMIN"].includes(role) || !requesterId || requesterId !== authorId) return "ineligible";
+  if (!["AUTHOR", "ADMIN", "SUPER_ADMIN"].includes(role) || !requesterId || requesterId !== authorId) return "ineligible";
   if (firstPostApproved === undefined) return "unknown";
   return firstPostApproved ? "eligible" : "ineligible";
 }

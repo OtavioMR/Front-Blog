@@ -9,26 +9,73 @@ import styles from "../admin.module.css";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v.trim() : "");
 const short = (id: string) => `${id.slice(0, 8)}.${id.slice(-4)}`;
-type Row = { id: string; name: string; email: string; role: string; profilePhoto: string | null; isActive: boolean; moderationSuspended: boolean; grantedAt: string | null; grantedBy: string | null };
+type Row = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  profilePhoto: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  moderationSuspended: boolean;
+  grantedAt: string | null;
+  grantedBy: string | null;
+};
 
 function rows(value: unknown, max: number): Row[] | null {
   if (!record(value) || !Array.isArray(value.data) || value.data.length > max) return null;
   const out: Row[] = [];
   for (const row of value.data) {
-    if (!record(row) || typeof row.id !== "string" || !uuid.test(row.id) || typeof row.name !== "string" || row.name.length > 255 || typeof row.email !== "string" || row.email.length > 255
-      || typeof row.role !== "string" || typeof row.isActive !== "boolean" || typeof row.moderationSuspended !== "boolean") return null;
-    out.push({ id: row.id, name: row.name, email: row.email, role: row.role, profilePhoto: typeof row.profilePhoto === "string" ? row.profilePhoto : null, isActive: row.isActive, moderationSuspended: row.moderationSuspended, grantedAt: typeof row.grantedAt === "string" && Number.isFinite(Date.parse(row.grantedAt)) ? row.grantedAt : null, grantedBy: typeof row.grantedBy === "string" ? row.grantedBy : null });
+    if (
+      !record(row) ||
+      typeof row.id !== "string" ||
+      !uuid.test(row.id) ||
+      typeof row.name !== "string" ||
+      row.name.length > 255 ||
+      typeof row.email !== "string" ||
+      row.email.length > 255 ||
+      typeof row.role !== "string" ||
+      typeof row.isActive !== "boolean" ||
+      typeof row.moderationSuspended !== "boolean"
+    )
+      return null;
+    const emailVerified = row.emailVerified !== false;
+    out.push({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      profilePhoto: typeof row.profilePhoto === "string" ? row.profilePhoto : null,
+      isActive: row.isActive,
+      emailVerified,
+      moderationSuspended: row.moderationSuspended,
+      grantedAt: typeof row.grantedAt === "string" && Number.isFinite(Date.parse(row.grantedAt)) ? row.grantedAt : null,
+      grantedBy: typeof row.grantedBy === "string" ? row.grantedBy : null,
+    });
   }
   return out;
 }
 
-export default async function AdministratorsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const raw = await searchParams, search = one(raw.busca), page = one(raw.pagina) || "1", adminPage = one(raw.adminPage) || "1", superPage = one(raw.superPage) || "1";
+export default async function AdministratorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const raw = await searchParams,
+    search = one(raw.busca),
+    page = one(raw.pagina) || "1",
+    adminPage = one(raw.adminPage) || "1",
+    superPage = one(raw.superPage) || "1";
   const actor = await adminIdentity();
   if (!actor) return <AdminFailure reason="session" />;
   // Exclusivo do SUPER_ADMIN; a API também recusa a alteração de cargos para qualquer outro perfil.
   if (actor.role !== "SUPER_ADMIN") return <AdminFailure reason="forbidden" />;
-  if ([raw.busca, raw.pagina, raw.adminPage, raw.superPage].some(Array.isArray) || search.length > 255 || [page, adminPage, superPage].some(value => !/^[1-9]\d{0,5}$/.test(value))) return <AdminFailure reason="missing" />;
+  if (
+    [raw.busca, raw.pagina, raw.adminPage, raw.superPage].some(Array.isArray) ||
+    search.length > 255 ||
+    [page, adminPage, superPage].some((value) => !/^[1-9]\d{0,5}$/.test(value))
+  )
+    return <AdminFailure reason="missing" />;
 
   const [admins, supers, candidates, history] = await Promise.all([
     adminUsersRead(new URLSearchParams({ page: adminPage, limit: "20", role: "ADMIN", sort: "name", order: "ASC" })),
@@ -38,13 +85,27 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
   ]);
   for (const result of [admins, supers, history]) if (!result.ok) return <AdminFailure reason={result.reason} />;
   if (candidates && !candidates.ok) return <AdminFailure reason={candidates.reason} />;
-  const adminRows = admins.ok ? rows(admins.value, 20) : null, superRows = supers.ok ? rows(supers.value, 20) : null;
+  const adminRows = admins.ok ? rows(admins.value, 20) : null,
+    superRows = supers.ok ? rows(supers.value, 20) : null;
   const found = candidates?.ok ? rows(candidates.value, 10) : [];
-  const log = history.ok && record(history.value) && Array.isArray(history.value.data) && history.value.data.length <= 10 && record(history.value.meta) ? history.value : null;
+  const log =
+    history.ok && record(history.value) && Array.isArray(history.value.data) && history.value.data.length <= 10 && record(history.value.meta)
+      ? history.value
+      : null;
   if (!adminRows || !superRows || !found || !log) return <AdminFailure reason="unavailable" />;
-  const entries = (log.data as unknown[]).filter(record).filter(e => typeof e.id === "string" && typeof e.createdAt === "string" && Number.isFinite(Date.parse(e.createdAt)) && typeof e.targetId === "string" && uuid.test(e.targetId) && record(e.details));
+  const entries = (log.data as unknown[])
+    .filter(record)
+    .filter(
+      (e) =>
+        typeof e.id === "string" &&
+        typeof e.createdAt === "string" &&
+        Number.isFinite(Date.parse(e.createdAt)) &&
+        typeof e.targetId === "string" &&
+        uuid.test(e.targetId) &&
+        record(e.details)
+    );
   const meta = record(log.meta) ? log.meta : {};
-  const eligible = found.filter(u => u.role !== "ADMIN" && u.role !== "SUPER_ADMIN");
+  const eligible = found.filter((u) => u.role !== "ADMIN" && u.role !== "SUPER_ADMIN");
   const pageLink = (key: "adminPage" | "superPage", value: number) => {
     const params = new URLSearchParams({ adminPage, superPage, pagina: page });
     if (search) params.set("busca", search);
@@ -57,27 +118,73 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Exclusivo do SUPER_ADMIN</p>
         <h2>Gerenciamento de Administradores</h2>
-        <p>Conceda ou revogue o cargo ADMIN. Cada alteração exige justificativa e código do autenticador, revoga as sessões da conta e fica registrada na auditoria.</p>
+        <p>
+          Conceda ou revogue o cargo ADMIN. Cada alteração exige justificativa e código do autenticador, revoga as
+          sessões da conta e fica registrada na auditoria.
+        </p>
       </div>
 
       <section className={styles.panel} aria-labelledby="admins-now">
-        <h2 id="admins-now">Administradores</h2>
+        <h2 id="admins-now">Administradores e Superadministradores Atuais</h2>
         <div className={styles.tableScroll}>
           <table className={styles.table}>
-            <thead><tr><th>Conta</th><th>E-mail</th><th>Cargo</th><th>Situação</th><th>Concessão</th><th>Ações</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Conta</th>
+                <th>E-mail</th>
+                <th>Cargo</th>
+                <th>Situação</th>
+                <th>Concessão</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
             <tbody>
-              {[...superRows, ...adminRows].map(row => (
+              {[...superRows, ...adminRows].map((row) => (
                 <tr key={row.id}>
-                  <td><div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}><Avatar name={row.name} src={row.profilePhoto} size={32} /><div><strong style={{ display: "block" }}>{row.name}</strong><span style={{ fontSize: "0.74rem", fontFamily: "monospace", color: "var(--text-muted)" }}>{short(row.id)}</span></div></div></td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <Avatar name={row.name} src={row.profilePhoto} size={32} />
+                      <div>
+                        <strong style={{ display: "block" }}>{row.name}</strong>
+                        <span style={{ fontSize: "0.74rem", fontFamily: "monospace", color: "var(--text-muted)" }}>
+                          {short(row.id)}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
                   <td>{row.email}</td>
-                  <td><span className={row.role === "SUPER_ADMIN" ? styles.roleBadgeSuperAdmin : styles.roleBadgeAdmin}><IconShield size={11} /> {row.role}</span></td>
+                  <td>
+                    <span className={row.role === "SUPER_ADMIN" ? styles.roleBadgeSuperAdmin : styles.roleBadgeAdmin}>
+                      <IconShield size={11} /> {row.role}
+                    </span>
+                  </td>
                   <td>{row.moderationSuspended ? "Suspensa" : row.isActive ? "Ativa" : "Inativa"}</td>
-                  <td>{row.grantedAt ? <><time dateTime={row.grantedAt}>{new Date(row.grantedAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</time>{row.grantedBy && <div>Por {row.grantedBy}</div>}</> : "Não disponível"}</td>
+                  <td>
+                    {row.grantedAt ? (
+                      <>
+                        <time dateTime={row.grantedAt}>
+                          {new Date(row.grantedAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                        </time>
+                        {row.grantedBy && <div>Por {row.grantedBy}</div>}
+                      </>
+                    ) : (
+                      "Não disponível"
+                    )}
+                  </td>
                   <td>
                     {row.role === "ADMIN" ? (
-                      <Link href={`/gestao-editorial/usuarios/${row.id}/funcao?cargo=READER`} prefetch={false} className={styles.btnSecondary} style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}>Remover cargo ADMIN</Link>
+                      <Link
+                        href={`/gestao-editorial/usuarios/${row.id}/funcao?cargo=READER`}
+                        prefetch={false}
+                        className={styles.btnSecondary}
+                        style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
+                      >
+                        Remover cargo ADMIN
+                      </Link>
                     ) : (
-                      <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>{row.id === actor.id ? "Sua conta" : "Cargo protegido"}</span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
+                        {row.id === actor.id ? "Sua conta" : "Cargo protegido"}
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -86,56 +193,165 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
           </table>
         </div>
         {!adminRows.length && <p style={{ color: "var(--text-muted)" }}>Nenhum ADMIN nesta página.</p>}
-        {[{ key: "adminPage" as const, label: "Administradores", result: admins, current: adminPage }, { key: "superPage" as const, label: "Superadministradores", result: supers, current: superPage }].map(({ key, label, result, current }) => {
+        {[
+          { key: "adminPage" as const, label: "Administradores", result: admins, current: adminPage },
+          { key: "superPage" as const, label: "Superadministradores", result: supers, current: superPage },
+        ].map(({ key, label, result, current }) => {
           const meta = result.ok && record(result.value) && record(result.value.meta) ? result.value.meta : {};
-          return <nav key={key} className={styles.pagination} aria-label={`Paginação de ${label}`}>
-            <span>{label}: página {current}</span>
-            {meta.hasPreviousPage === true && <Link href={pageLink(key, Number(current) - 1)} prefetch={false}>Anterior</Link>}
-            {meta.hasNextPage === true && <Link href={pageLink(key, Number(current) + 1)} prefetch={false}>Próxima</Link>}
-          </nav>;
+          return (
+            <nav key={key} className={styles.pagination} aria-label={`Paginação de ${label}`}>
+              <span>
+                {label}: página {current}
+              </span>
+              {meta.hasPreviousPage === true && (
+                <Link href={pageLink(key, Number(current) - 1)} prefetch={false}>
+                  Anterior
+                </Link>
+              )}
+              {meta.hasNextPage === true && (
+                <Link href={pageLink(key, Number(current) + 1)} prefetch={false}>
+                  Próxima
+                </Link>
+              )}
+            </nav>
+          );
         })}
       </section>
 
       <section className={styles.panel} aria-labelledby="admins-promote">
-        <h2 id="admins-promote">Promover usuário a ADMIN</h2>
+        <h2 id="admins-promote">Promover Usuário Elegível a Administrador</h2>
+        <p style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
+          Apenas usuários com e-mail confirmado e conta ativa podem ser promovidos a Administrador. O cargo de
+          Superadministrador é protegido e gerenciado exclusivamente via CLI.
+        </p>
         <Form className={styles.filters} action="/gestao-editorial/administradores" prefetch={false}>
-          <label>Nome, e-mail ou identificador<input name="busca" defaultValue={search} maxLength={255} placeholder="Pesquise uma conta ativa" /></label>
+          <label>
+            Pesquisar usuário
+            <input name="busca" defaultValue={search} maxLength={255} placeholder="Nome, e-mail ou identificador..." />
+          </label>
           <button type="submit">Pesquisar</button>
+          {search && (
+            <Link
+              href="/gestao-editorial/administradores"
+              className={styles.btnSecondary}
+              style={{ padding: "0.5rem 1rem", fontSize: "0.85rem", textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+            >
+              Limpar busca
+            </Link>
+          )}
         </Form>
         {search && (eligible.length ? (
           <div className={styles.tableScroll}>
             <table className={styles.table}>
-              <thead><tr><th>Conta</th><th>E-mail</th><th>Cargo atual</th><th>Ações</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Conta</th>
+                  <th>E-mail</th>
+                  <th>Cargo atual</th>
+                  <th>Situação</th>
+                  <th>E-mail</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
               <tbody>
-                {eligible.map(row => (
+                {eligible.map((row) => (
                   <tr key={row.id}>
-                    <td><strong>{row.name}</strong></td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <Avatar name={row.name} src={row.profilePhoto} size={32} />
+                        <div>
+                          <strong>{row.name}</strong>
+                          <span
+                            style={{
+                              fontSize: "0.74rem",
+                              fontFamily: "monospace",
+                              color: "var(--text-muted)",
+                              display: "block",
+                            }}
+                          >
+                            {short(row.id)}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td>{row.email}</td>
-                    <td>{row.role}</td>
-                    <td><Link href={`/gestao-editorial/usuarios/${row.id}/funcao?cargo=ADMIN`} prefetch={false} className={styles.btnPrimary} style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}>Promover a ADMIN <IconArrowUpRight size={13} /></Link></td>
+                    <td>
+                      <span className={styles.roleBadgeAuthor}>{row.role}</span>
+                    </td>
+                    <td>{row.moderationSuspended ? "Suspensa" : row.isActive ? "Ativa" : "Inativa"}</td>
+                    <td>
+                      <span
+                        style={{
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          color: row.emailVerified ? "var(--brand)" : "#b74740",
+                        }}
+                      >
+                        {row.emailVerified ? "Confirmado" : "Pendente"}
+                      </span>
+                    </td>
+                    <td>
+                      {row.emailVerified && row.isActive && !row.moderationSuspended ? (
+                        <Link
+                          href={`/gestao-editorial/usuarios/${row.id}/funcao?cargo=ADMIN`}
+                          prefetch={false}
+                          className={styles.btnPrimary}
+                          style={{
+                            padding: "0.35rem 0.75rem",
+                            fontSize: "0.8rem",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          Promover a ADMIN <IconArrowUpRight size={13} />
+                        </Link>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }} title="Requer e-mail confirmado e conta ativa">
+                          Não elegível
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : <p style={{ color: "var(--text-muted)" }}>Nenhuma conta elegível encontrada para esta busca.</p>)}
+        ) : (
+          <p style={{ color: "var(--text-muted)" }}>Nenhuma conta elegível encontrada para esta busca.</p>
+        ))}
       </section>
 
       <section className={styles.panel} aria-labelledby="admins-history">
-        <h2 id="admins-history">Histórico de alterações de cargo</h2>
+        <h2 id="admins-history">Histórico de Alterações de Cargo</h2>
         {entries.length ? (
           <div className={styles.tableScroll}>
             <table className={styles.table}>
-              <thead><tr><th>Quando</th><th>Concedido por</th><th>Conta</th><th>Alteração</th><th>Justificativa</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Quando</th>
+                  <th>Concedido por</th>
+                  <th>Conta</th>
+                  <th>Alteração</th>
+                  <th>Justificativa</th>
+                </tr>
+              </thead>
               <tbody>
-                {entries.map(e => {
+                {entries.map((e) => {
                   const d = e.details as Record<string, unknown>;
                   return (
                     <tr key={String(e.id)}>
-                      <td>{new Date(String(e.createdAt)).toLocaleString("pt-BR", { timeZone: "UTC" })} UTC</td>
+                      <td>{new Date(String(e.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td>
                       <td>{typeof e.actorName === "string" ? e.actorName : e.actorId ? "Usuário indisponível" : "Sistema"}</td>
-                      <td><Link href={`/gestao-editorial/usuarios/${e.targetId}`} prefetch={false}>{typeof e.targetLabel === "string" ? e.targetLabel : "Usuário indisponível"}</Link></td>
-                      <td>{typeof d.previousRole === "string" ? d.previousRole.slice(0, 20) : "?"} → {typeof d.role === "string" ? d.role.slice(0, 20) : "?"}</td>
+                      <td>
+                        <Link href={`/gestao-editorial/usuarios/${e.targetId}`} prefetch={false}>
+                          {typeof e.targetLabel === "string" ? e.targetLabel : "Usuário indisponível"}
+                        </Link>
+                      </td>
+                      <td>
+                        {typeof d.previousRole === "string" ? d.previousRole.slice(0, 20) : "?"} →{" "}
+                        {typeof d.role === "string" ? d.role.slice(0, 20) : "?"}
+                      </td>
                       <td>{typeof d.reason === "string" ? d.reason.slice(0, 1000) : "—"}</td>
                     </tr>
                   );
@@ -143,11 +359,31 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
               </tbody>
             </table>
           </div>
-        ) : <p style={{ color: "var(--text-muted)" }}>Nenhuma alteração registrada.</p>}
+        ) : (
+          <p style={{ color: "var(--text-muted)" }}>Nenhuma alteração registrada.</p>
+        )}
         <nav className={styles.pagination} aria-label="Paginação do histórico">
-          {meta.hasPreviousPage === true && <Link href={`/gestao-editorial/administradores?pagina=${Number(page) - 1}${search ? `&busca=${encodeURIComponent(search)}` : ""}`} prefetch={false}>Anterior</Link>}
+          {meta.hasPreviousPage === true && (
+            <Link
+              href={`/gestao-editorial/administradores?pagina=${Number(page) - 1}${
+                search ? `&busca=${encodeURIComponent(search)}` : ""
+              }`}
+              prefetch={false}
+            >
+              Anterior
+            </Link>
+          )}
           <span>Página {page}</span>
-          {meta.hasNextPage === true && <Link href={`/gestao-editorial/administradores?pagina=${Number(page) + 1}${search ? `&busca=${encodeURIComponent(search)}` : ""}`} prefetch={false}>Próxima</Link>}
+          {meta.hasNextPage === true && (
+            <Link
+              href={`/gestao-editorial/administradores?pagina=${Number(page) + 1}${
+                search ? `&busca=${encodeURIComponent(search)}` : ""
+              }`}
+              prefetch={false}
+            >
+              Próxima
+            </Link>
+          )}
         </nav>
       </section>
     </AdminShell>

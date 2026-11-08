@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminFailure, AdminShell } from "../../../_components/shell";
 import { adminCsrf, adminIdentity, adminUserDetail, adminUsersRead, record } from "../../../_lib/data";
+import { formatRoleName } from "@/lib/permissions";
 import RoleForm from "./role-form";
 import styles from "../../../admin.module.css";
 
@@ -20,5 +21,5 @@ export default async function RolePage({ params, searchParams }: { params: Promi
   const user = result.value, csrf = await adminCsrf();
   if (!csrf) return <AdminFailure reason="session" />;
   if (!record(user) || user.id !== id || typeof user.name !== "string" || user.name.length > 255 || !["READER", "AUTHOR", "ADMIN", "SUPER_ADMIN"].includes(String(user.role)) || typeof user.isActive !== "boolean") return <AdminFailure reason="unavailable" />;
-  return <AdminShell title="Função da conta" current="users"><div className={styles.intro}><p className={styles.eyebrow}>Permissões</p><h2>{user.name}</h2><p>Função atual: {String(user.role)}. Alterações revogam as sessões da conta e são registradas na auditoria.</p></div><section className={styles.panel}>{user.isActive ? <RoleForm id={id} current={String(user.role)} csrf={csrf} suggested={suggested} /> : <p>Somente contas ativas podem ter a função alterada.</p>}</section><p><Link href="/gestao-editorial/usuarios" prefetch={false}>Voltar aos usuários</Link></p></AdminShell>;
+  return <AdminShell title="Função da conta" current="users"><div className={styles.intro}><p className={styles.eyebrow}>Permissões</p><h2>{user.name}</h2><p>Função atual: <strong>{formatRoleName(String(user.role))}</strong> ({String(user.role)}). Alterações revogam as sessões da conta e são registradas na auditoria.</p></div><section className={styles.panel}>{user.isActive ? <RoleForm id={id} current={String(user.role)} csrf={csrf} suggested={suggested} /> : <p>Somente contas ativas podem ter a função alterada.</p>}</section><p><Link href="/gestao-editorial/usuarios" prefetch={false}>Voltar aos usuários</Link></p></AdminShell>;
 }

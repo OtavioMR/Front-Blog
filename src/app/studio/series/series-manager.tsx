@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
+import { canManageSeries } from "@/lib/permissions";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import { parseOwnArticles, type OwnArticles } from "../contracts";
 import { confirmedItems, parseDetail, parseSeries, parseSeriesList, type Detail, type Item, type Series } from "./contracts";
@@ -47,7 +48,7 @@ export default function SeriesManager() {
       const profile = await getOwnProfile();
       if (current !== revision.current) return;
       if (!profile) { setView("signed-out"); return; }
-      if (profile.role !== "AUTHOR" && profile.role !== "ADMIN") { setView("denied"); return; }
+      if (!canManageSeries(profile.role)) { setView("denied"); return; }
       const response = await authenticatedFetchForSubject(profile.id, "/api/v1/series/me", { cache: "no-store" });
       if (current !== revision.current) return;
       if (response.status === 401) { setView("signed-out"); return; }

@@ -48,8 +48,10 @@ export const notifyProfileChanged = notifyProfile;
 export function subscribeProfile(listener: () => void) { profileListeners.add(listener); return () => { profileListeners.delete(listener); }; }
 export function subscribeSession(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; }
 
-export async function login(email: string, password: string, totpCode: string): Promise<void> {
-  await locked(async () => {
+export type LoginResult = { ok: true } | { requires2fa: true; preAuthToken: string };
+
+export async function login(email: string, password: string, totpCode?: string): Promise<LoginResult> {
+  return locked(async () => {
     const previousState = readState();
     const previousToken = token;
     const epoch = crypto.randomUUID();
@@ -68,9 +70,62 @@ export async function login(email: string, password: string, totpCode: string): 
     }
     try {
       if (!response.ok) throw new Error();
-      await tokensFrom(response, epoch);
+      const data: unknown = await response.json();
+      if (data && typeof data === "object" && "requires2fa" in data && data.requires2fa) {
+        restoreState(previousState);
+        token = previousToken;
+        if (!("preAuthToken" in data) || typeof data.preAuthToken !== "string" || !data.preAuthToken) {
+          throw new Error("Desafio de autenticação inválido.");
+        }
+        return { requires2fa: true, preAuthToken: data.preAuthToken };
+      }
+      if (!data || typeof data !== "object" || !("access_token" in data) || typeof data.access_token !== "string" || !data.access_token || !("token_type" in data) || data.token_type !== "Bearer" || !("expires_in" in data) || typeof data.expires_in !== "number" || !Number.isFinite(data.expires_in) || data.expires_in <= 0) {
+        throw new Error("Resposta de sessão inválida.");
+      }
+      token = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000, epoch };
       saveState({ epoch, pending: false });
     } catch { token = null; broadcast(); throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
+    broadcast();
+    notifyProfile();
+    return { ok: true };
+  });
+}
+
+export async function verify2fa(preAuthToken: string, code: string): Promise<void> {
+  return locked(async () => {
+    const epoch = crypto.randomUUID();
+    saveState({ epoch, pending: true });
+    let response: Response;
+    try {
+      response = await fetch("/api/v1/auth/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({ preAuthToken, code }),
+      });
+    } catch {
+      token = null;
+      broadcast();
+      throw new Error("Não foi possível validar o código de autenticação.");
+    }
+    if ([400, 401, 403, 429].includes(response.status)) {
+      token = null;
+      broadcast();
+      if (response.status === 401) throw new Error("Código de autenticação ou de recuperação inválido ou expirado.");
+      if (response.status === 429) throw new Error("Muitas tentativas. Aguarde um pouco e tente novamente.");
+      throw new Error("Não foi possível validar o código informado.");
+    }
+    try {
+      if (!response.ok) throw new Error();
+      await tokensFrom(response, epoch);
+      saveState({ epoch, pending: false });
+    } catch {
+      token = null;
+      broadcast();
+      throw new Error("Não foi possível confirmar a autenticação.");
+    }
     broadcast();
     notifyProfile();
   });
@@ -167,7 +222,7 @@ export async function invalidateSessionForSubject(expectedId: string): Promise<b
   });
 }
 
-export type OwnProfile = { id: string; name: string; email: string; role: string; emailVerified: boolean; bio: string | null; profilePhoto?: string | null; firstPostApproved?: boolean };
+export type OwnProfile = { id: string; name: string; email: string; role: string; emailVerified: boolean; bio: string | null; profilePhoto?: string | null; firstPostApproved?: boolean; totpEnabled?: boolean };
 
 export async function getOwnProfile(): Promise<OwnProfile | null> {
   return locked(async () => {
@@ -179,7 +234,7 @@ export async function getOwnProfile(): Promise<OwnProfile | null> {
     const value: unknown = await response.json();
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Resposta de perfil inválida.");
     const profile = value as Record<string, unknown>;
-    if (profile.id !== id || typeof profile.name !== "string" || typeof profile.email !== "string" || typeof profile.role !== "string" || typeof profile.emailVerified !== "boolean" || !(profile.bio === null || typeof profile.bio === "string") || !(profile.firstPostApproved === undefined || typeof profile.firstPostApproved === "boolean") || !(profile.profilePhoto === undefined || profile.profilePhoto === null || typeof profile.profilePhoto === "string")) throw new Error("Resposta de perfil inválida.");
+    if (profile.id !== id || typeof profile.name !== "string" || typeof profile.email !== "string" || typeof profile.role !== "string" || typeof profile.emailVerified !== "boolean" || !(profile.bio === null || typeof profile.bio === "string") || !(profile.firstPostApproved === undefined || typeof profile.firstPostApproved === "boolean") || !(profile.profilePhoto === undefined || profile.profilePhoto === null || typeof profile.profilePhoto === "string") || !(profile.totpEnabled === undefined || typeof profile.totpEnabled === "boolean")) throw new Error("Resposta de perfil inválida.");
     return profile as OwnProfile;
   });
 }

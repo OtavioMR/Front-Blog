@@ -46,9 +46,11 @@ test("publication requires an approved owner and validates the resulting state",
   const { publicationEligibility, parsePublicationResponse } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
   assert.equal(publicationEligibility("AUTHOR", "a", "a", true), "eligible");
   assert.equal(publicationEligibility("ADMIN", "a", "a", true), "eligible");
+  assert.equal(publicationEligibility("SUPER_ADMIN", "a", "a", true), "eligible");
   assert.equal(publicationEligibility("AUTHOR", "a", "a", false), "ineligible");
   assert.equal(publicationEligibility("AUTHOR", "a", "a", undefined), "unknown");
   assert.equal(publicationEligibility("ADMIN", "a", "b", true), "ineligible");
+  assert.equal(publicationEligibility("SUPER_ADMIN", "a", "b", true), "ineligible");
   const owner = "4c781e0d-b963-493c-b2df-0a8fa66c0615";
   const id = "d28beb9c-6a69-4c3a-841c-7593a8a63265";
   const draft = { id, authorId: owner, title: "Title", content: "Test content", published: true, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };

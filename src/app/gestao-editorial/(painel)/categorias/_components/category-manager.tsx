@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
 import styles from "../../admin.module.css";
 
 export function CategoryCreateForm({ csrf }: { csrf: string }) {
@@ -70,6 +71,7 @@ export function CategoryRowActions({
 }) {
   const router = useRouter(), busy = useRef(false);
   const [editing, setEditing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"delete" | "reactivate" | null>(null);
   const [name, setName] = useState(currentName);
   const [slug, setSlug] = useState(currentSlug);
   const [description, setDescription] = useState(currentDescription);
@@ -101,9 +103,9 @@ export function CategoryRowActions({
     }
   }
 
-  async function handleDelete() {
+  async function executeDelete() {
+    setConfirmAction(null);
     if (busy.current || uncertain) return;
-    if (!window.confirm(`Desativar a categoria "${currentName}"? Ela deixará de aparecer publicamente, mas artigos e associações serão mantidos.`)) return;
     busy.current = true; setPending(true); setMessage("");
     try {
       const body = new URLSearchParams({ csrf, action: "delete", id });
@@ -122,9 +124,9 @@ export function CategoryRowActions({
     }
   }
 
-  async function handleReactivate() {
+  async function executeReactivate() {
+    setConfirmAction(null);
     if (busy.current || uncertain) return;
-    if (!window.confirm(`Reativar a categoria "${currentName}"? Ela voltará a aparecer na listagem pública.`)) return;
     busy.current = true; setPending(true); setMessage("");
     try {
       const body = new URLSearchParams({ csrf, action: "reactivate", id });
@@ -150,11 +152,11 @@ export function CategoryRowActions({
           {editing ? "Cancelar" : "Editar"}
         </button>
         {isActive ? (
-          <button type="button" onClick={handleDelete} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: "#733" }}>
+          <button type="button" onClick={() => setConfirmAction("delete")} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: "#733" }}>
             {pending ? "…" : "Desativar"}
           </button>
         ) : (
-          <button type="button" onClick={handleReactivate} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: "var(--accent, #0066cc)" }}>
+          <button type="button" onClick={() => setConfirmAction("reactivate")} disabled={pending || uncertain} style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", cursor: "pointer", background: "var(--accent, #0066cc)" }}>
             {pending ? "…" : "Reativar"}
           </button>
         )}
@@ -177,6 +179,28 @@ export function CategoryRowActions({
         </form>
       )}
       {message && <p role="status" style={{ fontSize: "0.8rem", margin: "0.25rem 0 0" }}>{message}</p>}
+
+      {confirmAction === "delete" && (
+        <ConfirmDialog
+          title={`Desativar a categoria "${currentName}"?`}
+          description="Ela deixará de aparecer publicamente, mas artigos e associações serão mantidos."
+          confirmLabel="Desativar categoria"
+          variant="danger"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={executeDelete}
+        />
+      )}
+
+      {confirmAction === "reactivate" && (
+        <ConfirmDialog
+          title={`Reativar a categoria "${currentName}"?`}
+          description="Ela voltará a aparecer na listagem pública do blog."
+          confirmLabel="Reativar categoria"
+          variant="primary"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={executeReactivate}
+        />
+      )}
     </div>
   );
 }

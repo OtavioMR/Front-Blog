@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/app/_components/confirm-dialog";
 import styles from "../../admin.module.css";
 
 export default function Review({ id, csrf }: { id: string; csrf: string }) {
@@ -9,22 +10,22 @@ export default function Review({ id, csrf }: { id: string; csrf: string }) {
     busy = useRef(false);
   const [decision, setDecision] = useState<"APPROVED" | "REJECTED">("APPROVED"),
     [reason, setReason] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pending, setPending] = useState(false),
     [uncertain, setUncertain] = useState(false),
     [message, setMessage] = useState("");
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const note = decision === "REJECTED" ? reason.trim() : "";
     if (busy.current || uncertain || (decision === "REJECTED" && (note.length < 5 || note.length > 1000))) return;
-    if (
-      !window.confirm(
-        decision === "APPROVED"
-          ? "Aprovar e publicar este primeiro artigo? O autor terá a permissão de publicação liberada."
-          : "Rejeitar este artigo com a justificativa informada?"
-      )
-    )
-      return;
+    setShowConfirm(true);
+  }
+
+  async function executeDecision() {
+    setShowConfirm(false);
+    const note = decision === "REJECTED" ? reason.trim() : "";
+    if (busy.current || uncertain || (decision === "REJECTED" && (note.length < 5 || note.length > 1000))) return;
 
     busy.current = true;
     setPending(true);
@@ -57,60 +58,77 @@ export default function Review({ id, csrf }: { id: string; csrf: string }) {
   }
 
   return (
-    <form className={styles.moderate} onSubmit={submit}>
-      <label>
-        Decisão editorial sobre a primeira publicação
-        <select
-          value={decision}
-          onChange={e => setDecision(e.target.value as "APPROVED" | "REJECTED")}
-          disabled={pending || uncertain}
-        >
-          <option value="APPROVED">Aprovar e publicar imediatamente</option>
-          <option value="REJECTED">Rejeitar com justificativa fundamentada</option>
-        </select>
-      </label>
-
-      {decision === "REJECTED" && (
+    <>
+      <form className={styles.moderate} onSubmit={handleSubmit}>
         <label>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>Justificativa da rejeição (mínimo 5 caracteres)</span>
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{reason.trim().length} / 1000</span>
-          </div>
-          <textarea
-            required
-            minLength={5}
-            maxLength={1000}
-            value={reason}
-            onChange={e => setReason(e.target.value)}
+          Decisão editorial sobre a primeira publicação
+          <select
+            value={decision}
+            onChange={(e) => setDecision(e.target.value as "APPROVED" | "REJECTED")}
             disabled={pending || uncertain}
-            placeholder="Explique os pontos que precisam ser corrigidos pelo autor..."
-          />
+          >
+            <option value="APPROVED">Aprovar e publicar imediatamente</option>
+            <option value="REJECTED">Rejeitar com justificativa fundamentada</option>
+          </select>
         </label>
-      )}
 
-      <button
-        type="submit"
-        className={decision === "APPROVED" ? styles.btnPrimary : styles.btnDanger}
-        disabled={pending || uncertain || (decision === "REJECTED" && reason.trim().length < 5)}
-      >
-        {pending ? "Aguarde…" : decision === "APPROVED" ? "Aprovar e publicar" : "Registrar rejeição"}
-      </button>
+        {decision === "REJECTED" && (
+          <label>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>Justificativa da rejeição (mínimo 5 caracteres)</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{reason.trim().length} / 1000</span>
+            </div>
+            <textarea
+              required
+              minLength={5}
+              maxLength={1000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              disabled={pending || uncertain}
+              placeholder="Explique os pontos que precisam ser corrigidos pelo autor..."
+            />
+          </label>
+        )}
 
-      {message && (
-        <p
-          role="status"
-          style={{
-            fontSize: "0.85rem",
-            marginTop: "0.5rem",
-            padding: "0.6rem 0.85rem",
-            borderRadius: "0.5rem",
-            background: "var(--surface-subtle)",
-            fontWeight: 500,
-          }}
+        <button
+          type="submit"
+          className={decision === "APPROVED" ? styles.btnPrimary : styles.btnDanger}
+          disabled={pending || uncertain || (decision === "REJECTED" && reason.trim().length < 5)}
         >
-          {message}
-        </p>
+          {pending ? "Aguarde…" : decision === "APPROVED" ? "Aprovar e publicar" : "Registrar rejeição"}
+        </button>
+
+        {message && (
+          <p
+            role="status"
+            style={{
+              fontSize: "0.85rem",
+              marginTop: "0.5rem",
+              padding: "0.6rem 0.85rem",
+              borderRadius: "0.5rem",
+              background: "var(--surface-subtle)",
+              fontWeight: 500,
+            }}
+          >
+            {message}
+          </p>
+        )}
+      </form>
+
+      {showConfirm && (
+        <ConfirmDialog
+          title={decision === "APPROVED" ? "Aprovar e publicar este artigo?" : "Rejeitar este artigo?"}
+          description={
+            decision === "APPROVED"
+              ? "O primeiro artigo será publicado imediatamente e o autor terá a permissão de publicação direta liberada."
+              : "O artigo será rejeitado com a justificativa informada e o autor será notificado para realizar os ajustes."
+          }
+          confirmLabel={decision === "APPROVED" ? "Aprovar e publicar" : "Confirmar rejeição"}
+          variant={decision === "APPROVED" ? "primary" : "danger"}
+          onCancel={() => setShowConfirm(false)}
+          onConfirm={executeDecision}
+        />
       )}
-    </form>
+    </>
   );
 }

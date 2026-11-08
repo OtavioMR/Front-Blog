@@ -94,6 +94,7 @@ export type AdminActorInfo = {
   name?: string;
   email?: string;
   profilePhoto?: string | null;
+  totpEnabled?: boolean;
 };
 
 // O sub apenas seleciona o perfil; o Nest valida o token e fornece a role atual.
@@ -111,7 +112,8 @@ export async function adminActor(token: string): Promise<AdminActorInfo | null> 
     const name = "name" in value && typeof value.name === "string" ? value.name : undefined;
     const email = "email" in value && typeof value.email === "string" ? value.email : undefined;
     const profilePhoto = "profilePhoto" in value && (typeof value.profilePhoto === "string" || value.profilePhoto === null) ? value.profilePhoto : null;
-    return { id: payload.sub, role: value.role, name, email, profilePhoto };
+    const totpEnabled = "totpEnabled" in value && typeof value.totpEnabled === "boolean" ? value.totpEnabled : undefined;
+    return { id: payload.sub, role: value.role, name, email, profilePhoto, totpEnabled };
   } catch { throw new Error("admin identity unavailable"); }
 }
 export function consumeConfirmation(session: Session, signature: string): boolean {
