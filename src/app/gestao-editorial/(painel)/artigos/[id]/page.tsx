@@ -83,9 +83,13 @@ export default async function PostDetail({
     return <AdminFailure reason="unavailable" />;
   }
 
+  const cover = typeof detail.coverImage === "string" && /^\/uploads\/post-covers\/[0-9a-f-]+\.webp$/i.test(detail.coverImage) ? detail.coverImage : null;
+
   const content = sanitizeHtml(detail.content, {
-    allowedTags: ["p", "br", "strong", "em", "ul", "ol", "li", "blockquote", "h2", "h3", "h4"],
-    allowedAttributes: {},
+    allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"],
+    allowedAttributes: { a: ["href", "title"] },
+    allowedSchemes: ["http", "https", "mailto"],
+    allowProtocolRelative: false,
   });
 
   const authorName = record(detail.author) && typeof detail.author.name === "string" ? detail.author.name : "Usuário removido";
@@ -127,6 +131,9 @@ export default async function PostDetail({
               </span>
             </div>
 
+            <h3>Imagem de capa</h3>
+            {cover ? <img src={cover} alt="Capa enviada para avalia??o" style={{ display: "block", width: "100%", maxHeight: "28rem", objectFit: "contain", marginBottom: "1.25rem" }} /> : <p>Este artigo n?o possui capa.</p>}
+
             {detail.reviewNote && (
               <div style={{ padding: "0.85rem", borderRadius: "0.55rem", background: "var(--brand-light)", border: "1px solid rgba(178, 67, 28, 0.25)", marginBottom: "1.25rem" }}>
                 <strong>Justificativa editorial:</strong> {String(detail.reviewNote)}
@@ -142,6 +149,8 @@ export default async function PostDetail({
                 lineHeight: 1.7,
                 fontFamily: "var(--font-reading)",
                 fontSize: "1.05rem",
+                whiteSpace: /<[a-z][\s\S]*?>/i.test(content) ? "normal" : "pre-wrap",
+                overflowWrap: "anywhere",
               }}
               dangerouslySetInnerHTML={{ __html: content }}
             />

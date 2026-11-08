@@ -1,4 +1,4 @@
-.page { max-width: 1500px; margin: 0 auto; padding: 0 6%; color: var(--text); }
+.page { max-width: 1500px; margin: 0 auto; padding: 0 6% clamp(50px, 6vw, 90px); color: var(--text); }
 .header { min-height: 104px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--border); }
 .brand { font: bold 30px var(--font-serif, Georgia, serif); letter-spacing: -1.5px; white-space: nowrap; }
 .brand span { color: var(--brand); margin-right: 9px; }

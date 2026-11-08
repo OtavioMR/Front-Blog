@@ -4,6 +4,8 @@ import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../../_components/shell";
 import { adminCsrf, adminIdentity, adminUserDetail, adminUserHistory, adminUsersRead, count, record } from "../../_lib/data";
 import UserModerationActions from "../_components/user-moderation";
+import RecoverTotp from "../_components/recover-totp";
+import UnblockAuthor from "../_components/unblock-author";
 import { IconShield, IconReports } from "../../_components/icons";
 import styles from "../../admin.module.css";
 
@@ -189,6 +191,8 @@ export default async function UserDetailPage({
             </div>
           </section>
 
+          {actor?.role === "SUPER_ADMIN" && !isSelf && detail.role === "READER" && detail.isActive && detail.authorPromotionBlocked === true && <UnblockAuthor id={id} csrf={csrf} />}
+          {actor?.role === "SUPER_ADMIN" && !isSelf && detail.role !== "SUPER_ADMIN" && detail.isActive && detail.emailVerified && detail.totpEnabled === true && <RecoverTotp id={id} csrf={csrf} />}
           {/* Ações Administrativas */}
           <section className={styles.panel} style={{ margin: 0 }}>
             <h2>Ações administrativas</h2>

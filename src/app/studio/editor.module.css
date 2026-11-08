@@ -314,6 +314,8 @@
   outline-offset: 2px;
 }
 
+.excerptArea { min-height: 120px; }
+
 .contentFooter {
   display: flex;
   justify-content: space-between;
@@ -364,19 +366,20 @@
 /* Cover Image Card */
 .coverPreviewWrapper {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background: var(--surface-subtle);
   border: 1px solid var(--border);
   border-radius: 6px;
-  border-radius: 2px;
 }
 
 .coverImage {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
 }
 
 .coverActions {
@@ -499,6 +502,7 @@
 
 .confirmActions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -532,8 +536,20 @@
 .scheduleInput:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .revisionPreview { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
 
-.bottomActions {
+@media (max-width: 600px) {
+  .topBarActions {
+    width: 100%;
+  }
+
+  .saveActions .btnPrimary {
+    justify-content: center;
+    flex: 1 1 100%;
+  }
+}
+
+.saveActions {
   display: flex;
   justify-content: flex-end;
-  margin: 24px 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }

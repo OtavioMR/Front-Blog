@@ -45,6 +45,14 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         if (response.status === 403) { setView("denied"); return; }
         if (!response.ok) throw new Error();
         const value = parseOwnArticles(await response.json());
+        await Promise.all(value.data.filter(article => article.reviewStatus === "REJECTED").map(async article => {
+          try {
+            const result = await authenticatedFetchForSubject(profile.id, `/api/v1/post-reviews/${encodeURIComponent(article.id)}`, { cache: "no-store" });
+            if (!result.ok) return;
+            const review: unknown = await result.json();
+            if (typeof review === "object" && review !== null && "status" in review && review.status === "REJECTED" && "reason" in review && (typeof review.reason === "string" || review.reason === null)) article.reviewReason = review.reason;
+          } catch { /* A falha na justificativa não deve ocultar a lista. */ }
+        }));
         if (current === revision.current) { setSubject(profile.id); setArticles(value); setPage(value.meta.page); setView("author"); }
       } else setView("denied");
     } catch { if (current === revision.current) setView("error"); }
@@ -58,6 +66,12 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
     return () => { active = false; generation.current++; unsubscribe(); };
   }, [load]);
 
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void load(page); };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [load, page]);
+
   async function accept(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!subject || !rules || !checked || busy || uncertain) return;
@@ -68,9 +82,12 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
       if (current !== revision.current) return;
       if (response.status === 409) { await load(1); return; }
       if (response.status === 401) { setView("signed-out"); return; }
-      if (response.status === 403) { setFeedback("Não foi possível liberar a autoria para esta conta. Verifique se ela está ativa, com e-mail confirmado e elegível."); return; }
+      if (response.status === 403) { setFeedback("Não foi possível liberar a autoria. A conta precisa estar ativa e ter e-mail confirmado; se a autoria foi bloqueada, peça a um superadministrador para liberar uma nova solicitação."); return; }
       if (response.status === 400) { setFeedback("As regras ou o aceite precisam ser atualizados. Recarregue as regras antes de tentar novamente."); setUncertain(true); return; }
-      if (!response.ok || !acceptedRules(await response.json(), rules.version)) throw new Error();
+      if (!response.ok) throw new Error();
+      const result = await response.json();
+      if (result?.requested === true) { setFeedback("Sua solicitação de liberação foi enviada ao superadministrador. Após a liberação, volte aqui e aceite as regras para se tornar autor."); return; }
+      if (!acceptedRules(result, rules.version)) throw new Error();
       setUncertain(false);
       await load(1);
     } catch { if (current === revision.current) { setUncertain(true); setFeedback("Não foi possível confirmar o resultado. Atualize o estado antes de tentar novamente."); } }
@@ -110,8 +127,8 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
       {view === "author" && articles && <>
         <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>SUA BIBLIOTECA</p><h2>Seus artigos</h2><p>Acompanhe suas histórias e o andamento de cada publicação.</p></div>{editorialEnabled && <Link className={styles.secondaryAction} href="/studio/series">Minhas séries <span aria-hidden="true">↗</span></Link>}</div>
         {!editorialEnabled && <p className={styles.notice}>A criação e a edição de artigos estarão disponíveis em breve.</p>}
-        {feedback && <p role="status">{feedback}</p>}{uncertain && <button onClick={() => { setUncertain(false); void load(page); }}>Atualizar lista</button>}
-        {articles.data.length === 0 ? <div className={styles.empty}><span className={styles.emptyIcon} aria-hidden="true">✎</span><h3>Nenhum artigo por aqui</h3><p>{page === 1 ? "Toda boa história começa com uma ideia. Que tal dar o primeiro passo?" : "Não há artigos nesta página."}</p>{editorialEnabled && page === 1 && <Link className={styles.primaryAction} href="/studio/novo">Começar a escrever <span aria-hidden="true">→</span></Link>}</div> : <ul className={styles.list}>{articles.data.map(article => <li key={article.id}><div className={styles.articleInfo}><strong>{article.title}</strong><span className={styles.status}>{article.published ? "Publicado" : article.scheduledAt ? "Agendado" : labels[article.reviewStatus] || "Status indisponível"}</span></div><span className={styles.rowActions}>{article.published && <Link href={`/posts/${encodeURIComponent(article.slug)}`}>Ver artigo</Link>}{editorialEnabled && article.reviewStatus !== "PENDING" && <Link href={`/studio/${encodeURIComponent(article.id)}`}>Editar artigo</Link>}<button type="button" disabled={busy || uncertain || article.reviewStatus === "PENDING"} title={article.reviewStatus === "PENDING" ? "Artigos em revisão não podem ser desativados." : undefined} onClick={() => setRemoval({ id: article.id, title: article.title, subject })} aria-label={`Desativar artigo ${article.title}`}>{busy ? "Aguarde…" : "Desativar"}</button></span></li>)}</ul>}
+        <button type="button" onClick={() => void load(page)}>Atualizar lista</button>{feedback && <p role="status">{feedback}</p>}{uncertain && <button onClick={() => { setUncertain(false); void load(page); }}>Atualizar lista</button>}
+        {articles.data.length === 0 ? <div className={styles.empty}><span className={styles.emptyIcon} aria-hidden="true">✎</span><h3>Nenhum artigo por aqui</h3><p>{page === 1 ? "Toda boa história começa com uma ideia. Que tal dar o primeiro passo?" : "Não há artigos nesta página."}</p>{editorialEnabled && page === 1 && <Link className={styles.primaryAction} href="/studio/novo">Começar a escrever <span aria-hidden="true">→</span></Link>}</div> : <ul className={styles.list}>{articles.data.map(article => <li key={article.id}><div className={styles.articleInfo}><strong>{article.title}</strong><span className={styles.status}>{article.published ? "Publicado" : article.scheduledAt ? "Agendado" : labels[article.reviewStatus] || "Status indisponível"}</span>{article.reviewStatus === "REJECTED" && <p className={styles.reviewReason}><strong>Justificativa da revisão:</strong> {article.reviewReason || "Não foi possível carregar a justificativa. Atualize a lista para tentar novamente."}</p>}</div><span className={styles.rowActions}>{article.published && <Link href={`/posts/${encodeURIComponent(article.slug)}`}>Ver artigo</Link>}{editorialEnabled && article.reviewStatus !== "PENDING" && <Link href={`/studio/${encodeURIComponent(article.id)}`}>Editar artigo</Link>}<button type="button" disabled={busy || uncertain || article.reviewStatus === "PENDING"} title={article.reviewStatus === "PENDING" ? "Artigos em revisão não podem ser desativados." : undefined} onClick={() => setRemoval({ id: article.id, title: article.title, subject })} aria-label={`Desativar artigo ${article.title}`}>{busy ? "Aguarde…" : "Desativar"}</button></span></li>)}</ul>}
         {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && <nav className={styles.pagination} aria-label="Paginação dos seus artigos"><button disabled={busy || !articles.meta.hasPreviousPage} onClick={() => void load(page - 1)}>Anterior</button><span>Página {page}</span><button disabled={busy || !articles.meta.hasNextPage} onClick={() => void load(page + 1)}>Próxima</button></nav>}
       </>}
     </section>{removal && <ConfirmDialog title="Desativar artigo?" description={`“${removal.title}” será removido das listagens e deixará de estar publicado.`} confirmLabel="Desativar artigo" onCancel={() => setRemoval(null)} onConfirm={() => { const { id, subject: openedBy } = removal; setRemoval(null); void removeArticle(id, openedBy); }} />}</main>;

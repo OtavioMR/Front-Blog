@@ -46,6 +46,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   let invalidDecision = false;
   let invalidAnalytics = false;
   let userSuspended = true;
+  let targetTotpEnabled = false;
   let userActionMode = "ok";
   let commentMode = "ok";
   const api = createServer(async (request, response) => {
@@ -94,7 +95,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20") return response.end(JSON.stringify({ data: [{ id: postId, name: "Pessoa <teste>", email: "pessoa@example.test", role: "SUPER_ADMIN", isActive: true, moderationSuspended: false, createdAt: "2026-01-01T12:00:00.000Z" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: true } }));
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=2&limit=20") return response.end(JSON.stringify({ data: [], meta: { page: 2, hasPreviousPage: true, hasNextPage: false } }));
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20&search=Pessoa&status=suspended") return response.end(JSON.stringify({ data: [{ id: postId, name: "Pessoa <teste>", email: "pessoa@example.test", role: "READER", isActive: false, moderationSuspended: true, createdAt: "2026-01-01T12:00:00.000Z" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: true } }));
-    if (request.method === "GET" && request.url === `/api/v1/admin/users/${postId}`) return response.end(JSON.stringify({ id: postId, name: "Pessoa <teste>", email: "pessoa@example.test", role: "READER", isActive: !userSuspended, moderationSuspended: userSuspended, emailVerified: true, createdAt: "2026-01-01T12:00:00.000Z", counts: { posts: 2, comments: 3 } }));
+    if (request.method === "GET" && request.url === `/api/v1/admin/users/${postId}`) return response.end(JSON.stringify({ id: postId, name: "Pessoa <teste>", email: "pessoa@example.test", role: "READER", isActive: !userSuspended, moderationSuspended: userSuspended, emailVerified: true, totpEnabled: targetTotpEnabled, createdAt: "2026-01-01T12:00:00.000Z", counts: { posts: 2, comments: 3 } }));
     if (request.method === "GET" && request.url === `/api/v1/admin/users/${postId}/moderation-history?page=1&limit=10`) return response.end(JSON.stringify({ data: [{ actorId: postId, action: "user.suspend", createdAt: "2026-01-01T12:00:00.000Z" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }));
     if (request.method === "GET" && request.url === `/api/v1/admin/users/${postId}/reports?page=1&limit=10`) return response.end(JSON.stringify({ data: [{ id: postId, reason: "Motivo <teste>", status: "PENDING", createdAt: "2026-01-01T12:00:00.000Z", reporterId: "não exibir" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }));
     if (request.method === "POST" && request.url === `/api/v1/admin/users/${postId}/restore`) { userActions.push({ action: "restore", body: JSON.parse(body) }); userSuspended = false; response.statusCode = 201; return response.end(JSON.stringify({ suspended: false })); }
@@ -203,7 +204,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   assert.equal(response.status, 200); assert.match(audit, /Motivo &lt;sintético&gt;/); assert.doesNotMatch(audit, /Motivo <sintético>/);
   assert.match(audit, /Denúncia analisada/); assert.match(audit, /Moderadora sintética/); assert.match(audit, /Conteúdo sintético/); assert.match(audit, /Detalhes técnicos/);
   const removedAudit = await (await request("/gestao-editorial/auditoria?search=removido", { headers: { Cookie: sessionCookie } })).text();
-  assert.match(removedAudit, /Usuário indisponível/); assert.match(removedAudit, /Detalhes não disponíveis/);
+  assert.match(removedAudit, /Usuário indisponível/); assert.match(removedAudit, /Registro indisponível/);
   response = await request("/gestao-editorial/auditoria?from=2026-01-01&to=2026-01-31", { headers: { Cookie: sessionCookie } });
   assert.equal(response.status, 200);
   const auditQuery = new URL(auditQueries.at(-1), "http://localhost").searchParams;
@@ -303,7 +304,11 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   response = await request("/gestao-editorial", { headers: { Cookie: superCookie } });
   const superCsrf = csrfFrom(await response.text());
   response = await request(`/gestao-editorial/usuarios/${postId}/funcao`, { headers: { Cookie: superCookie } });
-  assert.match(await response.text(), /Nova função/);
+  const rolePage = await response.text();
+  assert.match(rolePage, /Nova função/);
+  assert.match(rolePage, /precisa ativar a autenticação em dois fatores/);
+  assert.match(rolePage, /<option[^>]*value="ADMIN"[^>]*disabled|<option[^>]*disabled[^>]*value="ADMIN"/);
+  targetTotpEnabled = true;
   const roleChange = { csrf: superCsrf, role: "ADMIN", reason: "Justificativa sintética", code: "123456" };
   assert.equal((await form(`/gestao-editorial/usuarios/${postId}/funcao/alterar`, roleChange, superCookie, "https://outside.example.test")).status, 403);
   assert.equal((await form(`/gestao-editorial/usuarios/${postId}/funcao/alterar`, { ...roleChange, code: "000000" }, superCookie)).status, 401);

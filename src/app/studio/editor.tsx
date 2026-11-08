@@ -11,6 +11,7 @@ import styles from "./editor.module.css";
 import backStyles from "../_components/back-button.module.css";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import Revisions from "./revisions";
+import ImageCrop, { cropImage, defaultCrop } from "@/app/_components/image-crop";
 
 type State = "loading" | "ready" | "signed-out" | "denied" | "error";
 type Category = { id: string; name: string; slug?: string; isActive?: boolean };
@@ -45,14 +46,19 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const [id, setId] = useState(initialId || "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [excerpt, setExcerpt] = useState("");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [tags, setTags] = useState("");
-  const [saved, setSaved] = useState({ title: "", content: "", categoryIds: [] as string[], tags: [] as string[] });
+  const [saved, setSaved] = useState({ title: "", content: "", excerpt: "", categoryIds: [] as string[], tags: [] as string[] });
   const [categories, setCategories] = useState<Category[]>([]);
   const [cover, setCover] = useState<string | null>(null);
+  const [pendingCover, setPendingCover] = useState<File | null | undefined>(undefined);
+  const [coverCrop, setCoverCrop] = useState({ ...defaultCrop, original: true });
+  const [confirmSave, setConfirmSave] = useState(false);
   const [slug, setSlug] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [status, setStatus] = useState("DRAFT");
+  const [reviewReason, setReviewReason] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   // Interaction & UI states
@@ -78,8 +84,10 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const dirty =
     title !== saved.title ||
     content !== saved.content ||
+    excerpt !== saved.excerpt ||
     !sameList(categoryIds, saved.categoryIds) ||
-    !sameList(parsedCurrentTags, saved.tags);
+    !sameList(parsedCurrentTags, saved.tags) ||
+    pendingCover !== undefined;
 
   const isReadOnly = busy || revisionUncertain || status === "PENDING";
   const isEditMode = Boolean(id);
@@ -105,6 +113,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
     setAuthorId(draft.authorId);
     setTitle(draft.title);
     setContent(draft.content);
+    setExcerpt(draft.excerpt ?? "");
     const catIds = extractCategoryIds(draft.categories);
     const tagList = extractTagNames(draft.tags);
     setCategoryIds(catIds);
@@ -112,6 +121,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
     setSaved({
       title: draft.title,
       content: draft.content,
+      excerpt: draft.excerpt ?? "",
       categoryIds: catIds,
       tags: tagList,
     });
@@ -209,6 +219,20 @@ export default function Editor({ initialId }: { initialId?: string }) {
     };
   }, [initialId]);
 
+  useEffect(() => {
+    if (status !== "REJECTED" || !id || !owner) return;
+    let active = true;
+    authenticatedFetchForSubject(owner, `/api/v1/post-reviews/${encodeURIComponent(id)}`, { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error();
+        const result: unknown = await response.json();
+        if (typeof result !== "object" || result === null || !("status" in result) || result.status !== "REJECTED" || !("reason" in result) || typeof result.reason !== "string") throw new Error();
+        if (active) setReviewReason(result.reason);
+      })
+      .catch(() => { if (active) setReviewReason("Não foi possível carregar a justificativa. Recarregue a página para tentar novamente."); });
+    return () => { active = false; };
+  }, [status, id, owner]);
+
   // Validation
   function validateFields(): boolean {
     let valid = true;
@@ -241,8 +265,13 @@ export default function Editor({ initialId }: { initialId?: string }) {
   }
 
   // Save article (Create or Update)
-  async function save(event: FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) {
+  function requestSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!running.current && !isReadOnly && validateFields()) setConfirmSave(true);
+  }
+
+  async function save() {
+    setConfirmSave(false);
     if (running.current || isReadOnly) return;
 
     if (!validateFields()) {
@@ -259,9 +288,12 @@ export default function Editor({ initialId }: { initialId?: string }) {
     setFeedback({ type: "saving", text: "Salvando alterações..." });
 
     try {
+      const preparedCover = pendingCover ? await cropImage(pendingCover, 16 / 9, coverCrop) : pendingCover;
+      if (operation !== revision.current) return;
       const payload = {
         title: title.trim(),
         content,
+        ...(excerpt.trim() !== saved.excerpt.trim() ? { excerpt: excerpt.trim() } : {}),
         categoryIds,
         tagNames: parsedCurrentTags,
       };
@@ -288,7 +320,9 @@ export default function Editor({ initialId }: { initialId?: string }) {
             : "Confira o título (mínimo 3 caracteres), o conteúdo (mínimo 10 caracteres) e as tags (até 10).";
         setFeedback({
           type: "error",
-          text: `Não foi possível salvar as alterações. Tente novamente. ${errMsg}`,
+          text: errMsg.includes("property excerpt should not exist")
+            ? "A vers\u00e3o atual do servidor ainda n\u00e3o aceita a descri\u00e7\u00e3o do artigo. Seu texto foi preservado; atualize o servidor antes de salvar com descri\u00e7\u00e3o."
+            : `N\u00e3o foi poss\u00edvel salvar as altera\u00e7\u00f5es. ${errMsg}`,
         });
         return;
       }
@@ -317,6 +351,19 @@ export default function Editor({ initialId }: { initialId?: string }) {
       if (id && draft.id !== id) throw new Error();
 
       apply(draft);
+      if (preparedCover !== undefined) {
+        try {
+          const nextCover = await changeCover(draft.id, preparedCover);
+          if (operation !== revision.current) return;
+          setCover(nextCover);
+          setPendingCover(undefined);
+        } catch {
+          setPublicationUncertain(true);
+          setRevisionUncertain(true);
+          setFeedback({ type: "error", text: "O texto foi salvo, mas não foi possível confirmar a alteração da capa. Recarregue o editor e verifique antes de tentar novamente." });
+          return;
+        }
+      }
 
       if (!id) {
         window.history.replaceState(window.history.state, "", `/studio/${draft.id}`);
@@ -342,57 +389,21 @@ export default function Editor({ initialId }: { initialId?: string }) {
     }
   }
 
-  // Cover image management
-  async function changeCover(file: File | null, remove = false) {
-    if (!id || coverBusy || isReadOnly) return;
-    if (file) {
-      const problem = validatePhoto(file);
-      if (problem) {
-        setFeedback({ type: "error", text: problem });
-        return;
-      }
-    }
+  // A seleção permanece local até a confirmação do salvamento.
+  async function changeCover(postId: string, file: File | null): Promise<string | null> {
     setCoverBusy(true);
-    setFeedback({
-      type: "saving",
-      text: remove ? "Removendo imagem de capa..." : "Enviando imagem de capa...",
-    });
-
     try {
       const data = new FormData();
       if (file) data.append("file", file);
-      const response = await authenticatedFetchForSubject(
-        owner,
-        `/api/v1/posts/${id}/cover-image`,
-        remove ? { method: "DELETE" } : { method: "POST", body: data },
-      );
-
-      if (response.status === 409) {
-        setFeedback({
-          type: "error",
-          text: "A capa foi alterada simultaneamente ou o artigo está em revisão. Recarregue a página.",
-        });
-        return;
-      }
-
+      const response = await authenticatedFetchForSubject(owner, `/api/v1/posts/${postId}/cover-image`, file ? { method: "POST", body: data } : { method: "DELETE" });
       if (!response.ok) throw new Error();
-
       const value: unknown = await response.json();
-      const nextCover =
-        value && typeof value === "object" && "coverImage" in value ? (value.coverImage as string | null) : null;
-      setCover(nextCover);
-      setFeedback({
-        type: "success",
-        text: remove ? "Imagem de capa removida com sucesso!" : "Imagem de capa atualizada com sucesso!",
-      });
-    } catch {
-      setFeedback({
-        type: "error",
-        text: "Não foi possível alterar a imagem de capa. Tente novamente.",
-      });
-    } finally {
-      setCoverBusy(false);
-    }
+      if (!value || typeof value !== "object" || !("coverImage" in value)) throw new Error();
+      const next = value.coverImage;
+      if (next !== null && (typeof next !== "string" || !/^\/uploads\/post-covers\/[0-9a-f-]+\.webp$/i.test(next))) throw new Error();
+      if ((file && next === null) || (!file && next !== null)) throw new Error();
+      return next;
+    } finally { setCoverBusy(false); }
   }
 
   // Submit draft for review
@@ -537,6 +548,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
   return (
     <main className={styles.page}>
+      {confirmSave && <ConfirmDialog title={published ? "Atualizar publicação?" : "Salvar alterações?"} description={published ? "As alterações confirmadas ficarão visíveis na publicação. A capa e o texto são salvos em etapas; confira o resultado se houver falha." : "As alterações serão salvas no artigo."} confirmLabel="Confirmar e salvar" variant="primary" onCancel={() => setConfirmSave(false)} onConfirm={() => void save()} />}
       {destination && <ConfirmDialog title="Sair sem salvar?" description={LEAVE_PROMPT} confirmLabel="Sair sem salvar" onCancel={() => setDestination(null)} onConfirm={() => { const target = destination; setDestination(null); router.push(target); }} />}
       {confirmPublication !== null && <ConfirmDialog
         title={confirmPublication ? "Publicar artigo?" : "Retirar artigo do ar?"}
@@ -608,6 +620,8 @@ export default function Editor({ initialId }: { initialId?: string }) {
         )}
       </nav>
 
+      {state === "ready" && status === "REJECTED" && <div className={`${styles.feedbackBanner} ${styles.feedbackError}`} role="status"><strong>Justificativa da revisão:</strong> {reviewReason ?? "Carregando justificativa…"}</div>}
+
       {/* Notifications / Feedback Banner */}
       {feedback && state !== "ready" && (
         <div
@@ -652,7 +666,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
           <div className={styles.studioLayout}>
           {/* Main Writing Canvas */}
-          <form id="article-form" onSubmit={save} className={styles.mainCanvas} noValidate>
+          <form id="article-form" onSubmit={requestSave} className={styles.mainCanvas} noValidate>
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
                 <label htmlFor="article-title">Título do artigo *</label>
@@ -676,6 +690,18 @@ export default function Editor({ initialId }: { initialId?: string }) {
                 readOnly={isReadOnly}
               />
               {titleError && <p className={styles.fieldError} role="alert">{titleError}</p>}
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <div className={styles.fieldHeader}>
+                <label htmlFor="article-excerpt">Descrição do artigo</label>
+                <span className={styles.fieldCounter}>{excerpt.length} / 500</span>
+              </div>
+              <textarea id="article-excerpt" name="excerpt" className={`${styles.contentArea} ${styles.excerptArea}`}
+                placeholder="Apresente seu artigo em poucas palavras..." maxLength={500} rows={3}
+                value={excerpt} onChange={event => { setExcerpt(event.target.value); setConfirmSubmit(false); }}
+                readOnly={isReadOnly} />
+              <p>Uma breve apresentação exibida abaixo do título e nas listagens.</p>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -707,6 +733,40 @@ export default function Editor({ initialId }: { initialId?: string }) {
                 <span>~{readingTimeMin} min de leitura</span>
               </div>
             </div>
+            <div className={styles.saveActions}>
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={isReadOnly}
+              aria-busy={busy}
+            >
+              {busy ? (
+                <>
+                  <span className={styles.spinner} aria-hidden="true" />
+                  Salvando alterações...
+                </>
+              ) : published ? (
+                "Salvar alterações"
+              ) : (
+                "Salvar rascunho"
+              )}
+            </button>
+            </div>
+          {feedback && (
+            <div
+              role={feedback.type === "error" ? "alert" : "status"}
+              className={`${styles.feedbackBanner} ${
+                feedback.type === "saving"
+                  ? styles.feedbackSaving
+                  : feedback.type === "success"
+                  ? styles.feedbackSuccess
+                  : styles.feedbackError
+              }`}
+            >
+              {feedback.type === "saving" && <span className={styles.spinner} aria-hidden="true" />}
+              <span>{feedback.text}</span>
+            </div>
+          )}
           </form>
 
           {/* Sidebar Settings */}
@@ -731,6 +791,8 @@ export default function Editor({ initialId }: { initialId?: string }) {
                     </p>
                   )}
 
+                  {pendingCover instanceof File && <ImageCrop file={pendingCover} ratio={16 / 9} value={coverCrop} onChange={setCoverCrop} allowOriginal />}
+                  {pendingCover !== undefined && <p role="status">{pendingCover ? "Nova capa selecionada." : "Remoção da capa selecionada."} Salve e confirme as alterações para aplicar. <button type="button" className={styles.btnSecondary} onClick={() => setPendingCover(undefined)}>Desfazer alteração da capa</button></p>}
                   <div className={styles.coverActions}>
                     <label className={styles.fileLabel}>
                       {cover ? "Substituir capa" : "Selecionar imagem"}
@@ -741,7 +803,11 @@ export default function Editor({ initialId }: { initialId?: string }) {
                         onChange={event => {
                           const file = event.target.files?.[0] || null;
                           event.target.value = "";
-                          if (file) void changeCover(file);
+                          if (file) {
+                            const problem = validatePhoto(file);
+                            if (problem) setFeedback({ type: "error", text: problem });
+                            else { setPendingCover(file); setCoverCrop({ ...defaultCrop, original: true }); }
+                          }
                         }}
                       />
                     </label>
@@ -751,7 +817,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
                         type="button"
                         className={styles.btnDanger}
                         disabled={coverBusy || isReadOnly}
-                        onClick={() => void changeCover(null, true)}
+                        onClick={() => setPendingCover(null)}
                       >
                         Remover
                       </button>
@@ -821,43 +887,6 @@ export default function Editor({ initialId }: { initialId?: string }) {
               )}
             </section>
 
-          </aside>
-          </div>
-          <div className={styles.bottomActions}>
-            <button
-              type="submit"
-              form="article-form"
-              className={styles.btnPrimary}
-              disabled={isReadOnly}
-              aria-busy={busy}
-            >
-              {busy ? (
-                <>
-                  <span className={styles.spinner} aria-hidden="true" />
-                  Salvando alterações...
-                </>
-              ) : published ? (
-                "Salvar alterações"
-              ) : (
-                "Salvar rascunho"
-              )}
-            </button>
-          </div>
-      {feedback && (
-        <div
-          role={feedback.type === "error" ? "alert" : "status"}
-          className={`${styles.feedbackBanner} ${
-            feedback.type === "saving"
-              ? styles.feedbackSaving
-              : feedback.type === "success"
-              ? styles.feedbackSuccess
-              : styles.feedbackError
-          }`}
-        >
-          {feedback.type === "saving" && <span className={styles.spinner} aria-hidden="true" />}
-          <span>{feedback.text}</span>
-        </div>
-      )}
             {/* Publication / Review Actions Card */}
             {id && (
               <section className={styles.sideCard} aria-labelledby="pub-card-title">
@@ -966,6 +995,8 @@ export default function Editor({ initialId }: { initialId?: string }) {
                 )}
               </section>
             )}
+          </aside>
+          </div>
         </>
       )}
     </main>

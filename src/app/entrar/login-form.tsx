@@ -177,6 +177,7 @@ export default function LoginForm() {
               >
                 {isRecoveryCode ? "Usar código do Google Authenticator" : "Usar código de recuperação"}
               </button>
+              <Link className={styles.back} href="/recuperar-autenticador">Perdi o autenticador e os códigos de recuperação</Link>
               <button
                 type="button"
                 className={styles.ghost}

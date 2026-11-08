@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AdminFailure, AdminShell } from "./_components/shell";
-import { adminRead, count, record } from "./_lib/data";
+import { adminBlockedAuthors, adminIdentity, adminRead, count, record } from "./_lib/data";
 import { eventTitles } from "./_lib/audit-labels";
 import {
   IconReports,
@@ -41,6 +41,10 @@ export default async function AdminOverview() {
   const postsPublished = value.posts.published as number;
   const reportsPending = value.reports.pending as number;
   const postsPending = count(value.posts.pending) ? (value.posts.pending as number) : 0;
+  const actor = await adminIdentity();
+  const blocked = actor?.role === "SUPER_ADMIN" ? await adminBlockedAuthors(1, 1) : null;
+  const blockedTotal = blocked?.ok && record(blocked.value) && record(blocked.value.meta) && count(blocked.value.meta.total) ? blocked.value.meta.total as number : null;
+  const accessPending = blocked?.ok && record(blocked.value) && count(blocked.value.pendingTotal) ? blocked.value.pendingTotal as number : null;
 
   const hasUrgentAction = reportsPending > 0 || postsPending > 0;
 
@@ -125,6 +129,11 @@ export default async function AdminOverview() {
         )}
       </section>
 
+      {actor?.role === "SUPER_ADMIN" && <section className={accessPending ? styles.priorityBanner : styles.panel} aria-label="Solicitações de autoria">
+        <h2>🔔 Solicitações de autoria {accessPending !== null && accessPending > 0 && <span className={styles.priorityHeaderBadge}>{accessPending} {accessPending === 1 ? "solicitação pendente" : "solicitações pendentes"}</span>}</h2>
+        {blockedTotal === null || accessPending === null ? <p>Não foi possível consultar as solicitações de autoria.</p> : <p>{accessPending > 0 ? "Há pessoas aguardando sua avaliação para voltar a solicitar autoria." : "Nenhuma solicitação de liberação pendente."} {blockedTotal} {blockedTotal === 1 ? "conta está bloqueada" : "contas estão bloqueadas"} no total.</p>}
+        <Link href="/gestao-editorial/usuarios/acessos" className={accessPending ? styles.btnPrimary : styles.btnSecondary} prefetch={false}>Ver solicitações e contas</Link>
+      </section>}
       {/* Grid de Cards de Estatísticas Principais */}
       <div className={styles.cards}>
         {cards.map(([label, amount, description, icon]) => (

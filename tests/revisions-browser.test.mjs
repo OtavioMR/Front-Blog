@@ -22,15 +22,18 @@ test("revision preview restore pending and account switch", { timeout: 120000 },
   const postId = "d28beb9c-6a69-4c3a-841c-7593a8a63265", revisionId = "929e3c76-4032-4a33-8543-01c500151111";
   const token = role => `test.${Buffer.from(JSON.stringify({ sub: ids[role], role: "AUTHOR" })).toString("base64url")}.test`;
   const post = { id: postId, authorId: ids.AUTHOR, title: "Titulo atual", content: "Conteudo atual sintetico", slug: "titulo-atual", published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
-  const revision = { id: revisionId, title: "Versao antiga", content: "Conteudo privado anterior", createdAt: "2026-01-01T12:00:00Z" }; let restores = 0;
+  const revision = { id: revisionId, title: "Versao antiga", content: "Conteudo privado anterior", createdAt: "2026-01-01T12:00:00Z" }; let restores = 0, saves = 0, covers = 0, photos = 0;
   const api = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk;
     const respond = (status, data) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
     if (req.url === "/api/v1/auth/login") { const role = JSON.parse(body).password; if (!ids[role]) return respond(401, {}); res.setHeader("Set-Cookie", `refreshToken=${role}; HttpOnly; Path=/api/v1/auth; SameSite=Strict`); return respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 }); }
     if (req.url === "/api/v1/auth/refresh") { const role = /refreshToken=(AUTHOR|OTHER)/.exec(req.headers.cookie || "")?.[1]; return role ? respond(200, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {}); }
     const role = Object.keys(ids).find(value => req.headers.authorization === `Bearer ${token(value)}`);
+    if (role && req.url === `/api/v1/users/${ids[role]}/profile-photo` && req.method === "POST") { photos++; return respond(201, { id: ids[role], profilePhoto: "/uploads/profile-photos/550e8400-e29b-41d4-a716-446655440000.webp" }); }
     if (role && req.url === `/api/v1/users/${ids[role]}`) return respond(200, { id: ids[role], role: "AUTHOR", name: "Pessoa", email: "pessoa@example.test", emailVerified: true, bio: null, firstPostApproved: true });
     if (role !== "AUTHOR") return respond(403, {});
+    if (req.url === `/api/v1/posts/${postId}` && req.method === "PATCH") { saves++; Object.assign(post, JSON.parse(body)); return respond(200, post); }
+    if (req.url === `/api/v1/posts/${postId}/cover-image` && req.method === "POST") { covers++; post.coverImage = "/uploads/post-covers/550e8400-e29b-41d4-a716-446655440000.webp"; return respond(201, { coverImage: post.coverImage }); }
     if (req.url === `/api/v1/posts/${postId}`) return respond(200, post);
     if (req.url === `/api/v1/posts/${postId}/revisions?page=1&limit=10`) return respond(200, { data: [{ id: revision.id, title: revision.title, createdAt: revision.createdAt }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } });
     if (req.url === `/api/v1/posts/${postId}/revisions/${revisionId}`) return respond(200, revision);
@@ -90,6 +93,20 @@ test("revision preview restore pending and account switch", { timeout: 120000 },
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Restaurar esta vers\u00e3o').disabled"), true); assert.equal(restores, 0);
   await fill("#article-content", "Conteudo atual sintetico"); await click("Restaurar esta vers\u00e3o"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm"); await click("Cancelar"); assert.equal(restores, 0);
   await click("Restaurar esta vers\u00e3o"); await click("Restaurar vers\u00e3o"); await waitFor(() => has("Vers\u00e3o restaurada."), "restored"); assert.equal(restores, 1); assert.equal(await evaluate("document.querySelector('#article-content').value"), revision.content);
+  await evaluate(`(async () => { const input = document.querySelector('input[type=file]'); const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 200; canvas.getContext('2d').fillRect(0, 0, 100, 200); const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png')); const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'cover.png', { type: 'image/png' })); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await waitFor(() => has("Nova capa selecionada."), "cover selected");
+  await evaluate("Array.from(document.querySelectorAll('label')).find(x => x.textContent.includes('Usar imagem inteira')).querySelector('input').click()");
+  await waitFor(() => has("Posi\u00e7\u00e3o vertical"), "crop controls");
+  assert.equal(covers, 0); assert.equal(saves, 0);
+  await click("Salvar rascunho"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "save confirmation");
+  await click("Cancelar"); assert.equal(covers, 0); assert.equal(saves, 0);
+  await click("Salvar rascunho"); await click("Confirmar e salvar");
+  await waitFor(() => covers === 1, "cover saved"); assert.equal(saves, 1);
+  await cdp("Page.navigate", { url: `${base}/conta/foto` });
+  await waitFor(() => evaluate("!!document.querySelector('#photo')"), "profile photo");
+  await evaluate(`(async () => { const input = document.querySelector('#photo'); const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 200; canvas.getContext('2d').fillRect(0, 0, 100, 200); const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png')); const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'profile.png', { type: 'image/png' })); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await waitFor(() => has("Posi\u00e7\u00e3o vertical"), "profile crop controls"); assert.equal(photos, 0);
+  await click("Salvar foto"); await waitFor(() => has("Foto atualizada com sucesso."), "profile crop saved"); assert.equal(photos, 1);
   post.reviewStatus = "PENDING"; await openEditor(); await openPreview(); assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Restaurar esta vers\u00e3o').disabled"), true); assert.equal(restores, 1);
   post.reviewStatus = "DRAFT"; await openEditor(); await openPreview(); await click("Restaurar esta vers\u00e3o");
   const secondTarget = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(base + "/entrar")}`, { method: "PUT" })).json();

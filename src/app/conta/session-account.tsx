@@ -6,9 +6,11 @@ import { getOwnProfile, logout, subscribeSession, type OwnProfile } from "@/lib/
 import { canWriteArticles, canAccessAdmin, formatRoleName } from "@/lib/permissions";
 import Avatar from "@/app/_components/avatar";
 import TotpSettings from "./totp-settings";
+import RecoveryEmailSettings from "./recovery-email-settings";
+import AccountBack from "./account-back";
 import account from "./account.module.css";
 
-export default function Account() {
+export default function Account({ section }: { section?: "totp" | "recovery-email" }) {
   const [state, setState] = useState<"loading" | "signed-in" | "signed-out" | "busy" | "uncertain" | "error">("loading");
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [retry, setRetry] = useState(0);
@@ -29,10 +31,11 @@ export default function Account() {
   const canWrite = canWriteArticles(profile?.role);
   const isAdmin = canAccessAdmin(profile?.role);
   return <main className={account.page}>
-    <div className={account.heading}><p className={account.eyebrow}>SEU ESPAÇO</p><h1 className={account.title}>Minha conta.</h1></div>
+    <div className={account.heading}>{section && <AccountBack />}<p className={account.eyebrow}>{section ? "SEGURANÇA DA CONTA" : "SEU ESPAÇO"}</p><h1 className={account.title}>{section === "totp" ? "Verificação em duas etapas." : section === "recovery-email" ? "E-mail de recuperação." : "Minha conta."}</h1></div>
     {state === "loading" && <div className={account.skeleton} role="status" aria-label="Carregando"><span /><span /><span />Verificando sua sessão…</div>}
     {state === "busy" && <p role="status">Saindo…</p>}
-    {state === "signed-in" && profile && <div className={account.layout}>
+    {state === "signed-in" && profile && section && <section className={`${account.panel} ${account.securityDetail}`}>{section === "totp" ? <TotpSettings userId={profile.id} initialTotpEnabled={profile.totpEnabled ?? false} /> : <RecoveryEmailSettings userId={profile.id} totpEnabled={profile.totpEnabled ?? false} />}</section>}
+    {state === "signed-in" && profile && !section && <div className={account.layout}>
       <section className={account.summary} aria-labelledby="summary-title">
         <Avatar name={profile.name} src={profile.profilePhoto} size={72} />
         <h2 id="summary-title">{profile.name}</h2><p className={account.muted}>{profile.email}</p>
@@ -62,10 +65,12 @@ export default function Account() {
           </ul></section>}
         <section className={account.panel} aria-labelledby="security-title"><h2 id="security-title">Segurança</h2><p className={account.panelIntro}>Gerencie sua senha, suas sessões e a verificação em duas etapas.</p>
           <ul className={account.links}>
+            <li><Link href="/conta/verificacao"><strong>Verificação em duas etapas</strong><span>Proteja o acesso com um aplicativo autenticador</span></Link></li>
+            <li><Link href="/conta/email-recuperacao"><strong>E-mail de recuperação</strong><span>Cadastre ou altere seu endereço de recuperação</span></Link></li>
             <li><Link href="/conta/senha"><strong>Alterar senha</strong><span>Exige a senha atual e encerra as sessões</span></Link></li>
             <li><Link href="/conta/sessoes"><strong>Sessões e dispositivos</strong><span>Revise onde sua conta está conectada</span></Link></li>
           </ul>
-          <h3>Verificação em duas etapas</h3><TotpSettings userId={profile.id} initialTotpEnabled={profile.totpEnabled ?? false} /></section>
+          </section>
       </div>
     </div>}
     {state === "signed-out" && <div className={account.notice}><p>Entre novamente para acessar sua conta.</p><Link className={account.primary} href="/entrar">Entrar</Link></div>}

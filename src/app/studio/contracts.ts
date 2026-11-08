@@ -1,5 +1,5 @@
 export type Rules = { version: string; rules: string[] };
-export type OwnArticle = { id: string; title: string; published: boolean; reviewStatus: string; slug: string; scheduledAt?: string | null };
+export type OwnArticle = { id: string; title: string; published: boolean; reviewStatus: string; slug: string; scheduledAt?: string | null; reviewReason?: string | null };
 export type OwnArticles = { data: OwnArticle[]; meta: { page: number; hasNextPage: boolean; hasPreviousPage: boolean } };
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }

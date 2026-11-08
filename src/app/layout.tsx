@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { SiteHeader, SiteFooter } from "./_components/site-chrome";
+import ScrollOnNavigation from "./_components/scroll-on-navigation";
 
 export const metadata: Metadata = {
   title: "Grifório | Um espaço para boas ideias",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             __html: `(function(){try{var p=location.pathname;var t=p.startsWith('/gestao-editorial')?localStorage.getItem('admin-theme'):localStorage.getItem('entrelinhas-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;var b=localStorage.getItem('entrelinhas-bg-tone');document.documentElement.dataset.bgTone=(b==='warm'?'warm':'neutral');}catch(e){}})()`,
           }}
         />
+        <ScrollOnNavigation />
         <SiteHeader />
         {children}
         <SiteFooter />

@@ -18,7 +18,8 @@
     "test:publication-browser": "node --test tests/publication-browser.test.mjs",
     "test:series-browser": "node --test tests/series-browser.test.mjs",
     "test:revisions-browser": "node --test tests/revisions-browser.test.mjs",
-    "test:collections-browser": "node --test tests/collections-browser.test.mjs"
+    "test:collections-browser": "node --test tests/collections-browser.test.mjs",
+    "test:recovery-browser": "node --test tests/recovery-email-docker-browser.test.mjs"
   },
   "dependencies": {
     "next": "16.4.5",

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, invalidateSessionForSubject } from "@/lib/session-client";
 import styles from "./account.module.css";
+import RecoveryEmailSettings from './recovery-email-settings';
 
 type Step = "idle" | "setup_password" | "setup_qr" | "recovery_codes" | "disable" | "regen_codes" | "done";
 type SetupData = { secret: string; otpauthUri: string; qrCode: string };
@@ -25,6 +26,8 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [done, setDone] = useState("");
+  const [recoveryEmailVerified, setRecoveryEmailVerified] = useState(false);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
 
   function reset(next: Step) {
     setStep(next);
@@ -48,7 +51,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
     if (status === 401) return "Senha ou código inválidos, ou sessão expirada.";
     if (status === 400) return "Confira os dados informados. O código deve conter 6 dígitos do autenticador ou o formato de recuperação (ex: xxxx-xxxx).";
     if (status === 403) return "Contas com privilégios administrativos são obrigadas a manter a autenticação de dois fatores ativa.";
-    if (status === 409) return "A autenticação em dois fatores já está ativada nesta conta.";
+    if (status === 409) return "Confirme seu e-mail de recuperação antes de ativar o 2FA, ou atualize a conta se ele já estiver ativo.";
     if (status === 429) return "Muitas tentativas. Aguarde um minuto e tente novamente.";
     if (status === 503) return "Recurso indisponível no servidor no momento.";
     return "Não foi possível concluir a operação. Tente novamente.";
@@ -107,7 +110,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
       setRecoveryCodes(codes);
       setTotpEnabled(true);
       setStep("recovery_codes");
-      await invalidateSessionForSubject(userId).catch(() => false);
+      setNeedsSignIn(true);
     } catch {
       setMessage("Não foi possível confirmar o código. Tente novamente.");
     } finally {
@@ -231,6 +234,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
 
   return (
     <div className={styles.totp}>
+      {(step === 'idle' || step === 'setup_password') && <RecoveryEmailSettings userId={userId} totpEnabled={totpEnabled} onVerified={setRecoveryEmailVerified} statusOnly />}
       <p className={styles.muted}>
         Adicione uma camada extra de segurança com o <strong>Google Authenticator</strong>. Após ativar, o acesso à sua conta e operações críticas exigirão o código temporário de 6 dígitos.
       </p>
@@ -244,7 +248,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
           )}
           <div className={styles.actions}>
             {!totpEnabled ? (
-              <button className={styles.primary} onClick={() => reset("setup_password")}>
+              <button className={styles.primary} disabled={!recoveryEmailVerified} onClick={() => reset("setup_password")}>
                 Ativar autenticação de dois fatores
               </button>
             ) : (
@@ -267,7 +271,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
           <p className={styles.muted}>Informe sua senha atual para gerar a chave e o QR Code de autenticação.</p>
           {passwordInput}
           <div className={styles.actions}>
-            <button className={styles.primary} disabled={busy}>
+            <button className={styles.primary} disabled={busy || !recoveryEmailVerified}>
               {busy ? "Gerando chave…" : "Continuar"}
             </button>
             <button type="button" className={styles.secondary} onClick={() => reset("idle")} disabled={busy}>
@@ -366,7 +370,7 @@ export default function TotpSettings({ userId, initialTotpEnabled = false }: { u
             <button type="button" className={styles.secondary} onClick={downloadCodes}>
               Baixar códigos (.txt)
             </button>
-            <button type="button" className={styles.primary} onClick={() => reset("idle")}>
+            <button type="button" className={styles.primary} onClick={() => { setRecoveryCodes([]); if (needsSignIn) void invalidateSessionForSubject(userId); else reset('idle'); }}>
               Concluir
             </button>
           </div>

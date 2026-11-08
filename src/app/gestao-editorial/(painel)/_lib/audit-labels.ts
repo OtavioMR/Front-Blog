@@ -1,6 +1,6 @@
 export const eventTitles: Record<string, string> = {
   "user.permissions_changed": "Cargo de usuário alterado", "user.suspend": "Conta suspensa", "user.restore": "Conta restaurada",
-  "user.sessions_revoked": "Sessões revogadas", "user.author_promoted": "Usuário promovido a autor",
+  "user.sessions_revoked": "Sessões revogadas", "user.author_promoted": "Usuário promovido a autor", "user.author_request_unblocked": "Solicitação de autoria liberada",
   "user.suspension_expired": "Suspensão encerrada", "user.super_admin_bootstrap": "Superadministrador inicial configurado", "user.deleted": "Conta removida",
   "report.created": "Denúncia registrada", "report.assign": "Análise de denúncia atribuída", "report.release": "Análise devolvida à fila", "report.review": "Denúncia analisada",
   "comment.hide": "Comentário ocultado pela moderação", "comment.restore": "Comentário restaurado",
@@ -12,5 +12,7 @@ export const eventTitles: Record<string, string> = {
   "tag.created": "Tag criada", "tag.updated": "Tag alterada", "tag.deleted": "Tag removida", "tag.merged": "Tags unificadas",
   "auth.session_created": "Sessão iniciada", "auth.session_revoked": "Sessão encerrada", "auth.totp_enabled": "Autenticação em duas etapas ativada", "auth.totp_disabled": "Autenticação em duas etapas desativada",
   "auth.recovery_code_used": "Código de recuperação utilizado", "auth.recovery_codes_regenerated": "Códigos de recuperação renovados",
+  "auth.totp_recovery_authorized": "Recuperação de autenticador autorizada", "auth.totp_recovery_cancelled": "Recuperação de autenticador cancelada", "auth.totp_recovered": "Autenticador substituído por recuperação",
+  "auth.recovery_email_removed": "E-mail de recuperação removido", "auth.recovery_email_requested": "Confirmação de e-mail de recuperação solicitada", "auth.recovery_email_verified": "E-mail de recuperação confirmado", "auth.recovery_email_cancelled": "Alteração de e-mail de recuperação cancelada",
   "auth.password_reset": "Senha redefinida", "auth.social_linked": "Conta social vinculada", "auth.social_registered": "Conta social cadastrada",
 };

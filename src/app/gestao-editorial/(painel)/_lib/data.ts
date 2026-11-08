@@ -20,6 +20,11 @@ export async function adminReportsRead(query: URLSearchParams): Promise<AdminRes
 export async function adminUsersRead(query: URLSearchParams): Promise<AdminResult> {
   return read(`/admin/users?${query}`);
 }
+export async function adminBlockedAuthors(page: number, limit = 10, search = "", filter: "requested" | "all" = "all"): Promise<AdminResult> {
+  const query = new URLSearchParams({ page: String(page), limit: String(limit), filter });
+  if (search) query.set("search", search);
+  return read(`/admin/users/author-access/blocked?${query}`);
+}
 export async function adminUserDetail(id: string): Promise<AdminResult> {
   return read(`/admin/users/${id}`);
 }

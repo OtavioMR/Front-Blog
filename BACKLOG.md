@@ -1,5 +1,11 @@
 # Backlog do frontend do blog
 
+**Recuperação do autenticador:** solicitações repetidas dentro de 30 minutos mostram o horário para tentar novamente quando as credenciais e a elegibilidade são válidas; respostas para credenciais inválidas permanecem genéricas. Build dos dois projetos, lint direcionado e testes de recuperação e Swagger passaram.
+
+**E-mail de recuperação e 2FA obrigatório (08/11/2026):** Minha conta → Segurança permite cadastrar/trocar endereço separado com senha e TOTP quando ativo. O botão de ativar 2FA depende da confirmação; `/confirmar-email-recuperacao` confirma/cancela e `/recuperar-autenticador` solicita o fluxo sem expor existência da conta. Links por fragmento também funcionam na mesma aba; os códigos permanecem visíveis após ativar até o titular concluir. SUPER_ADMIN continua pelo servidor. Passaram build, lint direcionado, 75 testes das suítes public/session/theme/studio/admin, três provas de navegador editorial/conta com API simulada e uma prova completa com Chromium, API Docker real e SMTP local de captura. A prova validou confirmação, requisito de ativação, espera, troca, rejeição de códigos antigos, entrada com os novos e bloqueio de autorização online de SUPER_ADMIN. Nenhum e-mail externo foi enviado. Executar novamente com `BLOG_RECOVERY_E2E=1 npm run test:recovery-browser` após build da imagem; o teste pausa/restaura a API local. Ajustada uma expectativa antiga de texto do teste administrativo ao fallback atual da interface.
+
+**Recuperação segura de autenticador (08/11/2026):** criada `/recuperar-autenticador` com instruções, leitura de autorização por fragmento sem armazenamento local, configuração de QR Code local, confirmação do novo fator, códigos de recuperação e cancelamento. O login aponta para a ajuda; SUPER_ADMIN pode autorizar outras contas nos detalhes do usuário após verificação independente e TOTP atual. SUPER_ADMIN alvo usa procedimento no servidor. Build e lint direcionado passaram, assim como sessão (26 testes) e Studio (13). Navegador com API simulada validou configuração/conclusão, espera e cancelamento; uma chamada inválida pela cadeia real frontend/API retornou 401. Backend Docker local atualizado e migration aplicada; SMTP real não exercitado e não há implantação externa. Guia operacional: [TOTP_RECOVERY.md](../Backend-Blog/docs/TOTP_RECOVERY.md).
+
 **Refatoração do painel administrativo e isolamento da área pública (07/11/2026):**
 - **Unificação e eliminação de rotas duplicadas:** remoção do diretório `/admin` duplicado; todas as páginas administrativas foram migradas para `/gestao-editorial/(painel)` com rotas em português (`/denuncias`, `/artigos`, `/comentarios`, `/usuarios`, `/administradores`, `/categorias`, `/tags`, `/estatisticas`, `/auditoria`, `/conta`).
 - **Entrada administrativa exclusiva (`/gestao-editorial/entrar`):** formulário dedicado sem dependência do login de leitor, estilizado na identidade visual do Grifório com suporte a claro/escuro, validação de TOTP e bloqueio imediato com 403 de perfis sem privilégios administrativos (`READER`, `AUTHOR`). Sessão criada apenas após confirmação de papel administrativo pela API.
@@ -304,6 +310,10 @@ Por solicitação do usuário, a página de perfil de autor em `/autores/[id]` a
 A identidade Grifório foi aplicada ao cabeçalho, aos ícones, rodapés, textos e metadados públicos, preservando as cores e as preferências existentes. Build e 17 testes públicos passaram; lint passou com 17 avisos preexistentes.
 
 ## Sprint 3 — conta, Studio e revisão inicial
+
+**Editor (08/11/2026):** painel de publicação agrupado na coluna de configurações e prévia de capa sem corte. Testes de contrato passaram; a conferência visual autenticada permanece pendente.
+
+**Editor e imagens (08/11/2026):** seleção e remoção de capa aguardam o salvamento confirmado; foto de perfil e capa oferecem recorte ajustável, com opção de imagem inteira para a capa. O navegador com API simulada cobriu cancelamento, confirmação e recorte; `BLOG_MAIN_REVISION_E2E=1 node --test tests/revisions-docker-browser.test.mjs` confirmou restauração no navegador com API e banco Docker, usando conta sintética removida ao final. Texto e capa são enviados em etapas; uma falha na segunda exige conferir o resultado. Isso não conclui os critérios da sprint.
 
 - [ ] S3.1 Criar perfil, foto, senha e gestão de sessões segundo os contratos.
 - [ ] S3.2 Implementar regras e aceite de autoria.

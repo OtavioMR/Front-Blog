@@ -11,16 +11,18 @@ export default function RoleForm({
   current,
   csrf,
   suggested = "",
+  totpEnabled,
 }: {
   id: string;
   current: string;
   csrf: string;
   suggested?: string;
+  totpEnabled: boolean;
 }) {
   const router = useRouter();
   const busy = useRef(false);
   const [currentRole, setCurrentRole] = useState(current);
-  const [role, setRole] = useState(suggested !== current ? suggested : "");
+  const [role, setRole] = useState(suggested !== current && (suggested !== "ADMIN" || totpEnabled) ? suggested : "");
   const [reason, setReason] = useState("");
   const [code, setCode] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
@@ -32,7 +34,7 @@ export default function RoleForm({
   function requestSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const note = reason.trim();
-    if (busy.current || uncertain || !role || note.length < 5 || note.length > 1000 || !/^\d{6}$/.test(code)) {
+    if (busy.current || uncertain || !role || (role === "ADMIN" && !totpEnabled) || note.length < 5 || note.length > 1000 || !/^\d{6}$/.test(code)) {
       return;
     }
     setShowConfirm(true);
@@ -41,7 +43,7 @@ export default function RoleForm({
   async function executeChange() {
     setShowConfirm(false);
     const note = reason.trim();
-    if (busy.current || uncertain || !role || note.length < 5 || note.length > 1000 || !/^\d{6}$/.test(code)) {
+    if (busy.current || uncertain || !role || (role === "ADMIN" && !totpEnabled) || note.length < 5 || note.length > 1000 || !/^\d{6}$/.test(code)) {
       return;
     }
     const targetRole = role;
@@ -144,12 +146,13 @@ export default function RoleForm({
             {["READER", "AUTHOR", "ADMIN"]
               .filter((r) => r !== currentRole)
               .map((r) => (
-                <option key={r} value={r}>
+                <option key={r} value={r} disabled={r === "ADMIN" && !totpEnabled}>
                   {formatRoleName(r)} ({r})
                 </option>
               ))}
           </select>
         </label>
+        {!totpEnabled && currentRole !== "ADMIN" && <p className={styles.note}>Para ser administrador, o titular precisa ativar a autenticação em dois fatores na segurança da própria conta.</p>}
         <label>
           Justificativa (mínimo 5 caracteres)
           <textarea

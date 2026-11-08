@@ -5,6 +5,7 @@ export type Draft = {
   authorId: string;
   title: string;
   content: string;
+  excerpt?: string;
   published: boolean;
   isActive: boolean;
   reviewStatus: string;
@@ -24,6 +25,7 @@ export function parseDraft(value: unknown, owner: string, isAdmin = false): Draf
     (!isAdmin && item.authorId !== owner) ||
     typeof item.title !== "string" ||
     typeof item.content !== "string" ||
+    (item.excerpt !== undefined && (typeof item.excerpt !== "string" || item.excerpt.length > 500)) ||
     typeof item.published !== "boolean" ||
     item.isActive !== true ||
     !["DRAFT", "PENDING", "APPROVED", "REJECTED"].includes(String(item.reviewStatus)) ||

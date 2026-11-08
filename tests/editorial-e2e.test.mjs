@@ -113,7 +113,7 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   await fill("#email", "autora@example.test"); await fill("#password", "AUTHOR"); await click("Entrar");
   await waitFor(() => evaluate("location.pathname === '/conta'"), "entrada");
   await cdp("Page.navigate", { url: `${base}/studio/novo` }); await waitFor(() => has("Seu artigo permanece privado"), "editor autenticado");
-  await fill("input", "Título sintético"); await fill("textarea", "Conteúdo sintético para revisão."); await click("Salvar rascunho");
+  await fill("#article-title", "Título sintético"); await fill("#article-content", "Conteúdo sintético para revisão."); await click("Salvar rascunho"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm save"); await click("Confirmar e salvar");
   await waitFor(() => has("Rascunho salvo."), "salvamento"); assert.equal(post.reviewStatus, "DRAFT");
   post.scheduledAt = "2099-01-01T12:00:00.000Z";
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
@@ -124,15 +124,15 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
   await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Enviar para revis\u00e3o')"), "rascunho sem agendamento");
   await click("Enviar para revisão");
-  await fill("textarea", "Conteúdo sintético modificado.");
+  await fill("#article-content", "Conteúdo sintético modificado.");
   assert.equal(await has("Confirmar envio"), false);
   await evaluate("Array.from(document.querySelectorAll('a')).find(a => a.textContent.includes('Voltar ao Studio')).click()");
   await waitFor(() => has("Sair sem salvar?"), "confirmação de saída"); await click("Cancelar");
   assert.equal(await evaluate("location.pathname"), `/studio/${postId}`);
-  assert.equal(await evaluate("document.querySelector('textarea').value"), "Conteúdo sintético modificado.");
-  await fill("textarea", "Conteúdo sintético para revisão.");
+  assert.equal(await evaluate("document.querySelector('#article-content').value"), "Conteúdo sintético modificado.");
+  await fill("#article-content", "Conteúdo sintético para revisão.");
   await click("Enviar para revisão"); await click("Confirmar envio"); await waitFor(() => has("Artigo enviado para revisão."), "envio");
-  assert.equal(post.reviewStatus, "PENDING"); assert.equal(await evaluate("document.querySelector('textarea').readOnly"), true);
+  assert.equal(post.reviewStatus, "PENDING"); assert.equal(await evaluate("document.querySelector('#article-content').readOnly"), true);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('input,textarea')).every(field => field.readOnly || field.disabled)"), true);
   const deniedEdit = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "PATCH", headers: { Authorization: `Bearer ${token("AUTHOR")}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: "Mudanca indevida" }) });
   const deniedDelete = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token("AUTHOR")}` } });
@@ -186,7 +186,7 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   await waitFor(() => evaluate("Object.keys(Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === 'Assumir análise') || {}).some(key => key.startsWith('__reactProps'))"), "detalhe da denúncia");
   await click("Assumir análise");
   await waitFor(() => has("Atribuída a você"), "atribuição da análise");
-  await fill("textarea", "Análise sintética");
+  await fill("textarea[required]", "Análise sintética");
   await evaluate("window.confirm = () => true");
   await click("Registrar decisão");
   await waitFor(() => has("Decisão registrada com sucesso.") || has("Resolvida (Procedente)"), "decisão de moderação");

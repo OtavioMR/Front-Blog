@@ -16,6 +16,7 @@ export default function Navbar() {
 }
 
 function NavbarForRoute() {
+  const pathname = usePathname();
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
   const scrollDownAccum = useRef(0);
@@ -96,7 +97,7 @@ function NavbarForRoute() {
       aria-label="Navegação do site"
     >
       <div className={styles.inner}>
-        <Link className={styles.brand} href="/" aria-label="Grifório, página inicial">
+        <Link className={styles.brand} href="/" aria-label="Grifório, página inicial" onClick={() => { if (pathname === "/") window.scrollTo({ top: 0, behavior: "instant" }); }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/branding/griforio/symbol-light.svg" alt="" className={styles.logoLight} width="130" height="135" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
