@@ -1,0 +1,15 @@
+export const eventTitles: Record<string, string> = {
+  "user.permissions_changed": "Cargo de usuário alterado", "user.suspend": "Conta suspensa", "user.restore": "Conta restaurada",
+  "user.sessions_revoked": "Sessões revogadas", "user.author_promoted": "Usuário promovido a autor",
+  "user.suspension_expired": "Suspensão encerrada", "user.super_admin_bootstrap": "Superadministrador inicial configurado", "user.deleted": "Conta removida",
+  "report.created": "Denúncia registrada", "report.assign": "Análise de denúncia atribuída", "report.release": "Análise devolvida à fila", "report.review": "Denúncia analisada",
+  "comment.hide": "Comentário ocultado pela moderação", "comment.restore": "Comentário restaurado",
+  "comment.admin_updated": "Comentário alterado pela administração", "comment.moderated": "Comentário moderado",
+  "post.hide": "Artigo ocultado pela moderação", "post.restore": "Artigo restaurado", "post.review": "Artigo revisado",
+  "post.review_cancelled": "Revisão de artigo cancelada", "post.review_superseded": "Revisão de artigo substituída", "post.admin_updated": "Artigo alterado pela administração", "post.admin_cover_changed": "Capa do artigo alterada", "post.deleted": "Artigo removido",
+  "category.created": "Categoria criada", "category.updated": "Categoria alterada", "category.deleted": "Categoria removida",
+  "category.reactivated": "Categoria reativada",
+  "tag.created": "Tag criada", "tag.updated": "Tag alterada", "tag.deleted": "Tag removida", "tag.merged": "Tags unificadas",
+  "auth.session_created": "Sessão iniciada", "auth.session_revoked": "Sessão encerrada", "auth.totp_enabled": "Autenticação em duas etapas ativada", "auth.totp_disabled": "Autenticação em duas etapas desativada",
+  "auth.password_reset": "Senha redefinida", "auth.social_linked": "Conta social vinculada", "auth.social_registered": "Conta social cadastrada",
+};

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import sanitizeHtml from "sanitize-html";
+import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../../_components/shell";
-import { adminCsrf, adminIdentity, adminReportDetail, adminReportHistory, adminReportsRead, record } from "../../_lib/data";
+import { adminCsrf, adminIdentity, adminReportDetail, adminReportHistory, adminReportsRead, adminUsersRead, record } from "../../_lib/data";
 import ResolveReport from "../_components/resolve";
 import { IconPosts, IconComments, IconUsers } from "../../_components/icons";
 import styles from "../../admin.module.css";
@@ -52,9 +53,10 @@ export default async function ReportDetailPage({
 }) {
   const { id } = await params,
     raw = await searchParams,
-    page = typeof raw.page === "string" && raw.page ? raw.page : "1";
+    page = typeof raw.page === "string" && raw.page ? raw.page : "1",
+    moderatorPage = typeof raw.moderatorPage === "string" && raw.moderatorPage ? raw.moderatorPage : "1";
 
-  if (!uuid.test(id) || Array.isArray(raw.page) || !/^[1-9]\d{0,5}$/.test(page)) {
+  if (!uuid.test(id) || Array.isArray(raw.page) || Array.isArray(raw.moderatorPage) || !/^[1-9]\d{0,5}$/.test(page) || !/^[1-9]\d{0,5}$/.test(moderatorPage)) {
     const access = await adminReportsRead(new URLSearchParams({ page: "1", limit: "1" }));
     if (!access.ok) return <AdminFailure reason={access.reason} />;
     return (
@@ -70,11 +72,13 @@ export default async function ReportDetailPage({
     );
   }
 
-  const [detailResult, historyResult, actor, csrf] = await Promise.all([
+  const [detailResult, historyResult, actor, csrf, admins, supers] = await Promise.all([
     adminReportDetail(id),
     adminReportHistory(id, page),
     adminIdentity(),
     adminCsrf(),
+    adminUsersRead(new URLSearchParams({ page: moderatorPage, limit: "20", role: "ADMIN", status: "active", sort: "name", order: "ASC" })),
+    adminUsersRead(new URLSearchParams({ page: moderatorPage, limit: "20", role: "SUPER_ADMIN", status: "active", sort: "name", order: "ASC" })),
   ]);
 
   if (!detailResult.ok) return <AdminFailure reason={detailResult.reason} />;
@@ -83,6 +87,8 @@ export default async function ReportDetailPage({
 
   const detail = detailResult.value,
     history = historyResult.value;
+  const moderators = [admins, supers].flatMap(result => result.ok && record(result.value) && Array.isArray(result.value.data) ? result.value.data : []).filter((row): row is { id: string; name: string } => record(row) && typeof row.id === "string" && uuid.test(row.id) && typeof row.name === "string");
+  const moreModerators = [admins, supers].some(result => result.ok && record(result.value) && record(result.value.meta) && result.value.meta.hasNextPage === true);
 
   if (
     !record(detail) ||
@@ -123,6 +129,8 @@ export default async function ReportDetailPage({
     title?: string;
     content?: string;
     name?: string;
+    author?: { name?: string; profilePhoto?: string | null } | null;
+    post?: { id?: string; title?: string } | null;
   } | null;
 
   const targetType =
@@ -181,9 +189,10 @@ export default async function ReportDetailPage({
               </p>
               {detail.moderatorId ? (
                 <p style={{ margin: 0, fontSize: "0.85rem" }}>
-                  <strong>Moderador atribuído:</strong> {String(detail.moderatorId)}
+                  <strong>Moderador atribuído:</strong> {record(detail.moderator) && text(detail.moderator.name, 200) ? detail.moderator.name : "Usuário indisponível"}{record(detail.moderator) && typeof detail.moderator.role === "string" ? ` (${detail.moderator.role})` : ""}
                 </p>
               ) : null}
+              {date(detail.assignedAt) && <p style={{ margin: 0, fontSize: "0.85rem" }}><strong>Assumido em:</strong> {new Date(detail.assignedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</p>}
               {detail.moderationNote ? (
                 <div style={{ marginTop: "0.5rem", padding: "0.75rem", borderRadius: "0.5rem", background: "var(--brand-light)", border: "1px solid rgba(178, 67, 28, 0.2)" }}>
                   <strong>Justificativa da decisão:</strong> {String(detail.moderationNote)}
@@ -238,6 +247,8 @@ export default async function ReportDetailPage({
 
                 {targetType === "COMMENT" && target.content && (
                   <div style={{ padding: "1rem", borderRadius: "0.6rem", border: "1px solid var(--border)", background: "var(--surface)" }}>
+                    <p><Avatar name={target.author?.name || "Usuário removido"} src={target.author?.profilePhoto || null} size={24} /> <strong>Autor:</strong> {target.author?.name || "Usuário removido"}</p>
+                    <p><strong>Artigo:</strong> {target.post?.title || "Conteúdo indisponível"}</p>
                     <p className={styles.commentText} style={{ margin: 0, fontSize: "0.92rem" }}>
                       {String(target.content)}
                     </p>
@@ -262,8 +273,15 @@ export default async function ReportDetailPage({
                 targetType={targetType}
                 currentModeratorId={detail.moderatorId ? String(detail.moderatorId) : null}
                 actorId={actor?.id}
+                canRelease={actor?.role === "SUPER_ADMIN"}
+                moderators={moderators}
                 csrf={csrf}
               />
+              {(Number(moderatorPage) > 1 || moreModerators) && <nav className={styles.pagination} aria-label="Paginação de administradores para encaminhamento">
+                {Number(moderatorPage) > 1 && <Link href={`?page=${page}&moderatorPage=${Number(moderatorPage) - 1}`} prefetch={false}>Administradores anteriores</Link>}
+                <span>Página {moderatorPage}</span>
+                {moreModerators && <Link href={`?page=${page}&moderatorPage=${Number(moderatorPage) + 1}`} prefetch={false}>Próximos administradores</Link>}
+              </nav>}
             </section>
           )}
 
@@ -277,9 +295,9 @@ export default async function ReportDetailPage({
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>
                       {new Date(String(row.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </span>{" "}
-                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{String(row.action)}</span>{" "}
-                    · Responsável: {String(row.actorId || "Sistema")}
-                    {record(row.details) && text(row.details.reason, 1000) ? ` · ${row.details.reason}` : ""}
+                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{({ "report.assign": "Análise atribuída", "report.release": "Análise liberada", "report.review": "Decisão registrada", "report.created": "Denúncia criada" } as Record<string, string>)[String(row.action)] ?? "Evento registrado"}</span>{" "}
+                    · Responsável: {typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}
+                    {record(row.details) && text(row.details.note, 1000) ? ` · ${row.details.note}` : record(row.details) && text(row.details.reason, 1000) ? ` · ${row.details.reason}` : ""}
                   </li>
                 ))}
               </ul>

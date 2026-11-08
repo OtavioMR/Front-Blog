@@ -57,6 +57,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
       if (!["READER", "AUTHOR", "ADMIN", "SUPER_ADMIN"].includes(role)) { response.statusCode = 401; return response.end("{}"); }
       const token = `header.${Buffer.from(JSON.stringify({ sub: actorId })).toString("base64url")}.signature-${roles.size}`;
       roles.set(token, role);
+      response.setHeader("Set-Cookie", "refreshToken=synthetic.refresh.token; HttpOnly; Path=/api/v1/auth; SameSite=Strict");
       return response.end(JSON.stringify({ access_token: token, token_type: "Bearer", expires_in: 900 }));
     }
     if (request.method === "GET" && request.url === "/api/v1/categories?page=1&limit=20") return response.end(JSON.stringify({ data: [{ id: postId, name: 'Categoria <teste>', slug: 'categoria-teste', description: 'Descrição sintética', isActive: true }], meta: { page: 1, hasPreviousPage: false, hasNextPage: true } }));
@@ -77,9 +78,11 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
     const userRow = (id, name, role) => ({ id, name, email: `${name.split(" ")[0].toLowerCase()}@example.test`, role, isActive: true, moderationSuspended: false, createdAt: "2026-01-01T12:00:00.000Z" });
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20&role=ADMIN&status=active&sort=name&order=ASC") return listing([userRow(adminRowId, "Moderadora <Teste>", "ADMIN")]);
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20&role=SUPER_ADMIN&status=active&sort=name&order=ASC") return listing([userRow(actorId, "Dona <Raiz>", "SUPER_ADMIN")]);
+    if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20&role=ADMIN&sort=name&order=ASC") return listing([userRow(adminRowId, "Moderadora <Teste>", "ADMIN")]);
+    if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=20&role=SUPER_ADMIN&sort=name&order=ASC") return listing([userRow(actorId, "Dona <Raiz>", "SUPER_ADMIN")]);
     if (request.method === "GET" && request.url === "/api/v1/admin/users?page=1&limit=10&search=Pessoa&status=active") return listing([userRow(postId, "Pessoa <teste>", "READER"), userRow(adminRowId, "Moderadora <Teste>", "ADMIN")]);
     if (request.method === "GET" && request.url === "/api/v1/admin/audit-logs?page=1&limit=10&action=user.permissions_changed&targetType=user") return listing([{ id: postId, actorId, action: "user.permissions_changed", targetType: "user", targetId: adminRowId, createdAt: "2026-01-01T12:00:00.000Z", details: { previousRole: "READER", role: "ADMIN", reason: "Concessão <sintética>" } }]);
-    if (request.method === "GET" && request.url.startsWith("/api/v1/admin/audit-logs?")) { auditQueries.push(request.url); return response.end(JSON.stringify({ data: [{ id: postId, actorId: postId, action: "report.review", targetType: "report", targetId: postId, createdAt: "2026-01-01T12:00:00.000Z", details: { reason: "Motivo <sintético>" } }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } })); }
+    if (request.method === "GET" && request.url.startsWith("/api/v1/admin/audit-logs?")) { auditQueries.push(request.url); const missing = request.url.includes("search=removido"); return response.end(JSON.stringify({ data: [{ id: postId, actorId: postId, actorName: missing ? null : "Moderadora sintética", targetLabel: missing ? null : "Conteúdo sintético", action: "report.review", targetType: "report", targetId: postId, createdAt: "2026-01-01T12:00:00.000Z", details: { reason: "Motivo <sintético>" } }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } })); }
     if (request.method === "GET" && request.url === "/api/v1/admin/comments?page=1&limit=20") return response.end(JSON.stringify({ data: [{ id: postId, postId, authorId: postId, content: "Comentário <sintético>", isActive: true, moderationHidden: false, createdAt: "2026-01-01T12:00:00.000Z" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }));
     if (request.method === "GET" && request.url === `/api/v1/admin/comments/${postId}`) return response.end(JSON.stringify({ id: postId, postId, authorId: postId, rootId: null, replyToId: null, content: "Comentário <sintético>", isActive: true, moderationHidden: false, createdAt: "2026-01-01T12:00:00.000Z", reports: [{ id: postId, status: "PENDING", reason: "Motivo <privado>", createdAt: "2026-01-01T12:00:00.000Z" }] }));
     if (request.method === "GET" && request.url === `/api/v1/admin/comments/${postId}/history?page=1&limit=10`) return response.end(JSON.stringify({ data: [{ id: postId, actorId: postId, action: "comment.hide", createdAt: "2026-01-01T12:00:00.000Z", details: { reason: "Decisão sintética" } }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }));
@@ -109,7 +112,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
     if (request.method === "GET" && request.url === "/api/v1/reports?status=IN_REVIEW&target=USER&page=1&limit=20") return response.end(JSON.stringify({ data: [{ id: postId, postId: null, commentId: null, userId: postId, status: "IN_REVIEW", reason: "Perfil em análise" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: true } }));
     if (request.method === "GET" && request.url === `/api/v1/reports/${postId}`) return response.end(JSON.stringify({ id: postId, reason: "Motivo <script>privado</script>", reasonCategory: "OTHER", description: "Descrição sintética", status: "IN_REVIEW", moderatorId: postId, moderationNote: null, createdAt: "2026-01-01T12:00:00.000Z", target: { type: "POST", id: postId, title: "Artigo sintético", content: "<p>Contexto sintético</p><script>alert(1)</script>" } }));
     if (request.method === "GET" && request.url === `/api/v1/reports/${postId}/history?page=1&limit=10`) return response.end(JSON.stringify({ data: [{ id: postId, actorId: postId, action: "report.assign", createdAt: "2026-01-01T12:00:00.000Z" }], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } }));
-    if (request.method === "PATCH" && request.url === `/api/v1/reports/${postId}/assign`) { const payload = JSON.parse(body); response.statusCode = 200; return response.end(JSON.stringify({ id: postId, status: "IN_REVIEW", moderatorId: payload.moderatorId })); }
+    if (request.method === "PATCH" && request.url === `/api/v1/reports/${postId}/assign`) { const payload = JSON.parse(body); response.statusCode = 200; return response.end(JSON.stringify({ id: postId, status: payload.release ? "PENDING" : "IN_REVIEW", moderatorId: payload.release ? null : payload.moderatorId ?? actorId })); }
     if (request.method === "POST" && request.url === `/api/v1/reports/${postId}/resolve`) { const payload = JSON.parse(body); reportActions.push(payload); response.statusCode = 201; return response.end(JSON.stringify({ id: postId, status: payload.status, action: payload.action })); }
     if (request.method === "PATCH" && request.url === `/api/v1/reports/${postId}`) { if (["conflict", "invalid", "limited"].includes(reportMode)) { response.statusCode = { conflict: 409, invalid: 400, limited: 429 }[reportMode]; return response.end("{}"); } const input = JSON.parse(body); reportDecisions.push(input); return response.end(JSON.stringify({ id: postId, status: reportMode === "wrong-status" ? "PENDING" : input.status })); }
     if (request.method === "POST" && request.url === `/api/v1/post-reviews/${postId}/decision`) { const payload = JSON.parse(body); const decision = payload.decision; decisionBodies.push(payload); decisions.push(decision); response.statusCode = 201; return response.end(JSON.stringify({ status: invalidDecision ? "PENDING" : decision })); }
@@ -185,16 +188,22 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   assert.doesNotMatch(html, /href="\/gestao-editorial\/administradores"/);
   assert.doesNotMatch(html, /<script[^>]*>[^<]*alert|<img|onerror/i);
   const csrf = csrfFrom(html);
+  assert.equal((await form("/gestao-editorial/atividade", { csrf }, sessionCookie)).status, 204);
+  assert.equal((await form("/gestao-editorial/atividade", { csrf: "invalid" }, sessionCookie)).status, 403);
+  assert.equal((await form("/gestao-editorial/atividade", { csrf }, sessionCookie, "https://evil.example.test")).status, 403);
   response = await request("/gestao-editorial", { headers: { Cookie: sessionCookie } });
   assert.equal(response.status, 200); assert.match(await response.text(), /Contas cadastradas/); assert.match(response.headers.get("cache-control"), /private|no-store/);
   response = await request("/gestao-editorial/newsletter", { headers: { Cookie: sessionCookie } });
   assert.equal(response.status, 200); assert.match(await response.text(), /Inscrições e entregas/);
   response = await request("/gestao-editorial/estatisticas", { headers: { Cookie: sessionCookie } });
   const activity = await response.text();
-  assert.equal(response.status, 200); assert.match(activity, /report.review/); assert.match(activity, /Artigo &lt;sintético&gt;/); assert.doesNotMatch(activity, /Artigo <sintético>/);
+  assert.equal(response.status, 200); assert.match(activity, /Denúncia analisada/); assert.match(activity, /Artigo &lt;sintético&gt;/); assert.doesNotMatch(activity, /Artigo <sintético>/);
   response = await request("/gestao-editorial/auditoria?action=report.review", { headers: { Cookie: sessionCookie } });
   const audit = await response.text();
   assert.equal(response.status, 200); assert.match(audit, /Motivo &lt;sintético&gt;/); assert.doesNotMatch(audit, /Motivo <sintético>/);
+  assert.match(audit, /Denúncia analisada/); assert.match(audit, /Moderadora sintética/); assert.match(audit, /Conteúdo sintético/); assert.match(audit, /Detalhes técnicos/);
+  const removedAudit = await (await request("/gestao-editorial/auditoria?search=removido", { headers: { Cookie: sessionCookie } })).text();
+  assert.match(removedAudit, /Usuário indisponível/); assert.match(removedAudit, /Detalhes não disponíveis/);
   response = await request("/gestao-editorial/auditoria?from=2026-01-01&to=2026-01-31", { headers: { Cookie: sessionCookie } });
   assert.equal(response.status, 200);
   const auditQuery = new URL(auditQueries.at(-1), "http://localhost").searchParams;
@@ -257,15 +266,15 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   assert.doesNotMatch(await response.text(), /Decisão sintética/);
   response = await request(`/gestao-editorial/artigos/${postId}`, { headers: { Cookie: sessionCookie } });
   assert.doesNotMatch(await response.text(), /Conteúdo privado/);
-  assert.equal((await form(`/gestao-editorial/artigos/${postId}/moderar`, { csrf, action: "hide", reason: "Motivo sintético" }, sessionCookie)).status, 403);
-  assert.equal((await form(`/gestao-editorial/artigos/${postId}/revisar`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie)).status, 403);
-  assert.equal((await form(`/gestao-editorial/comentarios/${postId}/moderar`, commentAction, sessionCookie)).status, 403);
+  assert.equal((await form(`/gestao-editorial/artigos/${postId}/moderar`, { csrf, action: "hide", reason: "Motivo sintético" }, sessionCookie)).status, 401);
+  assert.equal((await form(`/gestao-editorial/artigos/${postId}/revisar`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie)).status, 401);
+  assert.equal((await form(`/gestao-editorial/comentarios/${postId}/moderar`, commentAction, sessionCookie)).status, 401);
   response = await request("/gestao-editorial", { headers: { Cookie: sessionCookie } });
   assert.doesNotMatch(await response.text(), /Contas cadastradas/);
   // Cargo rebaixado: a mesma sessão perde o acesso ao painel inteiro e é levada à entrada.
   await redirectsToLogin("/gestao-editorial", { headers: { Cookie: sessionCookie } });
   for (const path of ["/denuncias", "/artigos", "/comentarios", "/usuarios", "/categorias", "/tags", "/estatisticas", "/auditoria", "/conta"]) await redirectsToLogin("/gestao-editorial" + path, { headers: { Cookie: sessionCookie } });
-  for (const [path, body] of [["/gestao-editorial/categorias/acao", { csrf, action: "create", name: "Categoria sintética", description: "Teste" }], ["/gestao-editorial/denuncias/" + postId + "/resolver", { csrf, status: "RESOLVED", action: "HIDE_POST", note: "Violação confirmada" }]]) assert.equal((await form(path, body, sessionCookie)).status, 403);
+  for (const [path, body] of [["/gestao-editorial/categorias/acao", { csrf, action: "create", name: "Categoria sintética", description: "Teste" }], ["/gestao-editorial/denuncias/" + postId + "/resolver", { csrf, status: "RESOLVED", action: "HIDE_POST", note: "Violação confirmada" }]]) assert.equal((await form(path, body, sessionCookie)).status, 401);
   roles.set(adminToken, "ADMIN");
   revoked.add(adminToken);
   response = await request("/gestao-editorial/newsletter", { headers: { Cookie: sessionCookie } });
@@ -325,7 +334,9 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   assert.equal(response.status, 200);
   assert.match(reportDetailReact, /Contexto sintético/);
   assert.match(reportDetailReact, /Motivo &lt;script&gt;privado/);
-  assert.equal((await form(`/gestao-editorial/denuncias/${postId}/atribuir`, { csrf: superCsrf, moderatorId: actorId }, superCookie)).status, 204);
+  assert.equal((await form(`/gestao-editorial/denuncias/${postId}/atribuir`, { csrf: superCsrf, moderatorId: "inválido" }, superCookie)).status, 400);
+  assert.equal((await form(`/gestao-editorial/denuncias/${postId}/atribuir`, { csrf: superCsrf }, superCookie)).status, 204);
+  assert.equal((await form(`/gestao-editorial/denuncias/${postId}/atribuir`, { csrf: superCsrf, release: "true" }, superCookie)).status, 204);
   assert.equal((await form(`/gestao-editorial/denuncias/${postId}/resolver`, { csrf: superCsrf, status: "RESOLVED", action: "HIDE_POST", note: "Violação confirmada no teste" }, superCookie)).status, 204);
 
   response = await request(`/gestao-editorial/usuarios/${postId}`, { headers: { Cookie: superCookie } });
@@ -346,7 +357,7 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   response = await request("/gestao-editorial/administradores", { headers: { Cookie: superCookie } });
   const adminsHtml = await response.text();
   assert.equal(response.status, 200);
-  assert.match(adminsHtml, /Gerenciamento de Administradores/); assert.match(adminsHtml, /Administradores ativos/);
+  assert.match(adminsHtml, /Gerenciamento de Administradores/); assert.match(adminsHtml, /Situação/);
   assert.match(adminsHtml, /Dona &lt;Raiz&gt;/); assert.match(adminsHtml, /Moderadora &lt;Teste&gt;/); assert.doesNotMatch(adminsHtml, /Dona <Raiz>/);
   assert.match(adminsHtml, /Remover cargo ADMIN/); assert.match(adminsHtml, /Concessão &lt;sintética&gt;/); assert.doesNotMatch(adminsHtml, /Concessão <sintética>/);
   assert.match(adminsHtml, /READER[^A-Z]*ADMIN/); assert.match(adminsHtml, /href="\/gestao-editorial\/administradores"/);

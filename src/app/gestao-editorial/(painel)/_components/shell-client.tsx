@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Avatar from "@/app/_components/avatar";
-import { AdminThemeToggle } from "./admin-theme-toggle";
+import { AdminThemeToggle, type AdminTheme } from "./admin-theme-toggle";
 import {
   IconDashboard,
   IconAnalytics,
@@ -46,7 +46,9 @@ interface AdminShellClientProps {
   current: NavSectionKey;
   identity: AdminActorInfo;
   csrf: string;
+  expires: number | null;
   actions?: React.ReactNode;
+  initialTheme?: AdminTheme;
   children: React.ReactNode;
 }
 
@@ -55,12 +57,39 @@ export function AdminShellClient({
   current,
   identity,
   csrf,
+  expires,
   actions,
+  initialTheme = "system",
   children,
 }: AdminShellClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expiryWarning, setExpiryWarning] = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(false);
   const pathname = usePathname();
   const [lastPathname, setLastPathname] = useState(pathname);
+
+  useEffect(() => {
+    const check = () => setExpiryWarning(expires !== null && expires - Date.now() <= 10 * 60 * 1000);
+    check();
+    const timer = window.setInterval(check, 30000);
+    return () => window.clearInterval(timer);
+  }, [expires]);
+
+  useEffect(() => {
+    let active = false;
+    const markActive = () => { active = true; };
+    window.addEventListener("pointerdown", markActive);
+    window.addEventListener("keydown", markActive);
+    const timer = window.setInterval(async () => {
+      if (!active || document.visibilityState !== "visible") return;
+      active = false;
+      try {
+        const result = await fetch("/gestao-editorial/atividade", { method: "POST", body: new URLSearchParams({ csrf }), cache: "no-store" });
+        setSessionWarning(!result.ok);
+      } catch { setSessionWarning(true); }
+    }, 5 * 60 * 1000);
+    return () => { window.clearInterval(timer); window.removeEventListener("pointerdown", markActive); window.removeEventListener("keydown", markActive); };
+  }, [csrf]);
 
   // Close sidebar when route changes without cascading render effect
   if (pathname !== lastPathname) {
@@ -86,6 +115,8 @@ export function AdminShellClient({
 
   return (
     <div className={styles.shell}>
+      {expiryWarning && <div role="alert" style={{ position: "fixed", zIndex: 1000, bottom: "1rem", right: "1rem", maxWidth: "24rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: ".5rem", background: "var(--surface)", color: "var(--text)" }}>Sua sessão administrativa está próxima do limite máximo. Salve seu trabalho; será necessário entrar novamente.</div>}
+      {sessionWarning && <div role="alert" style={{ position: "fixed", zIndex: 1001, bottom: "5rem", right: "1rem", maxWidth: "24rem", padding: "1rem", border: "1px solid var(--border)", borderRadius: ".5rem", background: "var(--surface)", color: "var(--text)" }}>Não foi possível confirmar sua sessão. Preserve o texto em edição e confira sua conexão antes de continuar.</div>}
       {/* Mobile Backdrop Overlay */}
       {sidebarOpen && (
         <div
@@ -308,7 +339,7 @@ export function AdminShellClient({
             {actions && <div className={styles.headerCustomActions}>{actions}</div>}
 
             {/* Quick Theme Switcher */}
-            <AdminThemeToggle />
+            <AdminThemeToggle initialTheme={initialTheme} />
 
             
 

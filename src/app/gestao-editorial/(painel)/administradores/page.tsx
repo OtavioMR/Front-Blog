@@ -2,14 +2,14 @@ import Form from "next/form";
 import Link from "next/link";
 import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../_components/shell";
-import { adminAuditRead, adminIdentity, adminUserDetail, adminUsersRead, record } from "../_lib/data";
+import { adminAuditRead, adminIdentity, adminUsersRead, record } from "../_lib/data";
 import { IconArrowUpRight, IconShield } from "../_components/icons";
 import styles from "../admin.module.css";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v.trim() : "");
 const short = (id: string) => `${id.slice(0, 8)}.${id.slice(-4)}`;
-type Row = { id: string; name: string; email: string; role: string; profilePhoto: string | null; isActive: boolean; moderationSuspended: boolean };
+type Row = { id: string; name: string; email: string; role: string; profilePhoto: string | null; isActive: boolean; moderationSuspended: boolean; grantedAt: string | null; grantedBy: string | null };
 
 function rows(value: unknown, max: number): Row[] | null {
   if (!record(value) || !Array.isArray(value.data) || value.data.length > max) return null;
@@ -17,31 +17,22 @@ function rows(value: unknown, max: number): Row[] | null {
   for (const row of value.data) {
     if (!record(row) || typeof row.id !== "string" || !uuid.test(row.id) || typeof row.name !== "string" || row.name.length > 255 || typeof row.email !== "string" || row.email.length > 255
       || typeof row.role !== "string" || typeof row.isActive !== "boolean" || typeof row.moderationSuspended !== "boolean") return null;
-    out.push({ id: row.id, name: row.name, email: row.email, role: row.role, profilePhoto: typeof row.profilePhoto === "string" ? row.profilePhoto : null, isActive: row.isActive, moderationSuspended: row.moderationSuspended });
+    out.push({ id: row.id, name: row.name, email: row.email, role: row.role, profilePhoto: typeof row.profilePhoto === "string" ? row.profilePhoto : null, isActive: row.isActive, moderationSuspended: row.moderationSuspended, grantedAt: typeof row.grantedAt === "string" && Number.isFinite(Date.parse(row.grantedAt)) ? row.grantedAt : null, grantedBy: typeof row.grantedBy === "string" ? row.grantedBy : null });
   }
   return out;
 }
 
-async function names(ids: string[]): Promise<Map<string, string>> {
-  const found = new Map<string, string>();
-  await Promise.all([...new Set(ids)].filter(id => uuid.test(id)).map(async id => {
-    const result = await adminUserDetail(id);
-    if (result.ok && record(result.value) && typeof result.value.name === "string") found.set(id, result.value.name.slice(0, 255));
-  }));
-  return found;
-}
-
 export default async function AdministratorsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const raw = await searchParams, search = one(raw.busca), page = one(raw.pagina) || "1";
+  const raw = await searchParams, search = one(raw.busca), page = one(raw.pagina) || "1", adminPage = one(raw.adminPage) || "1", superPage = one(raw.superPage) || "1";
   const actor = await adminIdentity();
   if (!actor) return <AdminFailure reason="session" />;
   // Exclusivo do SUPER_ADMIN; a API também recusa a alteração de cargos para qualquer outro perfil.
   if (actor.role !== "SUPER_ADMIN") return <AdminFailure reason="forbidden" />;
-  if ([raw.busca, raw.pagina].some(Array.isArray) || search.length > 255 || !/^[1-9]\d{0,5}$/.test(page)) return <AdminFailure reason="missing" />;
+  if ([raw.busca, raw.pagina, raw.adminPage, raw.superPage].some(Array.isArray) || search.length > 255 || [page, adminPage, superPage].some(value => !/^[1-9]\d{0,5}$/.test(value))) return <AdminFailure reason="missing" />;
 
   const [admins, supers, candidates, history] = await Promise.all([
-    adminUsersRead(new URLSearchParams({ page: "1", limit: "20", role: "ADMIN", status: "active", sort: "name", order: "ASC" })),
-    adminUsersRead(new URLSearchParams({ page: "1", limit: "20", role: "SUPER_ADMIN", status: "active", sort: "name", order: "ASC" })),
+    adminUsersRead(new URLSearchParams({ page: adminPage, limit: "20", role: "ADMIN", sort: "name", order: "ASC" })),
+    adminUsersRead(new URLSearchParams({ page: superPage, limit: "20", role: "SUPER_ADMIN", sort: "name", order: "ASC" })),
     search ? adminUsersRead(new URLSearchParams({ page: "1", limit: "10", search, status: "active" })) : Promise.resolve(null),
     adminAuditRead(new URLSearchParams({ page, limit: "10", action: "user.permissions_changed", targetType: "user" })),
   ]);
@@ -53,9 +44,13 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
   if (!adminRows || !superRows || !found || !log) return <AdminFailure reason="unavailable" />;
   const entries = (log.data as unknown[]).filter(record).filter(e => typeof e.id === "string" && typeof e.createdAt === "string" && Number.isFinite(Date.parse(e.createdAt)) && typeof e.targetId === "string" && uuid.test(e.targetId) && record(e.details));
   const meta = record(log.meta) ? log.meta : {};
-  const known = await names(entries.flatMap(e => [String(e.targetId), typeof e.actorId === "string" ? e.actorId : ""]));
-  const who = (id: unknown) => (typeof id === "string" && uuid.test(id) ? known.get(id) ?? short(id) : "Sistema");
   const eligible = found.filter(u => u.role !== "ADMIN" && u.role !== "SUPER_ADMIN");
+  const pageLink = (key: "adminPage" | "superPage", value: number) => {
+    const params = new URLSearchParams({ adminPage, superPage, pagina: page });
+    if (search) params.set("busca", search);
+    params.set(key, String(value));
+    return `/gestao-editorial/administradores?${params}`;
+  };
 
   return (
     <AdminShell title="Administradores" current="admins">
@@ -66,16 +61,18 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
       </div>
 
       <section className={styles.panel} aria-labelledby="admins-now">
-        <h2 id="admins-now">Administradores ativos</h2>
+        <h2 id="admins-now">Administradores</h2>
         <div className={styles.tableScroll}>
           <table className={styles.table}>
-            <thead><tr><th>Conta</th><th>E-mail</th><th>Cargo</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Conta</th><th>E-mail</th><th>Cargo</th><th>Situação</th><th>Concessão</th><th>Ações</th></tr></thead>
             <tbody>
               {[...superRows, ...adminRows].map(row => (
                 <tr key={row.id}>
                   <td><div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}><Avatar name={row.name} src={row.profilePhoto} size={32} /><div><strong style={{ display: "block" }}>{row.name}</strong><span style={{ fontSize: "0.74rem", fontFamily: "monospace", color: "var(--text-muted)" }}>{short(row.id)}</span></div></div></td>
                   <td>{row.email}</td>
                   <td><span className={row.role === "SUPER_ADMIN" ? styles.roleBadgeSuperAdmin : styles.roleBadgeAdmin}><IconShield size={11} /> {row.role}</span></td>
+                  <td>{row.moderationSuspended ? "Suspensa" : row.isActive ? "Ativa" : "Inativa"}</td>
+                  <td>{row.grantedAt ? <><time dateTime={row.grantedAt}>{new Date(row.grantedAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</time>{row.grantedBy && <div>Por {row.grantedBy}</div>}</> : "Não disponível"}</td>
                   <td>
                     {row.role === "ADMIN" ? (
                       <Link href={`/gestao-editorial/usuarios/${row.id}/funcao?cargo=READER`} prefetch={false} className={styles.btnSecondary} style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}>Remover cargo ADMIN</Link>
@@ -88,7 +85,15 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
             </tbody>
           </table>
         </div>
-        {!adminRows.length && <p style={{ color: "var(--text-muted)" }}>Nenhum ADMIN ativo além dos SUPER_ADMIN.</p>}
+        {!adminRows.length && <p style={{ color: "var(--text-muted)" }}>Nenhum ADMIN nesta página.</p>}
+        {[{ key: "adminPage" as const, label: "Administradores", result: admins, current: adminPage }, { key: "superPage" as const, label: "Superadministradores", result: supers, current: superPage }].map(({ key, label, result, current }) => {
+          const meta = result.ok && record(result.value) && record(result.value.meta) ? result.value.meta : {};
+          return <nav key={key} className={styles.pagination} aria-label={`Paginação de ${label}`}>
+            <span>{label}: página {current}</span>
+            {meta.hasPreviousPage === true && <Link href={pageLink(key, Number(current) - 1)} prefetch={false}>Anterior</Link>}
+            {meta.hasNextPage === true && <Link href={pageLink(key, Number(current) + 1)} prefetch={false}>Próxima</Link>}
+          </nav>;
+        })}
       </section>
 
       <section className={styles.panel} aria-labelledby="admins-promote">
@@ -128,8 +133,8 @@ export default async function AdministratorsPage({ searchParams }: { searchParam
                   return (
                     <tr key={String(e.id)}>
                       <td>{new Date(String(e.createdAt)).toLocaleString("pt-BR", { timeZone: "UTC" })} UTC</td>
-                      <td>{who(e.actorId)}</td>
-                      <td><Link href={`/gestao-editorial/usuarios/${e.targetId}`} prefetch={false}>{who(e.targetId)}</Link></td>
+                      <td>{typeof e.actorName === "string" ? e.actorName : e.actorId ? "Usuário indisponível" : "Sistema"}</td>
+                      <td><Link href={`/gestao-editorial/usuarios/${e.targetId}`} prefetch={false}>{typeof e.targetLabel === "string" ? e.targetLabel : "Usuário indisponível"}</Link></td>
                       <td>{typeof d.previousRole === "string" ? d.previousRole.slice(0, 20) : "?"} → {typeof d.role === "string" ? d.role.slice(0, 20) : "?"}</td>
                       <td>{typeof d.reason === "string" ? d.reason.slice(0, 1000) : "—"}</td>
                     </tr>

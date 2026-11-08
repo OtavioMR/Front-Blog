@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventTitles } from "../../_lib/audit-labels";
 import sanitizeHtml from "sanitize-html";
 import { AdminFailure, AdminShell } from "../../_components/shell";
 import { adminCsrf, adminPostDetail, adminPostHistory, adminPostsRead, record } from "../../_lib/data";
@@ -87,7 +88,7 @@ export default async function PostDetail({
     allowedAttributes: {},
   });
 
-  const authorName = record(detail.author) ? String(detail.author.name) : detail.authorId;
+  const authorName = record(detail.author) && typeof detail.author.name === "string" ? detail.author.name : "Usuário removido";
   const isPendingReview = detail.reviewStatus === "PENDING" && detail.isActive;
   const canModerateVisibility = (detail.published && detail.isActive) || detail.moderationHidden;
 
@@ -189,8 +190,8 @@ export default async function PostDetail({
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>
                       {new Date(row.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </span>{" "}
-                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{row.action}</span>{" "}
-                    · {row.actorId || "Sistema"}
+                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{eventTitles[String(row.action)] ?? "Evento administrativo registrado"}</span>{" "}
+                    · {typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}
                     {record(row.details) && text(row.details.reason, 1000) ? ` · ${row.details.reason}` : ""}
                   </li>
                 ))}

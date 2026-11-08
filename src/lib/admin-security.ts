@@ -1,8 +1,13 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
-type Session = { token: string; csrf: string; expires: number; usedConfirmations: Set<string> };
+type Session = { token: string; refreshToken?: string; tokenExpires: number; csrf: string; expires: number; idleExpires: number; revoked: boolean; timer?: ReturnType<typeof setTimeout>; refreshing?: Promise<boolean>; usedConfirmations: Set<string> };
 const state = globalThis as typeof globalThis & { __editorialSessions?: Map<string, Session> };
 const sessions = state.__editorialSessions ??= new Map();
+function removeSession(key: string) {
+  const session = sessions.get(key);
+  if (session) { session.revoked = true; session.refreshToken = undefined; if (session.timer) clearTimeout(session.timer); }
+  sessions.delete(key);
+}
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 export const randomSecret = () => randomBytes(32).toString("base64url");
 export const cookieName = process.env.NODE_ENV === "production" ? "__Host-editorial-session" : "editorial-session-dev";
@@ -17,25 +22,72 @@ export function allowedOrigin(value: string | null): boolean {
     return ["http:", "https:"].includes(site.protocol) && (process.env.NODE_ENV !== "production" || site.protocol === "https:") && !site.username && !site.password && site.pathname === "/" && !site.search && !site.hash && value === site.origin;
   } catch { return false; }
 }
-export function createSession(token: string, seconds: number) {
-  for (const [key, session] of sessions) if (session.expires <= Date.now()) sessions.delete(key);
+const duration = (name: string, fallback: number) => {
+  const value = Number(process.env[name]);
+  return Number.isSafeInteger(value) && value >= 60 && value <= 604800 ? value * 1000 : fallback;
+};
+export function refreshCookie(response: Response): string | null {
+  const headers = response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""];
+  for (const header of headers) {
+    const match = /^refreshToken=([A-Za-z0-9._-]+)(?:;|$)/.exec(header);
+    if (match) return match[1];
+  }
+  return null;
+}
+export function createSession(token: string, seconds: number, refreshToken?: string) {
+  for (const [key, session] of sessions) if (session.expires <= Date.now() || session.idleExpires <= Date.now()) removeSession(key);
   if (sessions.size >= 1000) throw new Error("capacity");
   const id = randomSecret();
-  const session: Session = { token, csrf: randomSecret(), expires: Date.now() + Math.min(300, seconds - 10) * 1000, usedConfirmations: new Set() };
-  if (session.expires <= Date.now()) throw new Error("expired");
+  if (seconds <= 10 || !Number.isFinite(seconds)) throw new Error("expired");
+  const now = Date.now();
+  const session: Session = { token, refreshToken, tokenExpires: now + (seconds - 10) * 1000, csrf: randomSecret(), expires: now + (refreshToken ? duration("ADMIN_SESSION_MAX_SECONDS", 12 * 60 * 60 * 1000) : Math.min(300, seconds - 10) * 1000), idleExpires: now + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000), revoked: false, usedConfirmations: new Set() };
   const key = hash(id);
   sessions.set(key, session);
-  const timer = setTimeout(() => { if (sessions.get(key) === session) sessions.delete(key); }, session.expires - Date.now());
-  timer.unref();
+  session.timer = setTimeout(() => { if (sessions.get(key) === session) removeSession(key); }, session.expires - Date.now());
+  session.timer.unref();
   return { id, session };
 }
 export function getSession(id?: string): Session | null {
   if (!id || !/^[A-Za-z0-9_-]{43}$/.test(id)) return null;
   const key = hash(id); const value = sessions.get(key);
-  if (!value || value.expires <= Date.now()) { sessions.delete(key); return null; }
+  if (!value || value.revoked || value.expires <= Date.now() || value.idleExpires <= Date.now()) { removeSession(key); return null; }
   return value;
 }
-export function deleteSession(id?: string) { if (id) sessions.delete(hash(id)); }
+export function deleteSession(id?: string) { if (id) removeSession(hash(id)); }
+export async function getValidSession(id?: string): Promise<Session | null> {
+  const session = getSession(id);
+  if (!session) return null;
+  if (session.tokenExpires <= Date.now()) {
+    if (!session.refreshToken) { deleteSession(id); return null; }
+    session.refreshing ??= (async () => {
+      const response = await upstream("/auth/refresh", { method: "POST", headers: { Cookie: `refreshToken=${session.refreshToken}` } });
+      if (response.status === 401 || response.status === 403) return false;
+      if (!response.ok) throw new Error("refresh unavailable");
+      const next = refreshCookie(response);
+      const payload: unknown = await response.json();
+      if (!next || !payload || typeof payload !== "object" || !("access_token" in payload) || typeof payload.access_token !== "string" || !payload.access_token || !("expires_in" in payload) || typeof payload.expires_in !== "number" || !Number.isFinite(payload.expires_in) || payload.expires_in <= 10) throw new Error("invalid refresh response");
+      if (session.revoked) return false;
+      session.token = payload.access_token;
+      session.refreshToken = next;
+      session.tokenExpires = Date.now() + (payload.expires_in - 10) * 1000;
+      return true;
+    })().finally(() => { session.refreshing = undefined; });
+    let refreshed: boolean;
+    try { refreshed = await session.refreshing; } catch (error) { deleteSession(id); throw error; }
+    if (!refreshed) { deleteSession(id); return null; }
+  }
+  if (!getSession(id)) return null;
+  session.idleExpires = Date.now() + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000);
+  return session;
+}
+// Apenas leituras seguras devem ser repetidas após um 401 inesperado. Uma
+// rotação já concluída por outra requisição é reutilizada, sem renovar de novo.
+export async function refreshAfterUnauthorized(id: string | undefined, rejectedToken: string): Promise<Session | null> {
+  const session = getSession(id);
+  if (!session) return null;
+  if (session.token === rejectedToken) session.tokenExpires = 0;
+  return getValidSession(id);
+}
 export type AdminActorInfo = {
   id: string;
   role: "ADMIN" | "SUPER_ADMIN";
@@ -52,14 +104,15 @@ export async function adminActor(token: string): Promise<AdminActorInfo | null> 
     const payload: unknown = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
     if (!payload || typeof payload !== "object" || !("sub" in payload) || typeof payload.sub !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)) return null;
     const response = await upstream(`/users/${payload.sub}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) return null;
+    if ([401, 403, 404].includes(response.status)) return null;
+    if (!response.ok) throw new Error("admin identity unavailable");
     const value: unknown = await response.json();
     if (!value || typeof value !== "object" || !("id" in value) || value.id !== payload.sub || !("role" in value) || (value.role !== "ADMIN" && value.role !== "SUPER_ADMIN")) return null;
     const name = "name" in value && typeof value.name === "string" ? value.name : undefined;
     const email = "email" in value && typeof value.email === "string" ? value.email : undefined;
     const profilePhoto = "profilePhoto" in value && (typeof value.profilePhoto === "string" || value.profilePhoto === null) ? value.profilePhoto : null;
     return { id: payload.sub, role: value.role, name, email, profilePhoto };
-  } catch { return null; }
+  } catch { throw new Error("admin identity unavailable"); }
 }
 export function consumeConfirmation(session: Session, signature: string): boolean {
   if (session.usedConfirmations.size >= 1000 || session.usedConfirmations.has(signature)) return false;

@@ -1,5 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
+import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../_components/shell";
 import { adminPostsRead, record } from "../_lib/data";
 import { IconFilter, IconArrowUpRight, IconReview } from "../_components/icons";
@@ -211,7 +212,7 @@ export default async function PostsPage({
                     </td>
                     <td>
                       <span style={{ fontSize: "0.78rem", fontFamily: "monospace", color: "var(--text-muted)" }}>
-                        {String(row.authorId).slice(0, 8)}…{String(row.authorId).slice(-4)}
+                        <Avatar name={record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"} src={record(row.author) && typeof row.author.profilePhoto === "string" ? row.author.profilePhoto : null} size={24} /> {record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"}
                       </span>
                     </td>
                     <td>

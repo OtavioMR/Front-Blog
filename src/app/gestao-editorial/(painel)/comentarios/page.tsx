@@ -1,5 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
+import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../_components/shell";
 import { adminCommentsRead, adminCsrf, record } from "../_lib/data";
 import ModerateComment from "./_components/moderate";
@@ -164,10 +165,10 @@ export default async function CommentsPage({
                 <p>{String(row.content)}</p>
                 <p style={{ display: "flex", gap: "1rem", flexWrap: "wrap", fontSize: "0.82rem", color: "var(--text-muted)" }}>
                   <span>
-                    <strong>Autor:</strong> <span style={{ fontFamily: "monospace" }}>{String(row.authorId)}</span>
+                    <Avatar name={record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"} src={record(row.author) && typeof row.author.profilePhoto === "string" ? row.author.profilePhoto : null} size={24} /> <strong>Autor:</strong> {record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"}
                   </span>
                   <span>
-                    <strong>Artigo:</strong> <span style={{ fontFamily: "monospace" }}>{String(row.postId)}</span>
+                    <strong>Artigo:</strong> {record(row.post) && typeof row.post.title === "string" ? row.post.title : "Conteúdo indisponível"}
                   </span>
                 </p>
                 <p style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>

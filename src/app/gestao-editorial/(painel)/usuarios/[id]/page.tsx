@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventTitles } from "../../_lib/audit-labels";
 import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../../_components/shell";
 import { adminCsrf, adminIdentity, adminUserDetail, adminUserHistory, adminUsersRead, count, record } from "../../_lib/data";
@@ -213,8 +214,8 @@ export default async function UserDetailPage({
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>
                       {new Date(String(row.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </span>{" "}
-                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{String(row.action)}</span>{" "}
-                    · Responsável: {String(row.actorId || "Sistema")}
+                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{eventTitles[String(row.action)] ?? "Evento administrativo registrado"}</span>{" "}
+                    · Responsável: {typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}
                     {record(row.details) && text(row.details.reason, 1000) ? (
                       <span style={{ display: "block", color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.2rem" }}>
                         Justificativa: {row.details.reason}

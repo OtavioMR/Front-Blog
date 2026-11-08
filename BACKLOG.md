@@ -357,3 +357,12 @@ O código local do backend foi alterado para retornar `firstPostApproved` apenas
 - [ ] B05: avaliar consultas de suspensos, alvos de denúncia e paginação da fila.
 
 Esses itens são propostas ou verificações, não funcionalidades garantidas. Alterações no backend seguem suas próprias regras.
+
+## Evolução administrativa — em andamento
+
+- [x] Renovação da sessão BFF com rotação serializada por processo, limites locais configuráveis e aviso de duração máxima; testes administrativos simulados cobrem concorrência, inatividade e logout durante renovação.
+- [x] Fila de denúncias com filtros por responsável, contexto em lote, tomada, encaminhamento e liberação auditados; consultas de artigos e comentários incluem autor e contexto.
+- [ ] Ampliar o teste de navegador para reatribuição e formulários de permissões, incluindo navegação por teclado.
+- [ ] Validar implantação distribuída antes de usá-la. O BFF atual mantém sessões em memória de um único processo; reinício invalida as sessões locais.
+
+As consultas de auditoria e das filas de artigos e comentários foram verificadas no PostgreSQL configurado com dados sintéticos em transação revertida. A tomada simultânea de denúncia foi testada em transações reais. `BLOG_ADMIN_REFRESH_REAL=1 node --test tests/admin-refresh-real.test.mjs` valida renovação após expiração, concorrência, moderação, rebaixamento, suspensão e logout entre os dois servidores, com dados sintéticos removidos ao final. `npm run test:editorial-e2e` cobre aprovação editorial, tomada e decisão de denúncia, tema, teclado e telas em largura móvel contra API simulada. A validação da topologia distribuída e a cobertura adicional de formulários permanecem pendentes.

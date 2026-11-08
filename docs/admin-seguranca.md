@@ -1,16 +1,24 @@
 # Administração — proposta de proteção no servidor
 
+## Atualização da sessão administrativa
+
+O BFF mantém o refresh token da sessão administrativa exclusivamente na memória do servidor e o rotaciona pela API quando o access token precisa ser renovado. Requisições simultâneas na mesma sessão compartilham a renovação; uma falha de resultado incerto encerra a sessão local para evitar reutilizar um token possivelmente já rotacionado. A sessão pública continua independente. `ADMIN_SESSION_IDLE_SECONDS` e `ADMIN_SESSION_MAX_SECONDS` configuram os limites locais, com padrões de duas e doze horas. O cookie do navegador segue opaco, HttpOnly e SameSite Strict; as ações exigem Origin e CSRF.
+
+Enquanto a aba está visível, interações de teclado ou ponteiro permitem uma confirmação de atividade a cada cinco minutos. Essa chamada também exige Origin e CSRF e revalida o papel na API; não mantém uma aba abandonada ativa. Falhas são mostradas sem apagar o formulário em edição.
+
+O armazenamento continua limitado a um processo Node: reinício, múltiplas instâncias e serverless exigem armazenamento compartilhado seguro e coordenação distribuída antes do uso nessa topologia. A expiração local não revoga automaticamente a sessão no Nest; logout tenta revogá-la. As seções históricas a seguir descrevem o protótipo anterior e não substituem esta atualização.
+
 Análise do backend no commit `f89622e`. Não foram consultados dados reais.
 
 ## Protótipo implementado e bloqueado por padrão
 
 Foi implementado um recorte da proposta abaixo com entrada, leitura de fila e decisões, mas `ENABLE_ADMIN_BFF` só libera as rotas quando seu valor no processo servidor é exatamente `true`. Sem a flag, GET e POST retornam 404. Mantenha-a desativada até validar integração, autorização e topologia com dados sintéticos; não há link público para a área.
 
-A sessão administrativa dura no máximo cinco minutos e é mantida apenas em memória, em uma instância Node; não armazena nem usa refresh token. O cookie contém identificador aleatório, HttpOnly, SameSite Strict, sem Domain e, em produção, Secure com prefixo `__Host-`. Em produção, a origem configurada precisa ser HTTPS. O reinício ou troca de processo invalida a sessão; múltiplos processos, serverless e balanceamento não são suportados. A expiração local não revoga automaticamente a sessão Nest: logout tenta revogá-la, e a falha é apresentada como incerta. A implantação requer HTTPS real, isolamento da API e gerenciamento adequado das sessões; esse protótipo não é uma solução distribuída nem está pronto para produção.
+A sessão administrativa é mantida apenas em memória, em uma instância Node, com os limites e a renovação descritos na atualização acima. O cookie contém identificador aleatório, HttpOnly, SameSite Strict, sem Domain e, em produção, Secure com prefixo `__Host-`. Em produção, a origem configurada precisa ser HTTPS. O reinício ou troca de processo invalida a sessão; múltiplos processos, serverless e balanceamento não são suportados. A expiração local não revoga automaticamente a sessão Nest: logout tenta revogá-la, e a falha é apresentada como incerta. A implantação requer HTTPS real, isolamento da API e gerenciamento adequado das sessões.
 
-A fila é buscada no Nest a cada leitura; cada decisão é autorizada novamente pelo Nest. Os formulários mutáveis exigem Origin exata e token CSRF; as respostas privadas usam `no-store`, `noindex`, CSP e conteúdo editorial sanitizado. Não há renovação automática, nem alteração do backend. A configuração de sessão proposta em armazenamento compartilhado na seção seguinte é trabalho futuro, não comportamento atual.
+A fila é buscada no Nest a cada leitura; cada decisão é autorizada novamente pelo Nest. Os formulários mutáveis exigem Origin exata e token CSRF; as respostas privadas usam `no-store`, `noindex`, CSP e conteúdo editorial sanitizado. A configuração de sessão proposta em armazenamento compartilhado na seção seguinte é trabalho futuro.
 
-A mesma sessão e flag também protegem a fila de denúncias pendentes e as decisões de análise. O backend retorna apenas identificadores do artigo ou comentário na listagem; a tela não afirma mostrar o conteúdo denunciado e a decisão não altera esse conteúdo. O teste HTTP simulado cobre acesso, perda de papel, revogação, CSRF e escape de motivo; a integração real e a topologia segura permanecem pendentes.
+A mesma sessão e flag também protegem a fila de denúncias e as decisões de análise. A listagem recebe contexto e responsável em lote; a decisão pode ocultar o conteúdo denunciado na mesma transação. O teste HTTP simulado cobre acesso, perda de papel, revogação, CSRF e escape de motivo. Os testes reais de renovação e de concorrência no PostgreSQL usam dados sintéticos; a topologia distribuída permanece pendente.
 
 Indicadores agregados e gestão de categorias também usam essa sessão. Como a listagem de categorias é pública, a página administrativa consulta antes um endpoint protegido para revalidar ADMIN; cada alteração é autorizada pelo Nest. Somente categorias ativas são listadas, e a criação pode reativar uma categoria desativada. Não há versão ou ETag para impedir edição concorrente. As novas jornadas continuam sob a flag e exigem validação real antes de uso.
 

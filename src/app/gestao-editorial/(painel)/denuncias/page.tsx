@@ -1,5 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
+import Avatar from "@/app/_components/avatar";
 import { AdminFailure, AdminShell } from "../_components/shell";
 import { adminReportsRead, record } from "../_lib/data";
 import {
@@ -55,17 +56,19 @@ export default async function ReportsPage({
   const raw = await searchParams,
     page = one(raw.page) || "1",
     status = one(raw.status) || "PENDING",
-    target = one(raw.target);
+    target = one(raw.target),
+    assignee = one(raw.assignee);
 
   const invalid =
-    [raw.page, raw.status, raw.target].some(Array.isArray) ||
+    [raw.page, raw.status, raw.target, raw.assignee].some(Array.isArray) ||
     !/^[1-9]\d{0,5}$/.test(page) ||
     ![...Object.keys(statuses), "ALL"].includes(status) ||
-    !!(target && !Object.hasOwn(targets, target));
+    !!(target && !Object.hasOwn(targets, target)) || !["", "me", "unassigned"].includes(assignee);
 
   const query = new URLSearchParams();
   if (!invalid && status !== "ALL") query.set("status", status);
   if (!invalid && target) query.set("target", target);
+  if (!invalid && assignee) query.set("assignee", assignee);
   query.set("page", invalid ? "1" : page);
   query.set("limit", invalid ? "1" : "20");
 
@@ -117,12 +120,14 @@ export default async function ReportsPage({
   const href = (n: number) => {
     const p = new URLSearchParams({ page: String(n), status });
     if (target) p.set("target", target);
+    if (assignee) p.set("assignee", assignee);
     return `/gestao-editorial/denuncias?${p}`;
   };
 
   const statusTabHref = (s: string) => {
     const p = new URLSearchParams({ status: s });
     if (target) p.set("target", target);
+    if (assignee) p.set("assignee", assignee);
     return `/gestao-editorial/denuncias?${p}`;
   };
 
@@ -133,6 +138,13 @@ export default async function ReportsPage({
         <h2>Central de denúncias</h2>
         <p>Consulte a situação e abra o contexto antes de registrar uma decisão.</p>
       </div>
+
+      <nav aria-label="Filas de trabalho" style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+        <Link className={styles.btnSecondary} href="/gestao-editorial/denuncias?status=ALL&assignee=me" prefetch={false}>Atribuídas a mim</Link>
+        <Link className={styles.btnSecondary} href="/gestao-editorial/denuncias?status=ALL&assignee=unassigned" prefetch={false}>Sem responsável</Link>
+        <Link className={styles.btnSecondary} href="/gestao-editorial/denuncias?status=IN_REVIEW" prefetch={false}>Em andamento</Link>
+        <Link className={styles.btnSecondary} href="/gestao-editorial/denuncias?status=RESOLVED" prefetch={false}>Resolvidas</Link>
+      </nav>
 
       {/* Tabs Rápidas de Status */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
@@ -182,6 +194,15 @@ export default async function ReportsPage({
             </select>
           </label>
 
+          <label>
+            Responsável
+            <select name="assignee" defaultValue={assignee}>
+              <option value="">Todos</option>
+              <option value="me">Atribuídas a mim</option>
+              <option value="unassigned">Sem responsável</option>
+            </select>
+          </label>
+
           <button type="submit">
             <IconFilter size={15} style={{ verticalAlign: "middle", marginRight: "0.3rem" }} />
             Filtrar
@@ -196,10 +217,11 @@ export default async function ReportsPage({
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Identificador</th>
+                  <th>Conteúdo denunciado</th>
                   <th>Tipo de Alvo</th>
                   <th>Motivo informado</th>
                   <th>Situação</th>
+                  <th>Responsável</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -209,9 +231,9 @@ export default async function ReportsPage({
                   return (
                     <tr key={String(row.id)}>
                       <td>
-                        <span style={{ fontFamily: "monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                          {String(row.id).slice(0, 8)}…{String(row.id).slice(-4)}
-                        </span>
+                        <div>{typeof row.targetLabel === "string" && row.targetLabel ? row.targetLabel : "Conteúdo indisponível"}</div>
+                        {(row.postId || row.commentId) && <div style={{ display: "flex", alignItems: "center", gap: ".35rem", marginTop: ".3rem" }}><Avatar name={typeof row.authorName === "string" ? row.authorName : "Usuário removido"} src={typeof row.authorPhoto === "string" ? row.authorPhoto : null} size={24} /><span>{typeof row.authorName === "string" ? row.authorName : "Usuário removido"}</span></div>}
+                        {row.commentId && <div>{typeof row.postTitle === "string" ? row.postTitle : "Artigo indisponível"}</div>}
                       </td>
                       <td>
                         <span
@@ -245,6 +267,7 @@ export default async function ReportsPage({
                           {statuses[String(row.status)]}
                         </span>
                       </td>
+                      <td>{typeof row.moderatorName === "string" ? row.moderatorName : row.moderatorId ? "Usuário indisponível" : "Sem responsável"}</td>
                       <td>
                         <Link
                           href={`/gestao-editorial/denuncias/${row.id}`}

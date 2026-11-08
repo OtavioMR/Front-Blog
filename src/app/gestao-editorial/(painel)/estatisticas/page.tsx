@@ -1,5 +1,6 @@
 import { AdminFailure, AdminShell } from "../_components/shell";
 import { adminRead, count, record } from "../_lib/data";
+import { eventTitles } from "../_lib/audit-labels";
 import styles from "../admin.module.css";
 
 const date = (value: unknown): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
@@ -138,7 +139,7 @@ export default async function ActivityAnalytics() {
               {value.recentActions.map(row => (
                 <li key={String(row.id)} style={{ marginBottom: "0.4rem" }}>
                   <span className={styles.badgeInReview} style={{ fontSize: "0.75rem" }}>
-                    {String(row.action)}
+                    {eventTitles[String(row.action)] ?? "Evento administrativo registrado"}
                   </span>{" "}
                   ·{" "}
                   <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>

@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { adminActor, cookieName, getSession, upstream, type AdminActorInfo } from "@/lib/admin-security";
+import { adminActor, cookieName, getValidSession, refreshAfterUnauthorized, upstream, type AdminActorInfo } from "@/lib/admin-security";
 
 export type { AdminActorInfo };
 export type AdminResult = { ok: true; value: unknown } | { ok: false; reason: "session" | "forbidden" | "missing" | "unavailable" };
@@ -44,12 +44,18 @@ export async function adminReportHistory(id: string, page: string): Promise<Admi
 // Uma consulta por requisição; o cargo vem sempre da API, nunca do cookie ou do token decodificado.
 export const adminIdentity = cache(async () => {
   if (process.env.ENABLE_ADMIN_BFF !== "true") notFound();
-  const session = getSession((await cookies()).get(cookieName)?.value);
-  return session ? adminActor(session.token) : null;
+  const sessionId = (await cookies()).get(cookieName)?.value;
+  const session = await getValidSession(sessionId);
+  if (!session) return null;
+  const token = session.token;
+  const actor = await adminActor(token);
+  if (actor) return actor;
+  const renewed = await refreshAfterUnauthorized(sessionId, token);
+  return renewed ? adminActor(renewed.token) : null;
 });
 export async function adminSessionExpiry(): Promise<number | null> {
   if (process.env.ENABLE_ADMIN_BFF !== "true") notFound();
-  return getSession((await cookies()).get(cookieName)?.value)?.expires ?? null;
+  return (await getValidSession((await cookies()).get(cookieName)?.value))?.expires ?? null;
 }
 export async function adminCommentsRead(query: URLSearchParams): Promise<AdminResult> {
   return read(`/admin/comments?${query}`);
@@ -71,15 +77,22 @@ export async function adminPostHistory(id: string, page: string): Promise<AdminR
 }
 export async function adminCsrf(): Promise<string | null> {
   if (process.env.ENABLE_ADMIN_BFF !== "true") notFound();
-  return getSession((await cookies()).get(cookieName)?.value)?.csrf ?? null;
+  return (await getValidSession((await cookies()).get(cookieName)?.value))?.csrf ?? null;
 }
 
 async function read(path: string): Promise<AdminResult> {
   if (process.env.ENABLE_ADMIN_BFF !== "true") notFound();
-  const session = getSession((await cookies()).get(cookieName)?.value);
+  const sessionId = (await cookies()).get(cookieName)?.value;
+  let session = await getValidSession(sessionId);
   if (!session) return { ok: false, reason: "session" };
   try {
-    const response = await upstream(path, { headers: { Authorization: `Bearer ${session.token}` } });
+    const rejectedToken = session.token;
+    let response = await upstream(path, { headers: { Authorization: `Bearer ${rejectedToken}` } });
+    if (response.status === 401) {
+      session = await refreshAfterUnauthorized(sessionId, rejectedToken);
+      if (!session) return { ok: false, reason: "session" };
+      response = await upstream(path, { headers: { Authorization: `Bearer ${session.token}` } });
+    }
     if (response.status === 401) return { ok: false, reason: "session" };
     if (response.status === 403) return { ok: false, reason: "forbidden" };
     if (response.status === 404) return { ok: false, reason: "missing" };

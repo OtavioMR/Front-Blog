@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test:public": "node --test tests/public-http.test.mjs tests/public-comments.test.mjs tests/public-replies.test.mjs tests/public-series.test.mjs tests/post-view.test.mjs tests/comment-create.test.mjs tests/comment-manage.test.mjs tests/comment-like.test.mjs tests/interaction.test.mjs tests/related-posts.test.mjs",
     "test:session": "node --test tests/session-client.test.mjs tests/session-profile.test.mjs tests/sessions-data.test.mjs tests/profile-contract.test.mjs tests/password-contract.test.mjs tests/photo-validation.test.mjs tests/saved-posts.test.mjs tests/email-change.test.mjs tests/deactivate-account.test.mjs tests/follow-feed.test.mjs tests/notifications.test.mjs tests/collections-data.test.mjs",
-    "test:theme": "node --test tests/theme-control.test.mjs tests/bg-tone-control.test.mjs",
+    "test:theme": "node --test tests/theme-control.test.mjs tests/bg-tone-control.test.mjs tests/admin-theme-toggle.test.mjs",
     "test:studio": "node --test tests/studio-contract.test.mjs tests/studio-editor.test.mjs tests/studio-remove.test.mjs tests/series-contracts.test.mjs tests/revisions-contracts.test.mjs tests/editorial-feature-flag.test.mjs",
     "test:admin": "node --test tests/admin-security.test.mjs tests/admin-bff-http.test.mjs",
     "test:editorial-e2e": "node --test tests/editorial-e2e.test.mjs",

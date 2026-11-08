@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { adminCsrf, adminIdentity } from "../_lib/data";
+import { adminCsrf, adminIdentity, adminSessionExpiry } from "../_lib/data";
+import { type AdminTheme } from "./admin-theme-toggle";
 import { AdminShellClient, type NavSectionKey } from "./shell-client";
 import styles from "../admin.module.css";
 
@@ -17,11 +19,28 @@ export async function AdminShell({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [identity, csrf] = await Promise.all([adminIdentity(), adminCsrf()]);
+  const [identity, csrf, expires, cookieJar] = await Promise.all([
+    adminIdentity(),
+    adminCsrf(),
+    adminSessionExpiry(),
+    cookies(),
+  ]);
   if (!identity || !csrf) redirect(loginPath);
 
+  const rawTheme = cookieJar.get("admin-theme")?.value;
+  const initialTheme: AdminTheme =
+    rawTheme === "light" || rawTheme === "dark" || rawTheme === "system" ? rawTheme : "system";
+
   return (
-    <AdminShellClient title={title} current={current} identity={identity} csrf={csrf} actions={actions}>
+    <AdminShellClient
+      title={title}
+      current={current}
+      identity={identity}
+      csrf={csrf}
+      expires={expires}
+      actions={actions}
+      initialTheme={initialTheme}
+    >
       {children}
     </AdminShellClient>
   );

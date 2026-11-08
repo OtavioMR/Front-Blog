@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminFailure, AdminShell } from "./_components/shell";
 import { adminRead, count, record } from "./_lib/data";
+import { eventTitles } from "./_lib/audit-labels";
 import {
   IconReports,
   IconReview,
@@ -189,9 +190,9 @@ export default async function AdminOverview() {
                         : "—"}
                     </td>
                     <td>
-                      <span className={styles.badgeInReview}>{String(action.action)}</span>
+                      <span className={styles.badgeInReview}>{eventTitles[String(action.action)] ?? "Evento administrativo registrado"}</span>
                     </td>
-                    <td>{typeof action.actorId === "string" ? action.actorId : "Sistema"}</td>
+                    <td>{typeof action.actorName === "string" ? action.actorName : action.actorId ? "Usuário indisponível" : "Sistema"}</td>
                   </tr>
                 ))}
               </tbody>

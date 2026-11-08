@@ -4,60 +4,131 @@ import { useSyncExternalStore } from "react";
 import { IconMoon, IconSun } from "./icons";
 import styles from "../admin.module.css";
 
-type Theme = "system" | "light" | "dark";
-const eventName = "entrelinhas-theme-change";
+export type AdminTheme = "system" | "light" | "dark";
 
-function getTheme(): Theme {
+export const ADMIN_THEME_STORAGE_KEY = "admin-theme";
+export const ADMIN_THEME_COOKIE_NAME = "admin-theme";
+export const ADMIN_THEME_EVENT = "griforio-admin-theme-change";
+
+export function getAdminTheme(): AdminTheme {
+  if (typeof window === "undefined") return "system";
   try {
-    const value = localStorage.getItem("entrelinhas-theme");
-    return value === "light" || value === "dark" ? value : "system";
-  } catch {
-    return document.documentElement.dataset.theme === "dark" ? "dark" : document.documentElement.dataset.theme === "light" ? "light" : "system";
-  }
+    const value = localStorage.getItem(ADMIN_THEME_STORAGE_KEY);
+    if (value === "light" || value === "dark") return value;
+    if (value === "system") return "system";
+  } catch {}
+
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)admin-theme=(light|dark|system)(?:;|$)/);
+    if (match) return match[1] as AdminTheme;
+  } catch {}
+
+  const ds = typeof document !== "undefined" ? document.documentElement.dataset.theme : undefined;
+  return ds === "dark" ? "dark" : ds === "light" ? "light" : "system";
 }
 
-function subscribe(callback: () => void) {
+export function subscribeAdminTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
   function onStorage(event: StorageEvent) {
-    if (event.key !== "entrelinhas-theme" && event.key !== null) return;
-    const theme = getTheme();
-    if (theme === "system") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = theme;
+    if (event.key !== ADMIN_THEME_STORAGE_KEY && event.key !== null) return;
+    const theme = getAdminTheme();
+    if (theme === "system") {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = theme;
+    }
     callback();
   }
+
+  function onMediaChange() {
+    callback();
+  }
+
   window.addEventListener("storage", onStorage);
-  window.addEventListener(eventName, callback);
+  window.addEventListener(ADMIN_THEME_EVENT, callback);
+
+  let media: MediaQueryList | null = null;
+  try {
+    media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", onMediaChange);
+  } catch {}
+
   return () => {
     window.removeEventListener("storage", onStorage);
-    window.removeEventListener(eventName, callback);
+    window.removeEventListener(ADMIN_THEME_EVENT, callback);
+    try {
+      media?.removeEventListener("change", onMediaChange);
+    } catch {}
   };
 }
 
-function applyTheme(theme: Theme) {
-  if (theme === "system") delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = theme;
+export function applyAdminTheme(theme: AdminTheme) {
+  if (typeof window === "undefined") return;
+
+  if (theme === "system") {
+    delete document.documentElement.dataset.theme;
+  } else {
+    document.documentElement.dataset.theme = theme;
+  }
+
   try {
-    if (theme === "system") localStorage.removeItem("entrelinhas-theme");
-    else localStorage.setItem("entrelinhas-theme", theme);
+    if (theme === "system") {
+      localStorage.removeItem(ADMIN_THEME_STORAGE_KEY);
+    } else {
+      localStorage.setItem(ADMIN_THEME_STORAGE_KEY, theme);
+    }
   } catch {
     // Current tab still applies the theme choice when localStorage is restricted.
   }
-  window.dispatchEvent(new Event(eventName));
+
+  try {
+    const maxAge = 365 * 24 * 60 * 60;
+    const isSecure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${ADMIN_THEME_COOKIE_NAME}=${theme}; path=/gestao-editorial; max-age=${maxAge}; SameSite=Lax${isSecure}`;
+  } catch {}
+
+  window.dispatchEvent(new Event(ADMIN_THEME_EVENT));
 }
 
-export function AdminThemeToggle() {
-  const currentTheme = useSyncExternalStore(subscribe, getTheme, () => "system");
+const emptySubscribe = () => () => {};
+
+export function AdminThemeToggle({ initialTheme = "system" }: { initialTheme?: AdminTheme }) {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const currentTheme = useSyncExternalStore(
+    subscribeAdminTheme,
+    getAdminTheme,
+    () => initialTheme
+  );
 
   function cycleTheme() {
-    if (currentTheme === "dark") applyTheme("light");
-    else if (currentTheme === "light") applyTheme("dark");
-    else {
-      // If system, switch to the opposite of what's currently rendered
-      const isDark = document.documentElement.dataset.theme === "dark" || window.matchMedia("(prefers-color-scheme: dark)").matches;
-      applyTheme(isDark ? "light" : "dark");
+    let isCurrentlyDark: boolean;
+    if (currentTheme === "dark") {
+      isCurrentlyDark = true;
+    } else if (currentTheme === "light") {
+      isCurrentlyDark = false;
+    } else {
+      isCurrentlyDark =
+        document.documentElement.dataset.theme === "dark" ||
+        (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     }
+
+    applyAdminTheme(isCurrentlyDark ? "light" : "dark");
   }
 
-  const isDark = currentTheme === "dark" || (currentTheme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  // Hydration safety:
+  // During SSR and initial hydration pass (!mounted):
+  // We must strictly match what the server rendered:
+  // If initialTheme is "dark", the server rendered dark (isDark = true).
+  // Otherwise, the server rendered isDark = false (Moon icon, "Escuro").
+  // Once mounted === true:
+  // We calculate true isDark, taking system preferences into account.
+  const isDark = mounted
+    ? currentTheme === "dark" ||
+      (currentTheme === "system" &&
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)
+    : initialTheme === "dark";
 
   return (
     <button

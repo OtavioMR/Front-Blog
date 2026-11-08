@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventTitles } from "../../_lib/audit-labels";
 import { AdminFailure, AdminShell } from "../../_components/shell";
 import { adminCommentDetail, adminCommentHistory, adminCommentsRead, adminCsrf, record } from "../../_lib/data";
 import ModerateComment from "../_components/moderate";
@@ -134,14 +135,12 @@ export default async function CommentDetail({
 
             <div style={{ display: "grid", gap: "0.4rem", fontSize: "0.88rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
               <p style={{ margin: 0 }}>
-                <strong>Autor:</strong> <span style={{ fontFamily: "monospace" }}>{detail.authorId}</span>
+                <strong>Autor:</strong> {record(detail.author) && typeof detail.author.name === "string" ? detail.author.name : "Usuário removido"}
               </p>
               <p style={{ margin: 0 }}>
-                <strong>Artigo:</strong> <span style={{ fontFamily: "monospace" }}>{detail.postId}</span>
+                <strong>Artigo:</strong> {record(detail.post) && typeof detail.post.title === "string" ? detail.post.title : "Conteúdo indisponível"}
               </p>
-              <p style={{ margin: 0 }}>
-                <strong>Comentário principal:</strong> {String(detail.rootId || "—")} · <strong>Em resposta a:</strong> {String(detail.replyToId || "—")}
-              </p>
+              {Boolean(detail.rootId || detail.replyToId) && <details><summary>Referências da conversa</summary><p><strong>Comentário principal:</strong> {String(detail.rootId || "—")} · <strong>Em resposta a:</strong> {String(detail.replyToId || "—")}</p></details>}
             </div>
 
             {(detail.isActive || detail.moderationHidden) && (
@@ -164,7 +163,7 @@ export default async function CommentDetail({
                     <Link href={`/gestao-editorial/denuncias/${r.id}`} prefetch={false} style={{ color: "var(--brand)", fontWeight: 600 }}>
                       {r.reason}
                     </Link>{" "}
-                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{r.status}</span> ·{" "}
+                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{({ PENDING: "Aguardando análise", IN_REVIEW: "Em análise", RESOLVED: "Resolvida", DISMISSED: "Improcedente" } as Record<string, string>)[r.status] ?? "Situação indisponível"}</span> ·{" "}
                     {new Date(r.createdAt).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
                   </li>
                 ))}
@@ -186,8 +185,8 @@ export default async function CommentDetail({
                     <span style={{ fontWeight: 600, color: "var(--text)" }}>
                       {new Date(row.createdAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </span>{" "}
-                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{row.action}</span>{" "}
-                    · {row.actorId || "Sistema"}
+                    · <span className={styles.badgeInReview} style={{ fontSize: "0.72rem" }}>{eventTitles[String(row.action)] ?? "Evento administrativo registrado"}</span>{" "}
+                    · {typeof row.actorName === "string" ? row.actorName : row.actorId ? "Usuário indisponível" : "Sistema"}
                     {record(row.details) && text(row.details.reason, 1000) ? ` · ${row.details.reason}` : ""}
                   </li>
                 ))}

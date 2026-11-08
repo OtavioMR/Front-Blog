@@ -9,12 +9,16 @@ export default function ResolveReport({
   targetType,
   currentModeratorId,
   actorId,
+  canRelease,
+  moderators,
   csrf,
 }: {
   id: string;
   targetType: "POST" | "COMMENT" | "USER" | null;
   currentModeratorId?: string | null;
   actorId?: string;
+  canRelease?: boolean;
+  moderators: { id: string; name: string }[];
   csrf: string;
 }) {
   const router = useRouter(), busy = useRef(false);
@@ -24,21 +28,22 @@ export default function ResolveReport({
   const [pending, setPending] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState("");
+  const [nextModerator, setNextModerator] = useState("");
 
-  async function handleAssign() {
+  async function handleAssign(release = false, moderatorId = "") {
     if (busy.current || uncertain) return;
     busy.current = true;
     setPending(true);
     setMessage("");
     try {
-      const body = new URLSearchParams({ csrf, ...(actorId ? { moderatorId: actorId } : {}) });
+      const body = new URLSearchParams({ csrf, ...(release ? { release: "true" } : moderatorId ? { moderatorId } : {}) });
       const res = await fetch(`/gestao-editorial/denuncias/${id}/atribuir`, { method: "POST", body, cache: "no-store" });
       if (res.ok) {
-        setMessage("Denúncia atribuída com sucesso.");
+        setMessage(release ? "Análise devolvida à fila." : "Denúncia atribuída com sucesso.");
         router.refresh();
       } else if (res.status === 401) setMessage("Sessão expirada. Entre novamente.");
       else if (res.status === 403) setMessage("Sem permissão para atribuir esta denúncia.");
-      else if (res.status === 409) setMessage("A denúncia já foi concluída.");
+      else if (res.status === 409) setMessage("A denúncia já foi concluída ou assumida por outro moderador. Atualize a página.");
       else setMessage("Não foi possível atribuir a denúncia.");
     } catch {
       setUncertain(true);
@@ -103,8 +108,8 @@ export default function ResolveReport({
       <div style={{ marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
         <button
           type="button"
-          onClick={handleAssign}
-          disabled={pending || uncertain}
+          onClick={() => handleAssign()}
+          disabled={pending || uncertain || Boolean(currentModeratorId)}
           className={styles.btnSecondary}
           style={{ padding: "0.45rem 0.85rem", fontSize: "0.82rem" }}
         >
@@ -113,15 +118,18 @@ export default function ResolveReport({
             : isAssignedToMe
               ? "Atribuída a você"
               : currentModeratorId
-                ? "Reatribuir a mim"
-                : "Assumir denúncia"}
+                ? "Já atribuída"
+                : "Assumir análise"}
         </button>
-        {currentModeratorId && (
-          <span style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>
-            Moderador atual: {isAssignedToMe ? "Você" : currentModeratorId}
-          </span>
-        )}
+        {currentModeratorId && (isAssignedToMe || canRelease) && <button type="button" className={styles.btnSecondary} disabled={pending || uncertain} onClick={() => handleAssign(true)}>Liberar análise</button>}
       </div>
+      {moderators.some(person => person.id !== currentModeratorId && person.id !== actorId) && <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+        <label>Encaminhar para outro administrador <select value={nextModerator} onChange={event => setNextModerator(event.target.value)} disabled={pending || uncertain}>
+          <option value="">Selecione</option>
+          {moderators.filter(person => person.id !== currentModeratorId && person.id !== actorId).map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+        </select></label>
+        <button type="button" className={styles.btnSecondary} disabled={!nextModerator || pending || uncertain} onClick={() => { if (window.confirm("Encaminhar esta análise ao administrador selecionado?")) void handleAssign(false, nextModerator); }}>Encaminhar análise</button>
+      </div>}
 
       <form className={styles.moderate} onSubmit={submit}>
         <label>
