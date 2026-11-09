@@ -3,7 +3,6 @@ import Form from "next/form";
 import type { Metadata } from "next";
 import Image from "next/image";
 import styles from "./home.module.css";
-import { NewsletterForm } from "./newsletter-form";
 
 type ArticleSummary = {
   id: string;
@@ -216,7 +215,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
             </nav>
           )}
         </section>
-        <NewsletterForm />
       </div>
     </main>
   );

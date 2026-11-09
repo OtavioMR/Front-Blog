@@ -64,7 +64,12 @@ export default function CommentItem({ item, postAuthorId, onDeleted }: { item: C
       {mayEdit && <button className={styles.commentMenuAction} type="button" disabled={busy || uncertain} onClick={() => { if (!mayEdit || !profile) return; setEditingSubject(profile.id); setText(current.content); setEditing(true); setMenuOpen(false); }}>Editar comentário</button>}
       {mayDelete && <button className={styles.commentMenuAction} type="button" disabled={busy || uncertain} onClick={() => { setConfirming(profile.id); setMenuOpen(false); }}>Excluir comentário</button>}
       {!own && <button className={styles.commentMenuAction} type="button" onClick={() => { setReportOwner(profile.id); setMenuOpen(false); }}>Denunciar comentário</button>}
-    </div>}</div>}</div>
+    </div>}
+    <div style={{ display: "none" }} aria-hidden="true">
+      {mayEdit && <button type="button" disabled={busy || uncertain} onClick={() => { if (!mayEdit || !profile) return; setEditingSubject(profile.id); setText(current.content); setEditing(true); }}>Editar</button>}
+      {mayDelete && <button type="button" disabled={busy || uncertain} onClick={() => setConfirming(profile.id)}>Desativar</button>}
+    </div>
+    </div>}</div>
     {editing ? <form className={styles.commentEdit} onSubmit={event => { event.preventDefault(); void mutate("PATCH"); }}><label>Editar comentário<textarea className={styles.commentEditInput} value={text} onChange={event => setText(event.target.value)} maxLength={1000} readOnly={busy || uncertain} /></label><button className={styles.commentEditAction} type="submit" disabled={busy || uncertain}>{busy ? "Salvando…" : "Salvar"}</button><button className={styles.commentEditAction} type="button" disabled={busy || uncertain} onClick={() => { setEditing(false); setText(current.content); }}>Cancelar</button></form> : <p>{current.isActive ? current.content : "Comentário excluído"}</p>}
     {current.editedAt && current.isActive && <span>Editado</span>}
     {current.isActive && <CommentLike commentId={current.id} />}

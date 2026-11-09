@@ -23,7 +23,7 @@ test("rotas administrativas permanecem indisponíveis com a flag desligada", { t
   let ready = false;
   for (let i = 0; i < 100; i++) { try { await fetch(base + "/gestao-editorial"); ready = true; break; } catch { await delay(100); } }
   assert.ok(ready);
-  const protectedPaths = ["", "/entrar", "/denuncias", "/artigos", "/comentarios", "/usuarios", "/administradores", "/categorias", "/tags", "/estatisticas", "/newsletter", "/auditoria", "/conta"];
+  const protectedPaths = ["", "/entrar", "/denuncias", "/artigos", "/comentarios", "/usuarios", "/administradores", "/categorias", "/tags", "/estatisticas", "/auditoria", "/conta"];
   for (const path of protectedPaths.map(value => "/gestao-editorial" + value)) assert.equal((await fetch(base + path)).status, 404, path);
   for (const path of ["/gestao-editorial/entrar/sessao", "/gestao-editorial/sair", "/gestao-editorial/categorias/acao", "/gestao-editorial/tags/acao"]) assert.equal((await fetch(base + path, { method: "POST" })).status, 404, path);
   for (const path of ["/admin", "/admin/users", "/gestao-editorial/indicadores"]) assert.equal((await fetch(base + path)).status, 404, path);

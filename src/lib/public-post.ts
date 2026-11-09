@@ -4,9 +4,13 @@ export type PublicPost = {
   id: string;
   slug: string;
   title: string;
-  content: string;
+  content: string | null;
   excerpt: string;
   coverImage: string | null;
+  contentRating?: string;
+  aiTextDeclaration?: string;
+  aiCoverDeclaration?: string;
+  isRestricted?: boolean;
   publishedAt: string | null;
   updatedAt?: string;
   readingTimeMinutes: number;
@@ -20,7 +24,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parsePost(value: unknown): PublicPost {
   if (!isRecord(value) || typeof value.id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.id) || typeof value.slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug) ||
-      typeof value.title !== "string" || typeof value.content !== "string" || typeof value.excerpt !== "string" ||
+      typeof value.title !== "string" || !(value.content === null || typeof value.content === "string") || typeof value.excerpt !== "string" ||
       value.published !== true || value.isActive !== true ||
       !(value.coverImage === null || typeof value.coverImage === "string") ||
       !(value.publishedAt === null || (typeof value.publishedAt === "string" && !Number.isNaN(Date.parse(value.publishedAt)))) ||
@@ -48,7 +52,11 @@ export const getPublicPost = cache(async (slug: string): Promise<PublicPost | nu
 });
 
 export function publicCoverPath(path: string | null): string | null {
-  return path && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(path) ? path : null;
+  if (!path) return null;
+  if (/^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(path)) return path;
+  if (/^https:\/\/[a-z0-9.-]+\.public\.blob\.vercel-storage\.com\/post-covers\/[a-z0-9-]+\.webp$/i.test(path)) return path;
+  if (/^https:\/\/[a-z0-9.-]+\/post-covers\/[a-z0-9-]+\.webp$/i.test(path)) return path;
+  return null;
 }
 
 export function publicAuthorPath(id?: string): string | null {

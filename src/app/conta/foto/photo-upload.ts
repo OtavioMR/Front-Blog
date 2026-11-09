@@ -20,7 +20,7 @@ export async function uploadPhoto(subject: string, file: File, send: FetchForSub
     if (response.status === 400 || response.status === 413 || response.status === 429) return { kind: "invalid", message: response.status === 413 ? "A imagem excede o limite de 5 MiB." : response.status === 429 ? "Aguarde antes de tentar novamente." : "Envie uma imagem JPEG, PNG ou WebP válida." };
     if (!response.ok) return { kind: "uncertain" };
     const result: unknown = await response.json();
-    if (!result || typeof result !== "object" || !("id" in result) || result.id !== subject || !("profilePhoto" in result) || typeof result.profilePhoto !== "string" || !/^\/uploads\/profile-photos\/[0-9a-f-]+\.webp$/i.test(result.profilePhoto)) return { kind: "uncertain" };
+    if (!result || typeof result !== "object" || !("id" in result) || result.id !== subject || !("profilePhoto" in result) || typeof result.profilePhoto !== "string" || !(/^\/uploads\/profile-photos\/[0-9a-f-]+\.webp$/i.test(result.profilePhoto) || /^https:\/\/[a-z0-9.-]+\/(?:profile-photos\/)?[0-9a-f-]+\.webp$/i.test(result.profilePhoto))) return { kind: "uncertain" };
     return { kind: "success", profilePhoto: result.profilePhoto };
   } catch { return { kind: "uncertain" }; }
 }

@@ -64,7 +64,22 @@ export async function login(email: string, password: string, totpCode?: string):
       restoreState(previousState);
       token = previousToken;
       if (response.status === 401) throw new Error("Credenciais inválidas ou conta ainda não confirmada. Confira seus dados e o código, se necessário.");
-      if (response.status === 403) throw new Error("Esta conta não pode entrar no momento.");
+      if (response.status === 403) {
+        let msg = "Esta conta não pode entrar no momento.";
+        try {
+          const err = await response.json();
+          if (err && typeof err === "object") {
+            const reason = "reason" in err && typeof err.reason === "string" ? err.reason : "";
+            const endsAt = "endsAt" in err && typeof err.endsAt === "string" ? err.endsAt : "";
+            if (reason || endsAt) {
+              msg = `Conta suspensa. ${reason ? `Motivo: ${reason}. ` : ""}${endsAt ? `Término: ${endsAt}. ` : ""}Acesse a página de contato para solicitar recurso.`;
+            } else if ("message" in err && typeof err.message === "string") {
+              msg = err.message;
+            }
+          }
+        } catch { /* use default msg */ }
+        throw new Error(msg);
+      }
       if (response.status === 429) throw new Error("Muitas tentativas. Aguarde um pouco e tente novamente.");
       throw new Error("Confira os dados informados e tente novamente.");
     }

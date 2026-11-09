@@ -30,6 +30,15 @@ export default function Footer() {
               <Link href="/tags">Tags</Link>
               <Link href="/configuracoes">Aparência</Link>
             </div>
+            <div>
+              <p className={styles.heading}>Transparência & Legal</p>
+              <Link href="/termos">Termos de Uso</Link>
+              <Link href="/privacidade">Privacidade</Link>
+              <Link href="/diretrizes">Diretrizes</Link>
+              <Link href="/diretrizes/ia">Uso de IA</Link>
+              <Link href="/diretrizes/classificacao">Classificação Etária</Link>
+              <Link href="/contato">Contato</Link>
+            </div>
           </nav>
         </div>
         <div className={styles.bottom}>

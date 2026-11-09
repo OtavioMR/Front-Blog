@@ -168,11 +168,17 @@ export function safeExternalUrl(value: string | null): string | null {
 }
 
 export function photoPath(value: string | null): string | null {
-  return value && /^\/uploads\/profile-photos\/[0-9a-f-]+\.(webp|png|jpe?g)$/i.test(value) ? value : null;
+  if (!value) return null;
+  if (/^\/uploads\/profile-photos\/[0-9a-f-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
+  if (/^https:\/\/[a-z0-9.-]+\/(?:profile-photos\/)?[0-9a-f-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
+  return null;
 }
 
 export function coverPath(value: string | null | undefined): string | null {
-  return value && /^\/uploads\/post-covers\/[a-z0-9-]+\.(webp|png|jpe?g)$/i.test(value) ? value : null;
+  if (!value) return null;
+  if (/^\/uploads\/post-covers\/[a-z0-9-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
+  if (/^https:\/\/[a-z0-9.-]+\/(?:post-covers\/)?[a-z0-9-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
+  return null;
 }
 
 export function formatDate(value: string | null | undefined): string | null {

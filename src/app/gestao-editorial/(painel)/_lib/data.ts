@@ -7,7 +7,7 @@ import { adminActor, cookieName, getValidSession, refreshAfterUnauthorized, upst
 export type { AdminActorInfo };
 export type AdminResult = { ok: true; value: unknown } | { ok: false; reason: "session" | "forbidden" | "missing" | "unavailable" };
 
-export async function adminRead(path: "/admin/analytics/overview" | "/admin/analytics/newsletter" | "/admin/analytics/activity"): Promise<AdminResult> {
+export async function adminRead(path: "/admin/analytics/overview" | "/admin/analytics/activity"): Promise<AdminResult> {
   return read(path);
 }
 

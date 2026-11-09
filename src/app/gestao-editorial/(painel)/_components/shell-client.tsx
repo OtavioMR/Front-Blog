@@ -15,7 +15,6 @@ import {
   IconUsers,
   IconCategories,
   IconTags,
-  IconNewsletter,
   IconAudit,
   IconSettings,
   IconArrowUpRight,
@@ -31,7 +30,6 @@ export type NavSectionKey =
   | "admins"
   | "account"
   | "overview"
-  | "newsletter"
   | "analytics"
   | "audit"
   | "reports"
@@ -273,15 +271,6 @@ export function AdminShellClient({
 
           <div className={styles.navGroup}>
             <span className={styles.navGroupHeading}>Sistema & Auditoria</span>
-            <Link
-              href="/gestao-editorial/newsletter"
-              prefetch={false}
-              className={styles.navLink}
-              aria-current={current === "newsletter" ? "page" : undefined}
-            >
-              <IconNewsletter size={18} />
-              <span>Newsletter</span>
-            </Link>
             <Link
               href="/gestao-editorial/auditoria"
               prefetch={false}

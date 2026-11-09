@@ -45,9 +45,26 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
     if ((mode === "register" || mode === "reset") && (new TextEncoder().encode(password).length > 72 || password !== get("passwordConfirmation"))) {
       setMessage("As senhas devem coincidir e ter no máximo 72 bytes em UTF-8."); return;
     }
+    const birthDate = get("birthDate");
+    if (mode === "register") {
+      if (!birthDate) {
+        setMessage("Informe sua data de nascimento."); return;
+      }
+      const dob = new Date(birthDate);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      if (age < 18) {
+        setMessage("O cadastro no Grifório é atualmente restrito a maiores de 18 anos completos."); return;
+      }
+      if (!data.get("acceptedTerms")) {
+        setMessage("É necessário aceitar os Termos de Uso e a Política de Privacidade para criar uma conta."); return;
+      }
+    }
     if (mode === "confirm" && !/^[a-f0-9]{64}$/.test(token.trim())) { setMessage("Informe o código hexadecimal completo recebido por e-mail."); return; }
     if (mode === "reset" && !token.trim()) { setMessage("O código de recuperação está ausente. Solicite um novo link."); return; }
-    const payload = mode === "register" ? { name: get("name").trim(), email: get("email").trim(), password }
+    const payload = mode === "register" ? { name: get("name").trim(), email: get("email").trim(), password, birthDate, acceptedTerms: true, termsVersion: "1.0.0" }
       : mode === "confirm" ? { token: token.trim() }
       : mode === "reset" ? { token: token.trim(), newPassword: password }
       : { email: get("email").trim() };
@@ -56,8 +73,10 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
       const endpoint = mode === "confirm" && emailChange ? "/users/confirm-email-change" : config[mode].endpoint;
       const response = await fetch(`/api/v1${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload), cache: "no-store", credentials: "omit" });
       if (!response.ok) {
+        const json = await response.json().catch(() => null);
         if (response.status === 429) setMessage("Muitas tentativas. Aguarde um pouco e tente novamente.");
         else if (response.status === 409 && mode === "register") setMessage("Não foi possível criar a conta com esse e-mail. Verifique os dados ou recupere sua senha.");
+        else if (json?.message) setMessage(Array.isArray(json.message) ? json.message.join(", ") : json.message);
         else if (response.status === 400 && (mode === "confirm" || mode === "reset")) setMessage("Código inválido ou expirado. Solicite um novo e tente novamente.");
         else if (response.status === 400) setMessage("Confira os dados informados e tente novamente.");
         else setMessage("Não foi possível concluir agora. Tente novamente em instantes.");
@@ -73,10 +92,21 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
   return <main className={styles.page}><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{emailChange && mode === "confirm" ? "Confirme seu novo e-mail." : info.title}</h1><p className={styles.description}>{emailChange && mode === "confirm" ? "Confirme o código enviado ao novo endereço. Ele é válido por 30 minutos." : info.description}</p>
     {message && <p className={styles.message} role={success ? "status" : "alert"}>{message}</p>}
     {!success && <form className={styles.form} method="post" onSubmit={submit}>
-      {mode === "register" && <label className={styles.field}>Nome<input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>}
+      {mode === "register" && (
+        <>
+          <label className={styles.field}>Nome<input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>
+          <label className={styles.field}>Data de nascimento<input name="birthDate" type="date" aria-describedby="birthdate-hint" required /><span className={styles.hint} id="birthdate-hint">O cadastro no lançamento é restrito a maiores de 18 anos completos.</span></label>
+        </>
+      )}
       {(mode === "register" || mode === "resend" || mode === "forgot") && <label className={styles.field}>E-mail<input name="email" type="email" autoComplete="email" maxLength={255} required /></label>}
       {mode === "confirm" && <label className={styles.field}>Código de confirmação<input value={token} onChange={event => setToken(event.target.value)} autoComplete="off" spellCheck={false} maxLength={64} required /></label>}
       {(mode === "register" || mode === "reset") && <><label className={styles.field}>Senha<input name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} aria-describedby="password-hint" required /><span className={styles.hint} id="password-hint">Pelo menos 8 caracteres e até 72 bytes em UTF-8.</span></label><label className={styles.field}>Confirme a senha<input name="passwordConfirmation" type="password" autoComplete="new-password" minLength={8} maxLength={72} required /></label></>}
+      {mode === "register" && (
+        <label className={styles.checkboxField}>
+          <input name="acceptedTerms" type="checkbox" required />
+          <span>Declaro ter 18 anos ou mais e aceito os <Link href="/termos" target="_blank">Termos de Uso</Link> e a <Link href="/privacidade" target="_blank">Política de Privacidade</Link>.</span>
+        </label>
+      )}
       <button type="submit" disabled={busy}>{busy ? "Enviando…" : info.button}</button>
     </form>}
     <nav className={styles.links} aria-label="Ajuda com a conta"><Link href="/entrar">Entrar</Link>{mode !== "confirm" && <Link href="/confirmar-email">Confirmar e-mail</Link>}{mode !== "resend" && <Link href="/reenviar-verificacao">Reenviar código</Link>}{mode !== "forgot" && <Link href="/recuperar-senha">Recuperar senha</Link>}</nav>

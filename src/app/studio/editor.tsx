@@ -48,7 +48,20 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const [excerpt, setExcerpt] = useState("");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [tags, setTags] = useState("");
-  const [saved, setSaved] = useState({ title: "", content: "", excerpt: "", categoryIds: [] as string[], tags: [] as string[] });
+  const [contentRating, setContentRating] = useState("LIVRE");
+  const [aiTextDeclaration, setAiTextDeclaration] = useState("HUMAN_ONLY");
+  const [aiCoverDeclaration, setAiCoverDeclaration] = useState("NONE");
+  const [copyrightConfirmed, setCopyrightConfirmed] = useState(true);
+  const [saved, setSaved] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    categoryIds: [] as string[],
+    tags: [] as string[],
+    contentRating: "LIVRE",
+    aiTextDeclaration: "HUMAN_ONLY",
+    aiCoverDeclaration: "NONE",
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [cover, setCover] = useState<string | null>(null);
   const [confirmSave, setConfirmSave] = useState(false);
@@ -82,6 +95,9 @@ export default function Editor({ initialId }: { initialId?: string }) {
     title !== saved.title ||
     content !== saved.content ||
     excerpt !== saved.excerpt ||
+    contentRating !== saved.contentRating ||
+    aiTextDeclaration !== saved.aiTextDeclaration ||
+    aiCoverDeclaration !== saved.aiCoverDeclaration ||
     !sameList(categoryIds, saved.categoryIds) ||
     !sameList(parsedCurrentTags, saved.tags);
 
@@ -114,12 +130,18 @@ export default function Editor({ initialId }: { initialId?: string }) {
     const tagList = extractTagNames(draft.tags);
     setCategoryIds(catIds);
     setTags(tagList.join(", "));
+    setContentRating(draft.contentRating || "LIVRE");
+    setAiTextDeclaration(draft.aiTextDeclaration || "HUMAN_ONLY");
+    setAiCoverDeclaration(draft.aiCoverDeclaration || (draft.coverImage ? "HUMAN_OR_PHOTO" : "NONE"));
     setSaved({
       title: draft.title,
       content: draft.content,
       excerpt: draft.excerpt ?? "",
       categoryIds: catIds,
       tags: tagList,
+      contentRating: draft.contentRating || "LIVRE",
+      aiTextDeclaration: draft.aiTextDeclaration || "HUMAN_ONLY",
+      aiCoverDeclaration: draft.aiCoverDeclaration || (draft.coverImage ? "HUMAN_OR_PHOTO" : "NONE"),
     });
     setStatus(draft.reviewStatus || "DRAFT");
     setScheduledAt(draft.scheduledAt || null);
@@ -257,6 +279,14 @@ export default function Editor({ initialId }: { initialId?: string }) {
       valid = false;
     }
 
+    if (!copyrightConfirmed) {
+      setFeedback({
+        type: "error",
+        text: "É necessário confirmar que você possui os direitos autorais ou autorização para publicar este conteúdo.",
+      });
+      valid = false;
+    }
+
     return valid;
   }
 
@@ -278,6 +308,14 @@ export default function Editor({ initialId }: { initialId?: string }) {
       return;
     }
 
+    if (!copyrightConfirmed) {
+      setFeedback({
+        type: "error",
+        text: "É obrigatório confirmar a titularidade de direitos autorais para salvar a publicação.",
+      });
+      return;
+    }
+
     const operation = ++revision.current;
     running.current = true;
     setBusy(true);
@@ -291,6 +329,10 @@ export default function Editor({ initialId }: { initialId?: string }) {
         ...(excerpt.trim() !== saved.excerpt.trim() ? { excerpt: excerpt.trim() } : {}),
         categoryIds,
         tagNames: parsedCurrentTags,
+        contentRating,
+        aiTextDeclaration,
+        aiCoverDeclaration,
+        authorCopyrightConfirmed: copyrightConfirmed,
       };
 
       const response = await authenticatedFetchForSubject(
@@ -382,7 +424,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
       const value: unknown = await response.json();
       if (!value || typeof value !== "object" || !("coverImage" in value)) throw new Error();
       const next = value.coverImage;
-      if (next !== null && (typeof next !== "string" || !/^\/uploads\/post-covers\/[0-9a-f-]+\.webp$/i.test(next))) throw new Error();
+      if (next !== null && (typeof next !== "string" || !(/^\/uploads\/post-covers\/[0-9a-f-]+\.webp$/i.test(next) || /^https:\/\/[a-z0-9.-]+\/post-covers\/[0-9a-f-]+\.webp$/i.test(next)))) throw new Error();
       if ((file && next === null) || (!file && next !== null)) throw new Error();
       return next;
     } finally { setCoverBusy(false); }
@@ -397,6 +439,11 @@ export default function Editor({ initialId }: { initialId?: string }) {
       const nextCover = await changeCover(id, file);
       if (operation !== revision.current) return;
       setCover(nextCover);
+      if (nextCover && aiCoverDeclaration === "NONE") {
+        setAiCoverDeclaration("HUMAN_OR_PHOTO");
+      } else if (!nextCover) {
+        setAiCoverDeclaration("NONE");
+      }
       setFeedback({ type: "success", text: file ? "Capa atualizada com sucesso." : "Capa removida com sucesso." });
     } catch {
       if (operation === revision.current) {
@@ -830,6 +877,104 @@ export default function Editor({ initialId }: { initialId?: string }) {
                   )}
                 </>
               )}
+            </section>
+
+            {/* Governance & Rating Card */}
+            <section className={styles.sideCard} aria-labelledby="governance-card-title">
+              <h2 id="governance-card-title">Classificação & IA</h2>
+              
+              <div>
+                <label htmlFor="content-rating-select" className={styles.fieldLabel}>
+                  Classificação indicativa
+                </label>
+                <select
+                  id="content-rating-select"
+                  className={styles.selectInput}
+                  value={contentRating}
+                  disabled={isReadOnly}
+                  onChange={event => {
+                    setContentRating(event.target.value);
+                    setConfirmSubmit(false);
+                  }}
+                >
+                  <option value="LIVRE">LIVRE — Todas as idades</option>
+                  <option value="10+">10+ — Não recomendado para menores de 10 anos</option>
+                  <option value="12+">12+ — Não recomendado para menores de 12 anos</option>
+                  <option value="14+">14+ — Não recomendado para menores de 14 anos</option>
+                  <option value="16+">16+ — Não recomendado para menores de 16 anos</option>
+                  <option value="18+">18+ — Restrito a maiores de 18 anos</option>
+                </select>
+                <p className={styles.cardHint} style={{ marginTop: "4px" }}>
+                  <a href="/diretrizes/classificacao" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>
+                    Critérios de classificação indicativa
+                  </a>
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="ai-text-select" className={styles.fieldLabel}>
+                  Uso de Inteligência Artificial no texto
+                </label>
+                <select
+                  id="ai-text-select"
+                  className={styles.selectInput}
+                  value={aiTextDeclaration}
+                  disabled={isReadOnly}
+                  onChange={event => {
+                    setAiTextDeclaration(event.target.value);
+                    setConfirmSubmit(false);
+                  }}
+                >
+                  <option value="HUMAN_ONLY">Texto autoral humano (sem uso substancial de IA)</option>
+                  <option value="HUMAN_WITH_AI">Humano com auxílio de IA (assistência gramatical/ideias)</option>
+                  <option value="PARTIAL_AI">Parcialmente gerado por IA (trechos substantivos)</option>
+                  <option value="FULL_AI">Integralmente gerado por IA</option>
+                </select>
+                <p className={styles.cardHint} style={{ marginTop: "4px" }}>
+                  <a href="/diretrizes/ia" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>
+                    Diretrizes de transparência de IA
+                  </a>
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="ai-cover-select" className={styles.fieldLabel}>
+                  Origem da imagem de capa
+                </label>
+                <select
+                  id="ai-cover-select"
+                  className={styles.selectInput}
+                  value={aiCoverDeclaration}
+                  disabled={isReadOnly}
+                  onChange={event => {
+                    setAiCoverDeclaration(event.target.value);
+                    setConfirmSubmit(false);
+                  }}
+                >
+                  <option value="NONE">Sem capa</option>
+                  <option value="HUMAN_OR_PHOTO">Imagem humana ou fotografia</option>
+                  <option value="AI_GENERATED">Imagem gerada por IA</option>
+                  <option value="HYBRID">Híbrida (elementos humanos e IA)</option>
+                </select>
+              </div>
+
+              <div style={{ paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+                <label className={styles.checkOption} style={{ alignItems: "flex-start", gap: "8px" }}>
+                  <input
+                    type="checkbox"
+                    checked={copyrightConfirmed}
+                    disabled={isReadOnly}
+                    onChange={event => {
+                      setCopyrightConfirmed(event.target.checked);
+                      setConfirmSubmit(false);
+                    }}
+                    style={{ marginTop: "3px" }}
+                  />
+                  <span style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                    Declaro que detenho os direitos autorais ou licença legal de publicação para este texto e mídias associadas (Lei 9.610/98).
+                  </span>
+                </label>
+              </div>
             </section>
 
             {/* Categories Card */}

@@ -17,6 +17,7 @@ import EditArticleLink from "./edit-article-link";
 import { PostReport } from "./report-form";
 import Avatar from "@/app/_components/avatar";
 import BackButton from "@/app/_components/back-button";
+import RestrictedPostUnlocker from "./restricted-post";
 import { getAuthor } from "../../autores/[id]/data";
 import styles from "./post.module.css";
 
@@ -48,7 +49,7 @@ export default async function PostPage({ params, searchParams }: Props) {
     getPublicSeries(post.id, post.slug),
   ]);
 
-  const content = sanitizeHtml(post.content, {
+  const content = sanitizeHtml(post.content ?? "", {
     allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"],
     allowedAttributes: { a: ["href", "title"] },
     allowedSchemes: ["http", "https", "mailto"],
@@ -62,6 +63,27 @@ export default async function PostPage({ params, searchParams }: Props) {
 
   const fmt = (value: string) => new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(value));
   const updated = post.updatedAt && post.publishedAt && Date.parse(post.updatedAt) - Date.parse(post.publishedAt) > 3_600_000 ? fmt(post.updatedAt) : null;
+
+  const ratingColors: Record<string, string> = {
+    LIVRE: "#2E7D32",
+    "10+": "#0288D1",
+    "12+": "#FBC02D",
+    "14+": "#F57C00",
+    "16+": "#D32F2F",
+    "18+": "#212121",
+  };
+
+  const aiTextLabels: Record<string, string> = {
+    HUMAN_WITH_AI: "Texto com auxílio de IA (declaração do autor)",
+    PARTIAL_AI: "Texto parcialmente gerado por IA (declaração do autor)",
+    FULL_AI: "Texto gerado por IA (declaração do autor)",
+  };
+
+  const aiCoverLabels: Record<string, string> = {
+    AI_GENERATED: "Capa gerada por IA (declaração do autor)",
+    HYBRID: "Capa híbrida com IA (declaração do autor)",
+  };
+
   return (
     <main className={styles.page}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
@@ -71,6 +93,26 @@ export default async function PostPage({ params, searchParams }: Props) {
         <div className={styles.category}>{post.categories.map(category => category.name).join(" · ") || "BOAS HISTÓRIAS"}</div>
         <h1>{post.title}</h1>
         {post.excerpt && <p className={styles.excerpt}>{post.excerpt}</p>}
+        <div className={styles.governanceBadges}>
+          <Link
+            href="/diretrizes/classificacao"
+            className={styles.ratingBadge}
+            style={{ backgroundColor: ratingColors[post.contentRating ?? "LIVRE"] ?? "#2E7D32" }}
+            title="Classificação indicativa da obra (clique para entender os critérios)"
+          >
+            {post.contentRating ?? "LIVRE"}
+          </Link>
+          {post.aiTextDeclaration && aiTextLabels[post.aiTextDeclaration] && (
+            <Link href="/diretrizes/ia" className={styles.aiBadge} title="Política de Transparência de IA">
+              <span aria-hidden="true">🤖</span> {aiTextLabels[post.aiTextDeclaration]}
+            </Link>
+          )}
+          {post.aiCoverDeclaration && aiCoverLabels[post.aiCoverDeclaration] && (
+            <Link href="/diretrizes/ia" className={styles.aiBadge} title="Política de Transparência de IA">
+              <span aria-hidden="true">🎨</span> {aiCoverLabels[post.aiCoverDeclaration]}
+            </Link>
+          )}
+        </div>
         <div className={styles.byline}>
           {post.author?.name && <Avatar name={post.author.name} src={authorProfile?.profilePhoto} size={52} />}
           <div className={styles.bylineText}>
@@ -79,8 +121,32 @@ export default async function PostPage({ params, searchParams }: Props) {
           </div>
           <EditArticleLink postId={post.id} authorId={post.author?.id} />
         </div>
-        {cover && <div className={styles.cover}><Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized /><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
-        <div className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
+        {post.isRestricted ? (
+          <RestrictedPostUnlocker
+            slug={post.slug}
+            fallback={
+              <div className={styles.restrictedWarning}>
+                <h2>Conteúdo Restrito (18+)</h2>
+                <p>
+                  Esta publicação possui classificação indicativa 18+. O acesso ao conteúdo integral e à imagem de capa é reservado a maiores de idade autenticados.
+                </p>
+                <div className={styles.restrictedButtons}>
+                  <Link href="/entrar" className={styles.restrictedBtnPrimary}>
+                    Entrar na minha conta
+                  </Link>
+                  <Link href="/criar-conta" className={styles.restrictedBtnSecondary}>
+                    Criar conta (18+)
+                  </Link>
+                </div>
+              </div>
+            }
+          />
+        ) : (
+          <>
+            {cover && <div className={styles.cover}><Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized /><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
+            <div className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
+          </>
+        )}
         {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
         <PostReport postId={post.id} />

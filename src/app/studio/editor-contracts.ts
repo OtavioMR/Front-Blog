@@ -12,6 +12,9 @@ export type Draft = {
   scheduledAt: string | null;
   slug?: string | null;
   coverImage?: string | null;
+  contentRating?: string;
+  aiTextDeclaration?: string;
+  aiCoverDeclaration?: string;
   categories?: { id: string; name?: string; slug?: string }[];
   tags?: { id?: string; name: string; slug?: string }[];
 };

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./avatar.module.css";
 
-const PHOTO = /^\/uploads\/profile-photos\/[0-9a-f-]+\.(?:webp|png|jpe?g)$/i;
+const PHOTO = /^(\/uploads\/profile-photos\/[0-9a-f-]+\.(?:webp|png|jpe?g)|https:\/\/[a-z0-9.-]+\/(?:profile-photos\/)?[0-9a-f-]+\.(?:webp|png|jpe?g))$/i;
 
 export function initialsOf(name?: string | null): string {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean);

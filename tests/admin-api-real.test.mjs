@@ -76,7 +76,7 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
     if (authorized) {
       const sessionCookie = panelLogin.headers.getSetCookie().find(value => value.startsWith("__Host-editorial-session="))?.split(";")[0];
       assert.ok(sessionCookie);
-      for (const [path, label] of [["/gestao-editorial", "O Grifório em números"], ["/gestao-editorial/usuarios", "Contas da plataforma"], ["/gestao-editorial/comentarios", "Comentários"], ["/gestao-editorial/artigos", "Artigos da plataforma"], ["/gestao-editorial/denuncias", "Central de denúncias"], ["/gestao-editorial/estatisticas", "Movimentação da plataforma"], ["/gestao-editorial/newsletter", "Inscrições e entregas"], ["/gestao-editorial/auditoria", "Ações registradas"], ["/gestao-editorial/categorias", "Categorias editoriais"], ["/gestao-editorial/tags", "Tags da plataforma"]]) {
+      for (const [path, label] of [["/gestao-editorial", "O Grifório em números"], ["/gestao-editorial/usuarios", "Contas da plataforma"], ["/gestao-editorial/comentarios", "Comentários"], ["/gestao-editorial/artigos", "Artigos da plataforma"], ["/gestao-editorial/denuncias", "Central de denúncias"], ["/gestao-editorial/estatisticas", "Movimentação da plataforma"], ["/gestao-editorial/auditoria", "Ações registradas"], ["/gestao-editorial/categorias", "Categorias editoriais"], ["/gestao-editorial/tags", "Tags da plataforma"]]) {
         const response = await frontRequest(path, { headers: { Cookie: sessionCookie } });
         assert.equal(response.status, 200, path);
         assert.ok((await response.text()).includes(label), `resposta válida ${path}`);

@@ -7,7 +7,7 @@ import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@
 import { parseNotifications, type Notifications, type Notice } from "./data";
 import styles from "../feed/view.module.css";
 
-const labels: Record<Notice["type"], string> = { post_like: "curtiu seu artigo", comment: "comentou em seu artigo", reply: "respondeu a um comentário", comment_like: "curtiu seu comentário", follow: "começou a acompanhar você", post_approved: "aprovou seu artigo", post_rejected: "rejeitou seu artigo", post_hidden: "ocultou seu artigo", post_restored: "restaurou seu artigo", comment_hidden: "ocultou seu comentário", comment_restored: "restaurou seu comentário", role_changed: "alterou sua função", sessions_revoked: "encerrou suas sessões", account_suspended: "suspendeu sua conta", account_restored: "restaurou sua conta", report_assigned: "atribuiu uma denúncia a você" };
+const labels: Record<Notice["type"], string> = { post_like: "curtiu seu artigo", comment: "comentou em seu artigo", reply: "respondeu a um comentário", comment_like: "curtiu seu comentário", follow: "começou a acompanhar você", post_approved: "aprovou seu artigo", post_rejected: "rejeitou seu artigo", post_hidden: "ocultou seu artigo por moderação", post_restored: "restaurou seu artigo", comment_hidden: "ocultou seu comentário por moderação", comment_restored: "restaurou seu comentário", role_changed: "alterou sua função", sessions_revoked: "encerrou suas sessões", account_suspended: "suspendeu sua conta", account_restored: "restaurou sua conta", report_assigned: "atribuiu uma denúncia a você", content_rating_changed: "reclassificou a faixa etária do seu artigo" };
 export default function NotificationsView() {
   const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
   const [data, setData] = useState<Notifications | null>(null);
@@ -64,7 +64,49 @@ export default function NotificationsView() {
       <p role="status">{data.unread === 1 ? "1 notificação não lida" : `${data.unread} notificações não lidas`}</p>
       {message && <p role="alert">{message}</p>}
       {uncertain ? <button className={styles.button} onClick={() => void load(page)}>Atualizar lista</button> : <button className={styles.button} disabled={busy || data.unread === 0} onClick={() => void mark()}>Marcar todas como lidas</button>}
-      {!data.data.length ? <p>Nenhuma notificação nesta página.</p> : <ul className={styles.list}>{data.data.map(item => <li key={item.id}><article><p><strong>{item.actor.name}</strong> {labels[item.type]}.</p>{item.postId && (item.type === "post_approved" || item.type === "post_rejected") && <p><Link className={styles.link} href={`/studio/${encodeURIComponent(item.postId)}`}>Ver artigo e resultado da revisão</Link></p>}<p><time dateTime={item.createdAt}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}</time> · {item.readAt ? "Lida" : "Não lida"}</p>{!item.readAt && <button className={styles.button} disabled={busy || uncertain} onClick={() => void mark(item.id)} aria-label={`Marcar notificação de ${item.actor.name} como lida`}>Marcar como lida</button>}</article></li>)}</ul>}
+      {!data.data.length ? (
+        <p>Nenhuma notificação nesta página.</p>
+      ) : (
+        <ul className={styles.list}>
+          {data.data.map(item => {
+            const isModerationAction = ["post_hidden", "comment_hidden", "content_rating_changed", "account_suspended"].includes(item.type);
+            const reason = item.details && typeof item.details.reason === "string" ? item.details.reason : null;
+
+            return (
+              <li key={item.id}>
+                <article>
+                  <p><strong>{item.actor.name}</strong> {labels[item.type]}.</p>
+                  {reason && (
+                    <p style={{ fontSize: "14px", fontStyle: "italic", margin: "4px 0 8px", color: "var(--text-muted)" }}>
+                      Motivo: &ldquo;{reason}&rdquo;
+                    </p>
+                  )}
+                  {item.postId && (item.type === "post_approved" || item.type === "post_rejected") && (
+                    <p><Link className={styles.link} href={`/studio/${encodeURIComponent(item.postId)}`}>Ver artigo e resultado da revisão</Link></p>
+                  )}
+                  {isModerationAction && (
+                    <p>
+                      <Link className={styles.link} href={`/contato?assunto=recurso&notificacao=${encodeURIComponent(item.id)}`}>
+                        Solicitar recurso contra esta decisão (prazo de resposta: 15 dias)
+                      </Link>
+                    </p>
+                  )}
+                  <p>
+                    <time dateTime={item.createdAt}>
+                      {new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}
+                    </time> · {item.readAt ? "Lida" : "Não lida"}
+                  </p>
+                  {!item.readAt && (
+                    <button className={styles.button} disabled={busy || uncertain} onClick={() => void mark(item.id)} aria-label={`Marcar notificação de ${item.actor.name} como lida`}>
+                      Marcar como lida
+                    </button>
+                  )}
+                </article>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {(data.meta.hasPreviousPage || data.meta.hasNextPage) && <nav className={styles.pagination} aria-label="Paginação das notificações"><button className={styles.button} disabled={busy || !data.meta.hasPreviousPage} onClick={() => void load(page - 1)}>Anterior</button><span>Página {page}</span><button className={styles.button} disabled={busy || !data.meta.hasNextPage} onClick={() => void load(page + 1)}>Próxima</button></nav>}
     </>}
   </main>;
