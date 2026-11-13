@@ -39,11 +39,11 @@ export async function POST(request: Request) {
         message: "Contas administrativas precisam ativar a autenticação de dois fatores (2FA) antes de acessar o painel editorial. Acesse as configurações da sua conta de leitor/autor para ativá-la.",
       }), { status: 403, headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private" } });
     }
-    const old = jar.get(cookieName)?.value; const prior = getSession(old);
+    const old = jar.get(cookieName)?.value; const prior = await getSession(old);
     const revocation = prior ? logoutUpstream(prior).catch(() => undefined) : undefined;
-    deleteSession(old);
+    await deleteSession(old);
     await revocation;
-    const created = createSession(token, payload.expires_in, refresh);
+    const created = await createSession(token, payload.expires_in, refresh);
     jar.set(cookieName, created.id, { ...options, maxAge: Math.floor((created.session.expires - Date.now()) / 1000) });
     jar.set(loginCookieName, "", { ...options, maxAge: 0 });
     issuedToken = null;

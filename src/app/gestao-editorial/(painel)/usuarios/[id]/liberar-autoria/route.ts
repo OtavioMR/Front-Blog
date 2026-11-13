@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 const reply = (status: number, value?: unknown) => new Response(value ? JSON.stringify(value) : null, { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, private' } });
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (process.env.ENABLE_ADMIN_BFF !== 'true') return reply(404);
-  const sessionId = (await cookies()).get(cookieName)?.value, current = getSession(sessionId);
+  const sessionId = (await cookies()).get(cookieName)?.value, current = await getSession(sessionId);
   if (!current) return reply(401);
   const { id } = await params, form = await formBody(request);
   if (!form || !sameSecret(form.get('csrf') ?? undefined, current.csrf)) return reply(403);

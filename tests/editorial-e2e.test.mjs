@@ -1,3 +1,4 @@
+import "./support/admin-store.mjs";
 import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
