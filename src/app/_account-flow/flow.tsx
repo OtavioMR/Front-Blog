@@ -1,39 +1,50 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import styles from "./flow.module.css";
 
 type Mode = "register" | "confirm" | "resend" | "forgot" | "reset";
 const config: Record<Mode, { title: string; description: string; button: string; endpoint: string }> = {
   register: { title: "Crie sua conta.", description: "Faça parte de um espaço para boas leituras.", button: "Criar conta", endpoint: "/users" },
-  confirm: { title: "Confirme seu e-mail.", description: "Cole o código recebido no e-mail de cadastro. Ele é válido por 24 horas.", button: "Confirmar e-mail", endpoint: "/users/confirm-email" },
-  resend: { title: "Receba um novo código.", description: "Solicite novamente o código de confirmação do cadastro.", button: "Enviar instruções", endpoint: "/users/resend-verification" },
+  confirm: { title: "Confirme seu e-mail.", description: "Digite o código de seis dígitos enviado ao seu e-mail. Ele é válido por 24 horas.", button: "Confirmar e-mail", endpoint: "/users/confirm-email" },
+  resend: { title: "Receba um novo e-mail.", description: "Solicite novamente o código de confirmação do cadastro.", button: "Enviar instruções", endpoint: "/users/resend-verification" },
   forgot: { title: "Recupere sua senha.", description: "Informe seu e-mail para receber as instruções de recuperação.", button: "Enviar instruções", endpoint: "/auth/forgot-password" },
   reset: { title: "Escolha uma nova senha.", description: "O link recebido por e-mail é válido por 30 minutos.", button: "Redefinir senha", endpoint: "/auth/reset-password" },
 };
 
 export default function AccountFlow({ mode }: { mode: Mode }) {
+  const router = useRouter();
   const [token, setToken] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [emailChange, setEmailChange] = useState(false);
+  const [linkToken, setLinkToken] = useState(false);
+  const [ready, setReady] = useState(mode !== "confirm");
   useEffect(() => {
+    if (mode === "confirm" || mode === "resend") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEmail(sessionStorage.getItem("verification-email") || "");
+    }
     if (mode !== "reset" && mode !== "confirm") return;
     const url = new URL(window.location.href);
-    const value = url.searchParams.get("token");
+    const fragmentToken = mode === "confirm" ? new URLSearchParams(url.hash.slice(1)).get("token") : null;
+    const value = fragmentToken ?? url.searchParams.get("token");
     if (mode === "confirm" && url.searchParams.get("type") === "email-change") {
       // The link identifies the confirmation operation; the token itself remains in memory only.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmailChange(true);
     }
     if (value !== null) {
       url.searchParams.delete("token");
+      if (fragmentToken !== null) { url.hash = ""; setLinkToken(true); }
       window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
       // Read the browser-only URL after hydration, then remove the secret from the address bar.
       setToken(value);
     }
+    if (mode === "confirm") setReady(true);
   }, [mode]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -62,10 +73,10 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
         setMessage("É necessário aceitar os Termos de Uso e a Política de Privacidade para criar uma conta."); return;
       }
     }
-    if (mode === "confirm" && !/^[a-f0-9]{64}$/.test(token.trim())) { setMessage("Informe o código hexadecimal completo recebido por e-mail."); return; }
+    if (mode === "confirm" && !(emailChange || linkToken ? /^[a-f0-9]{64}$/ : /^\d{6}$/).test(token.trim())) { setMessage(emailChange || linkToken ? "Código inválido." : "Informe os seis dígitos recebidos por e-mail."); return; }
     if (mode === "reset" && !token.trim()) { setMessage("O código de recuperação está ausente. Solicite um novo link."); return; }
     const payload = mode === "register" ? { name: get("name").trim(), email: get("email").trim(), password, birthDate, acceptedTerms: true, termsVersion: "1.0.0" }
-      : mode === "confirm" ? { token: token.trim() }
+      : mode === "confirm" ? { token: token.trim(), ...(!emailChange && !linkToken ? { email: email.trim() } : {}) }
       : mode === "reset" ? { token: token.trim(), newPassword: password }
       : { email: get("email").trim() };
     setBusy(true); setMessage("");
@@ -74,16 +85,18 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
       const response = await fetch(`/api/v1${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload), cache: "no-store", credentials: "omit" });
       if (!response.ok) {
         const json = await response.json().catch(() => null);
-        if (response.status === 429) setMessage("Muitas tentativas. Aguarde um pouco e tente novamente.");
+        if (response.status === 429) setMessage(mode === "confirm" ? "Muitas tentativas. O bloqueio pode durar até 24 horas." : "Muitas tentativas. Aguarde um pouco e tente novamente.");
         else if (response.status === 409 && mode === "register") setMessage("Não foi possível criar a conta com esse e-mail. Verifique os dados ou recupere sua senha.");
+        else if (response.status === 400 && mode === "confirm") setMessage("Código inválido ou expirado. Solicite um novo e-mail e tente novamente.");
         else if (json?.message) setMessage(Array.isArray(json.message) ? json.message.join(", ") : json.message);
         else if (response.status === 400 && (mode === "confirm" || mode === "reset")) setMessage("Código inválido ou expirado. Solicite um novo e tente novamente.");
         else if (response.status === 400) setMessage("Confira os dados informados e tente novamente.");
         else setMessage("Não foi possível concluir agora. Tente novamente em instantes.");
         return;
       }
+      if (mode === "register") { sessionStorage.setItem("verification-email", get("email").trim()); router.push("/confirmar-email"); return; }
       setToken(""); setSuccess(true);
-      setMessage(mode === "register" ? "Conta criada. Confira seu e-mail para obter o código de confirmação." : mode === "confirm" ? (emailChange ? "Novo e-mail confirmado. Suas sessões anteriores foram encerradas; entre novamente com o novo endereço." : "E-mail confirmado com sucesso.") : mode === "reset" ? "Senha redefinida com sucesso." : "Se houver uma conta elegível para este e-mail, as instruções serão enviadas.");
+      setMessage(mode === "confirm" ? (emailChange ? "Novo e-mail confirmado. Suas sessões anteriores foram encerradas; entre novamente com o novo endereço." : "E-mail confirmado com sucesso.") : mode === "reset" ? "Senha redefinida com sucesso." : "Se houver uma conta elegível para este e-mail, as instruções serão enviadas.");
     } catch { setMessage("Não foi possível conectar ao serviço. Tente novamente em instantes."); }
     finally { setBusy(false); }
   }
@@ -91,15 +104,19 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
   const info = config[mode];
   return <main className={styles.page}><section className={styles.panel}><p className={styles.eyebrow}>Sua conta</p><h1>{emailChange && mode === "confirm" ? "Confirme seu novo e-mail." : info.title}</h1><p className={styles.description}>{emailChange && mode === "confirm" ? "Confirme o código enviado ao novo endereço. Ele é válido por 30 minutos." : info.description}</p>
     {message && <p className={styles.message} role={success ? "status" : "alert"}>{message}</p>}
-    {!success && <form className={styles.form} method="post" onSubmit={submit}>
+    {!ready && <p role="status">Preparando confirmação…</p>}
+    {ready && !success && <form className={styles.form} method="post" onSubmit={submit}>
       {mode === "register" && (
         <>
           <label className={styles.field}>Nome<input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>
           <label className={styles.field}>Data de nascimento<input name="birthDate" type="date" aria-describedby="birthdate-hint" required /><span className={styles.hint} id="birthdate-hint">O cadastro no lançamento é restrito a maiores de 18 anos completos.</span></label>
         </>
       )}
-      {(mode === "register" || mode === "resend" || mode === "forgot") && <label className={styles.field}>E-mail<input name="email" type="email" autoComplete="email" maxLength={255} required /></label>}
-      {mode === "confirm" && <label className={styles.field}>Código de confirmação<input value={token} onChange={event => setToken(event.target.value)} autoComplete="off" spellCheck={false} maxLength={64} required /></label>}
+      {(mode === "register" || mode === "resend" || mode === "forgot") && <label className={styles.field}>E-mail<input name="email" type="email" autoComplete="email" maxLength={255} defaultValue={mode === "resend" ? email : undefined} required /></label>}
+      {mode === "confirm" && !linkToken && <>
+        {!emailChange && <label className={styles.field}>E-mail<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" maxLength={255} required /></label>}
+        <label className={styles.field}>Código de confirmação<input name="confirmationCode" value={token} onChange={event => setToken(event.target.value)} autoComplete="one-time-code" inputMode={emailChange ? "text" : "numeric"} spellCheck={false} maxLength={emailChange ? 64 : 6} required /></label>
+      </>}
       {(mode === "register" || mode === "reset") && <><label className={styles.field}>Senha<input name="password" type="password" autoComplete="new-password" minLength={8} maxLength={72} aria-describedby="password-hint" required /><span className={styles.hint} id="password-hint">Pelo menos 8 caracteres e até 72 bytes em UTF-8.</span></label><label className={styles.field}>Confirme a senha<input name="passwordConfirmation" type="password" autoComplete="new-password" minLength={8} maxLength={72} required /></label></>}
       {mode === "register" && (
         <label className={styles.checkboxField}>
@@ -107,8 +124,8 @@ export default function AccountFlow({ mode }: { mode: Mode }) {
           <span>Declaro ter 18 anos ou mais e aceito os <Link href="/termos" target="_blank">Termos de Uso</Link> e a <Link href="/privacidade" target="_blank">Política de Privacidade</Link>.</span>
         </label>
       )}
-      <button type="submit" disabled={busy}>{busy ? "Enviando…" : info.button}</button>
+      <button type="submit" disabled={busy}>{busy ? "Enviando…" : mode === "confirm" && linkToken ? "Confirmar meu e-mail" : info.button}</button>
     </form>}
-    <nav className={styles.links} aria-label="Ajuda com a conta"><Link href="/entrar">Entrar</Link>{mode !== "confirm" && <Link href="/confirmar-email">Confirmar e-mail</Link>}{mode !== "resend" && <Link href="/reenviar-verificacao">Reenviar código</Link>}{mode !== "forgot" && <Link href="/recuperar-senha">Recuperar senha</Link>}</nav>
+    <nav className={styles.links} aria-label="Ajuda com a conta"><Link href="/entrar">Entrar</Link>{mode !== "confirm" && <Link href="/confirmar-email">Confirmar e-mail</Link>}{mode !== "resend" && <Link href="/reenviar-verificacao">Solicitar novo e-mail</Link>}{mode !== "forgot" && <Link href="/recuperar-senha">Recuperar senha</Link>}</nav>
   </section></main>;
 }

@@ -23,7 +23,8 @@ test("confirma??o de cadastro e troca de e-mail usam endpoints corretos", { time
     let body = ""; for await (const chunk of req) body += chunk;
     if (req.method === "POST" && ["/api/v1/users/confirm-email", "/api/v1/users/confirm-email-change"].includes(req.url)) {
       requests.push({ path: req.url, body: JSON.parse(body) });
-      res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ message: "ok" })); return;
+      const expired = JSON.parse(body).token === "b".repeat(64);
+      res.writeHead(expired ? 400 : 200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ message: expired ? "Token inválido ou expirado." : "ok" })); return;
     }
     res.writeHead(404); res.end();
   });
@@ -84,10 +85,18 @@ test("confirma??o de cadastro e troca de e-mail usam endpoints corretos", { time
   await cdp("Page.reload");
   await waitFor(() => has("Confirme seu novo e-mail."), "tipo preservado apos recarga");
 
-  await cdp("Page.navigate", { url: `${base}/confirmar-email?token=${token}` });
-  await waitFor(() => evaluate(`!location.search.includes('token=') && document.querySelector('input')?.value === ${JSON.stringify(token)}`), "remo??o do token da URL");
+  await cdp("Page.navigate", { url: "about:blank" });
+  await cdp("Page.navigate", { url: `${base}/confirmar-email` });
+  await waitFor(() => evaluate("!!document.querySelector('input[name=confirmationCode]')"), "formulario de codigo");
+  await waitFor(() => evaluate("Object.keys(document.querySelector('input[name=confirmationCode]')).some(k => k.startsWith('__reactProps'))"), "hidratacao");
+  await fill('input[type=email]', 'reader@example.test');
+  await fill('input[name=confirmationCode]', '012345');
+  assert.equal(requests.length, 1, "abrir a pagina nao confirma");
   await click("Confirmar e-mail");
-  await waitFor(() => has("E-mail confirmado com sucesso."), "confirma??o de cadastro");
-  assert.deepEqual(requests[1], { path: "/api/v1/users/confirm-email", body: { token } });
-  assert.equal(requests.length, 2);
+  await waitFor(() => has("E-mail confirmado com sucesso."), "confirmacao por codigo");
+  assert.deepEqual(requests[1], { path: "/api/v1/users/confirm-email", body: { token: '012345', email: 'reader@example.test' } });
+  const response = await fetch(`${base}/confirmar-email`);
+  assert.match(response.headers.get("referrer-policy"), /no-referrer/);
+  assert.match(response.headers.get("cache-control"), /no-store/);
+
 });
