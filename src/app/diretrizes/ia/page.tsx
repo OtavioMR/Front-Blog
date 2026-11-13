@@ -87,7 +87,7 @@ export default function DiretrizesIaPage() {
       <section className={styles.section}>
         <h2>3. Exibição Pública das Etiquetas</h2>
         <p>
-          3.1. As informações sobre IA são apresentadas publicamente junto à publicação como <strong>"Declaração do autor"</strong>, evitando rotulações involuntárias ou precipitadas.
+          3.1. As informações sobre IA são apresentadas publicamente junto à publicação como <strong>&quot;Declaração do autor&quot;</strong>, evitando rotulações involuntárias ou precipitadas.
         </p>
         <p>
           3.2. A omissão intencional de uso substancial de IA para enganar o público constitui infração às diretrizes editoriais e pode ser denunciada pela comunidade.

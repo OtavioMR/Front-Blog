@@ -1,3 +1,4 @@
+import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
 import { once } from "node:events";
@@ -26,13 +27,13 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   const api = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     let body = ""; for await (const chunk of req) body += chunk;
-    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(data)); };
+    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(v2FixtureResponse(data, req, res))); };
     if (req.method === "POST" && req.url === "/api/v1/auth/login") {
       const role = JSON.parse(body).password;
       if (["AUTHOR", "ADMIN"].includes(role)) res.setHeader("Set-Cookie", "refreshToken=synthetic; HttpOnly; Path=/api/v1/auth; SameSite=Strict");
       return ["AUTHOR", "ADMIN"].includes(role) ? respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     }
-    if (req.method === "POST" && req.url === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token("AUTHOR"), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
+    if (req.method === "POST" && req.url === "/api/v1/auth/refresh/v2") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token("AUTHOR"), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     if (req.method === "GET" && req.url === "/api/v1/categories?page=1&limit=20") return respond(200, { data: category ? [category] : [], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } });
     if (req.method === "GET" && req.url === `/api/v1/categories/${postId}`) return category ? respond(200, category) : respond(404, {});
     const bearer = (req.headers.authorization || "").replace(/^Bearer /, "");
@@ -101,7 +102,7 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   const target = await waitFor(async () => (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(item => item.type === "page" && item.url === "about:blank"), "Chromium; defina CHROME_PATH");
   socket = new WebSocket(target.webSocketDebuggerUrl); await once(socket, "open");
   let sequence = 0; const pending = new Map();
-  socket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); data.error ? reject(new Error(data.error.message)) : resolve(data.result); } });
+  socket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); if (data.error) reject(new Error(data.error.message)); else resolve(data.result); } });
   const cdp = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
   const evaluate = async expression => { const result = await cdp("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value; };
   const has = text => evaluate(`document.body.innerText.includes(${JSON.stringify(text)})`);

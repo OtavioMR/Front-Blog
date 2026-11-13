@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
-import { adminActor, cookieName, createSession, deleteSession, formBody, getSession, loginCookieName, page, refreshCookie, sameSecret, upstream } from "@/lib/admin-security";
+import { adminActor, cookieName, createSession, deleteSession, formBody, getSession, loginCookieName, loginRefreshState, logoutUpstream, page, sameSecret, upstream } from "@/lib/admin-security";
 
 export const runtime = "nodejs";
 const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/" };
 const unavailable = () => page("Página não encontrada", "<p>Esta página não está disponível.</p>", 404);
-const revoke = (token: string) => upstream("/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+const revoke = (token: string) => logoutUpstream({ token }).catch(() => undefined);
 
 // Autentica pela API existente e só abre a sessão administrativa depois de confirmar o cargo ADMIN/SUPER_ADMIN com 2FA ativo.
 export async function POST(request: Request) {
@@ -27,8 +27,7 @@ export async function POST(request: Request) {
     if (!payload || typeof payload !== "object" || !("access_token" in payload) || typeof payload.access_token !== "string" || !payload.access_token || !("expires_in" in payload) || typeof payload.expires_in !== "number" || !Number.isFinite(payload.expires_in) || payload.expires_in <= 10) throw new Error("invalid");
     const token = payload.access_token;
     issuedToken = token;
-    const refreshToken = refreshCookie(response);
-    if (!refreshToken) throw new Error("missing refresh cookie");
+    const refresh = loginRefreshState(response, payload as Record<string, unknown>);
     // O cargo é lido na API a cada entrada: contas comuns nunca recebem sessão administrativa.
     const actor = await adminActor(token);
     if (!actor) { await revoke(token); issuedToken = null; return page("Acesso negado", "<p>Esta conta não possui acesso administrativo.</p>", 403); }
@@ -40,9 +39,11 @@ export async function POST(request: Request) {
         message: "Contas administrativas precisam ativar a autenticação de dois fatores (2FA) antes de acessar o painel editorial. Acesse as configurações da sua conta de leitor/autor para ativá-la.",
       }), { status: 403, headers: { "Content-Type": "application/json", "Cache-Control": "no-store, private" } });
     }
-    const old = jar.get(cookieName)?.value; const prior = getSession(old); deleteSession(old);
-    if (prior) await revoke(prior.token);
-    const created = createSession(token, payload.expires_in, refreshToken);
+    const old = jar.get(cookieName)?.value; const prior = getSession(old);
+    const revocation = prior ? logoutUpstream(prior).catch(() => undefined) : undefined;
+    deleteSession(old);
+    await revocation;
+    const created = createSession(token, payload.expires_in, refresh);
     jar.set(cookieName, created.id, { ...options, maxAge: Math.floor((created.session.expires - Date.now()) / 1000) });
     jar.set(loginCookieName, "", { ...options, maxAge: 0 });
     issuedToken = null;

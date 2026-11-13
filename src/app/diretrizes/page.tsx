@@ -64,7 +64,7 @@ export default function DiretrizesPage() {
           3.1. <strong>Comunicação motivada:</strong> Quando um artigo ou comentário é ocultado, o autor recebe uma notificação detalhada contendo o motivo da decisão da moderação.
         </p>
         <p>
-          3.2. <strong>Decisões institucionais:</strong> Para salvaguardar a segurança física e psicológica de nossos revisores contra perseguições e assédio online, as ações de moderação são assinadas coletivamente como <strong>"Moderação do Grifório"</strong>.
+          3.2. <strong>Decisões institucionais:</strong> Para salvaguardar a segurança física e psicológica de nossos revisores contra perseguições e assédio online, as ações de moderação são assinadas coletivamente como <strong>&quot;Moderação do Grifório&quot;</strong>.
         </p>
         <p>
           3.3. <strong>Integridade do texto:</strong> Moderadores e administradores <strong>não editam o conteúdo literário</strong> do autor. Medidas editoriais limitam-se à ocultação do conteúdo, ajuste da classificação etária ou suspensão temporal/definitiva de privilégios.

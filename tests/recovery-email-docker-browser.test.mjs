@@ -112,7 +112,7 @@ test('recovery email, mandatory 2FA and recovery in browser with Docker API and 
   const target = await waitFor(async () => (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(item => item.type === 'page' && item.url === 'about:blank'), 'Edge');
   socket = new WebSocket(target.webSocketDebuggerUrl); await once(socket, 'open');
   let sequence = 0; const pending = new Map();
-  socket.addEventListener('message', event => { const value = JSON.parse(event.data); if (pending.has(value.id)) { const promise = pending.get(value.id); pending.delete(value.id); value.error ? promise.reject(new Error(value.error.message)) : promise.resolve(value.result); } });
+  socket.addEventListener('message', event => { const value = JSON.parse(event.data); if (pending.has(value.id)) { const promise = pending.get(value.id); pending.delete(value.id); if (value.error) promise.reject(new Error(value.error.message)); else promise.resolve(value.result); } });
   const cdp = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
   const evaluate = async expression => { const value = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (value.exceptionDetails) throw new Error(value.exceptionDetails.text); return value.result.value; };
   const has = text => evaluate(`document.body.innerText.includes(${JSON.stringify(text)})`);
