@@ -19,7 +19,7 @@ test("perfil é consultado com bearer e falhas não exibem dados de outra conta"
   let profileStatus = 200;
   let profileId = id;
   globalThis.fetch = async (path, init) => {
-    if (path === "/api/v1/auth/login") return Response.json({ access_token: loginAccess, token_type: "Bearer", expires_in: 900 });
+    if (path === "/api/v1/auth/login") return Response.json({ access_token: loginAccess, token_type: "Bearer", expires_in: 900, session_id: '00000000-0000-4000-8000-000000000001', refresh_protocol: 2, refresh_generation: 0 });
     if (path === "/api/v1/users/me/author" && init.method === "POST") { mutationCount++; return Response.json({ role: "AUTHOR", rulesVersion: "1" }); }
     if (path.startsWith("/api/v1/posts/me?")) { mutationCount++; return Response.json({ data: [] }); }
     if (path.startsWith("/api/v1/auth/sessions/") && init.method === "DELETE") { mutationCount++; return new Response(null, { status: 204 }); }

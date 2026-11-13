@@ -58,15 +58,16 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
       if (!["READER", "AUTHOR", "ADMIN", "SUPER_ADMIN"].includes(role)) { response.statusCode = 401; return response.end("{}"); }
       const token = `header.${Buffer.from(JSON.stringify({ sub: actorId })).toString("base64url")}.signature-${roles.size}`;
       roles.set(token, role);
-      response.setHeader("Set-Cookie", "refreshToken=synthetic.refresh.token; HttpOnly; Path=/api/v1/auth; SameSite=Strict");
-      return response.end(JSON.stringify({ access_token: token, token_type: "Bearer", expires_in: 900 }));
+      const sessionId = '00000000-0000-4000-8000-000000000001';
+      response.setHeader("Set-Cookie", [`__Secure-griforio-rt-${sessionId}-0=synthetic.refresh.token; HttpOnly; Secure; Path=/api/v1/auth; SameSite=Strict`, `__Secure-griforio-proof-${sessionId}-0=${'p'.repeat(43)}; HttpOnly; Secure; Path=/api/v1/auth; SameSite=Strict`]);
+      return response.end(JSON.stringify({ access_token: token, token_type: "Bearer", expires_in: 900, session_id: sessionId, refresh_protocol: 2, refresh_generation: 0 }));
     }
     if (request.method === "GET" && request.url === "/api/v1/categories?page=1&limit=20") return response.end(JSON.stringify({ data: [{ id: postId, name: 'Categoria <teste>', slug: 'categoria-teste', description: 'Descrição sintética', isActive: true }], meta: { page: 1, hasPreviousPage: false, hasNextPage: true } }));
     if (request.method === "GET" && request.url === "/api/v1/categories?page=2&limit=20") return response.end(JSON.stringify({ data: [], meta: { page: 2, hasPreviousPage: true, hasNextPage: false } }));
     if (request.method === "GET" && request.url === `/api/v1/categories/${postId}`) return response.end(JSON.stringify({ id: postId, name: "Categoria <teste>", isActive: true }));
     const token = (request.headers.authorization ?? "").replace(/^Bearer /, "");
     if (!roles.has(token) || revoked.has(token)) { response.statusCode = 401; return response.end("{}"); }
-    if (request.method === "POST" && request.url === "/api/v1/auth/logout") { revoked.add(token); return response.end("{}"); }
+    if (request.method === "POST" && request.url === "/api/v1/auth/logout/v2") { revoked.add(token); return response.end("{}"); }
     if (roles.get(token) !== "ADMIN" && roles.get(token) !== "SUPER_ADMIN") { response.statusCode = 403; return response.end("{}"); }
     if (request.method === "GET" && request.url === `/api/v1/users/${actorId}`) return response.end(JSON.stringify({ id: actorId, role: roles.get(token) }));
     if (request.method === "PATCH" && request.url === `/api/v1/admin/users/${postId}/role`) { if (roles.get(token) !== "SUPER_ADMIN") { response.statusCode = 403; return response.end("{}"); } if (request.headers["x-totp-code"] !== "123456") { response.statusCode = 401; return response.end("{}"); } const payload = JSON.parse(body); roleChanges.push(payload); return response.end(JSON.stringify({ id: postId, role: payload.role })); }
@@ -195,7 +196,9 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   response = await request("/gestao-editorial", { headers: { Cookie: sessionCookie } });
   assert.equal(response.status, 200); assert.match(await response.text(), /Contas cadastradas/); assert.match(response.headers.get("cache-control"), /private|no-store/);
   response = await request("/gestao-editorial/newsletter", { headers: { Cookie: sessionCookie } });
-  assert.equal(response.status, 200); assert.match(await response.text(), /Inscrições e entregas/);
+  // Newsletter is excluded from V1 in both the application module and the panel.
+  assert.equal(response.status, 404);
+  assert.doesNotMatch(html, /href="\/gestao-editorial\/newsletter"/);
   response = await request("/gestao-editorial/estatisticas", { headers: { Cookie: sessionCookie } });
   const activity = await response.text();
   assert.equal(response.status, 200); assert.match(activity, /Denúncia analisada/); assert.match(activity, /Artigo &lt;sintético&gt;/); assert.doesNotMatch(activity, /Artigo <sintético>/);
@@ -295,7 +298,8 @@ test("BFF editorial protege entradas, dados, ações e sessão", { timeout: 3000
   assert.equal(response.status, 403);
   response = await form("/gestao-editorial/sair", { csrf: nextCsrf }, nextCookie);
   assert.equal(response.status, 303); assert.equal(new URL(response.headers.get("location"), base).pathname, "/gestao-editorial/entrar");
-  assert.match(findCookie(response, "__Host-editorial-session"), /Max-Age=0/i);
+  // A delayed fixed-name deletion must not erase a newer administrative login.
+  assert.equal(findCookie(response, "__Host-editorial-session"), undefined);
   await redirectsToLogin("/gestao-editorial", { headers: { Cookie: nextCookie } });
   userSuspended = false;
   response = await login("SUPER_ADMIN");

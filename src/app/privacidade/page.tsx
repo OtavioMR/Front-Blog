@@ -75,7 +75,7 @@ export default function PrivacidadePage() {
         </p>
         <ul>
           <li><strong>Artigos e imagens:</strong> O titular pode despublicar previamente suas obras pelo Studio. As opções definitivas de preservação ou despublicação de artigos no encerramento de conta seguem a política informada no momento da confirmação;</li>
-          <li><strong>Comentários:</strong> Permanecem nos tópicos para preservar o encadeamento das discussões comunitárias, porém são <strong>efetivamente anonimizados</strong>. O nome do autor é desvinculado e substituído pelo marcador neutro <em>"Usuário desativado"</em>, e foto e links para o perfil são permanentemente removidos.</li>
+          <li><strong>Comentários:</strong> Permanecem nos tópicos para preservar o encadeamento das discussões comunitárias, porém são <strong>efetivamente anonimizados</strong>. O nome do autor é desvinculado e substituído pelo marcador neutro <em>&quot;Usuário desativado&quot;</em>, e foto e links para o perfil são permanentemente removidos.</li>
         </ul>
       </section>
 

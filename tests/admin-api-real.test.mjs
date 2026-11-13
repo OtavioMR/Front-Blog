@@ -159,7 +159,7 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
         assert.equal((await form(`/gestao-editorial/denuncias/${reportId}/resolver`, { csrf, status: "RESOLVED", action: "NONE", note: "Denúncia resolvida no teste sintético" }, sessionCookie)).status, 204);
       }
       if (account.role === "SUPER_ADMIN") {
-        const target = accounts.find(a => a.role === "ADMIN"), path = `/gestao-editorial/usuarios/${target.id}`;
+        const target = accounts.find(a => a.role === "ADMIN");
         const moderatePath = `/gestao-editorial/usuarios/${target.id}/moderar`;
         assert.equal((await form(moderatePath, { csrf, action: "suspend", reason: "Teste sintetico de administracao" }, sessionCookie)).status, 204);
         assert.equal((await form(moderatePath, { csrf, action: "restore" }, sessionCookie)).status, 204);
