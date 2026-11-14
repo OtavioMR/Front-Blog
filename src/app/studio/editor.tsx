@@ -34,7 +34,7 @@ function extractTagNames(tags?: { name: string }[]): string[] {
   return tags.map(t => t.name).filter(name => typeof name === "string" && name.length > 0);
 }
 
-export default function Editor({ initialId }: { initialId?: string }) {
+export default function Editor({ initialId, initialSeriesId }: { initialId?: string; initialSeriesId?: string }) {
   const router = useRouter();
   const [destination, setDestination] = useState<string | null>(null);
   const [state, setState] = useState<State>("loading");
@@ -43,6 +43,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
   const [reviewProfile, setReviewProfile] = useState<{ role: string; firstPostApproved?: boolean } | null>(null);
   const [authorId, setAuthorId] = useState("");
   const [id, setId] = useState(initialId || "");
+  const [seriesContext, setSeriesContext] = useState<{ id: string; title: string } | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -122,6 +123,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
 
   function apply(draft: Draft) {
     setId(draft.id);
+    if (draft.seriesContext && validDraftId(draft.seriesContext.id) && typeof draft.seriesContext.title === "string") setSeriesContext(draft.seriesContext);
     setAuthorId(draft.authorId);
     setTitle(draft.title);
     setContent(draft.content);
@@ -193,6 +195,16 @@ export default function Editor({ initialId }: { initialId?: string }) {
           })
           .catch(() => {});
 
+        if (!initialId && initialSeriesId) {
+          if (!validDraftId(initialSeriesId)) { setState("error"); return; }
+          const response = await authenticatedFetchForSubject(profile.id, `/api/v1/series/${initialSeriesId}/manage`, { cache: "no-store" });
+          if (!response.ok) throw new Error();
+          const series: unknown = await response.json();
+          if (!series || typeof series !== "object" || !("id" in series) || series.id !== initialSeriesId || !("authorId" in series) || series.authorId !== profile.id || !("title" in series) || typeof series.title !== "string") throw new Error();
+          if (!active || current !== generation.current) return;
+          setSeriesContext({ id: initialSeriesId, title: series.title });
+        }
+
         // Fetch existing article if editing
         if (initialId) {
           if (!validDraftId(initialId)) {
@@ -235,7 +247,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
       generation.current++;
       unsubscribe();
     };
-  }, [initialId]);
+  }, [initialId, initialSeriesId]);
 
   useEffect(() => {
     if (status !== "REJECTED" || !id || !owner) return;
@@ -324,6 +336,7 @@ export default function Editor({ initialId }: { initialId?: string }) {
     try {
       if (operation !== revision.current) return;
       const payload = {
+        ...(!id && seriesContext ? { seriesId: seriesContext.id } : {}),
         title: title.trim(),
         content,
         ...(excerpt.trim() !== saved.excerpt.trim() ? { excerpt: excerpt.trim() } : {}),
@@ -615,12 +628,12 @@ export default function Editor({ initialId }: { initialId?: string }) {
       {/* Top action & navigation bar */}
       <nav className={styles.topBar} aria-label="Ações do editor">
         <Link
-          href="/studio"
+          href={seriesContext ? `/studio/series?id=${encodeURIComponent(seriesContext.id)}` : "/studio"}
           className={`${styles.backLink} ${backStyles.back}`}
           data-back-button="true"
-          onNavigate={event => preventUnsavedNavigation(event, "/studio")}
+          onNavigate={event => preventUnsavedNavigation(event, seriesContext ? `/studio/series?id=${encodeURIComponent(seriesContext.id)}` : "/studio")}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" /></svg><span>Voltar ao Studio</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 8H3M7.5 3.5 3 8l4.5 4.5" /></svg><span>{seriesContext ? `Voltar para ${seriesContext.title}` : "Voltar ao Studio"}</span>
         </Link>
 
         {state === "ready" && (

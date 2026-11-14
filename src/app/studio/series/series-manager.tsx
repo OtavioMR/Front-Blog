@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -39,7 +39,19 @@ type Screen = "list" | "create" | "detail";
 type DetailTab = "chapters" | "add" | "settings";
 type Confirmation = "delete" | "items" | null;
 
-export default function SeriesManager() {
+async function fetchDetailForOwner(id: string, owner: string) {
+  const response = await authenticatedFetchForSubject(owner, `/api/v1/series/${id}/manage`, { cache: "no-store" });
+  if (!response.ok) throw new Error();
+  return parseDetail(await response.json(), owner, id);
+}
+
+async function loadArticlesForOwner(owner: string) {
+  const response = await authenticatedFetchForSubject(owner, "/api/v1/posts/me?page=1&limit=10&kind=standalone", { cache: "no-store" });
+  if (!response.ok) throw new Error();
+  return parseOwnArticles(await response.json());
+}
+
+export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: string }) {
   const router = useRouter();
   const [view, setView] = useState<View>("loading");
   const [screen, setScreen] = useState<Screen>("list");
@@ -111,11 +123,19 @@ export default function SeriesManager() {
       setSeries(list);
       setTitle("");
       setDescription("");
+      if (initialSeriesId) {
+        const selected = list.find((item) => item.id === initialSeriesId);
+        if (selected) {
+          const [data, page] = await Promise.all([fetchDetailForOwner(selected.id, profile.id), loadArticlesForOwner(profile.id)]);
+          if (current !== revision.current) return;
+          setDetail(data); setItems(data.posts); setTitle(data.title); setDescription(data.description); setArticles(page); setScreen("detail");
+        }
+      }
       setView("ready");
     } catch {
       if (current === revision.current) setView("error");
     }
-  }, []);
+  }, [initialSeriesId]);
 
   useEffect(() => {
     let active = true;
@@ -147,7 +167,7 @@ export default function SeriesManager() {
   }
 
   async function loadArticles(page: number, subject = owner) {
-    const response = await authenticatedFetchForSubject(subject, `/api/v1/posts/me?page=${page}&limit=10`, {
+    const response = await authenticatedFetchForSubject(subject, `/api/v1/posts/me?page=${page}&limit=10&kind=standalone`, {
       cache: "no-store",
     });
     if (!response.ok) throw new Error();
@@ -212,7 +232,7 @@ export default function SeriesManager() {
     discardAndReturnToList();
   }
 
-  function handleHeaderNavigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
+  function handleHeaderNavigate(event: { preventDefault: () => void }, href: string) {
     if (dirty) {
       event.preventDefault();
       setPendingLeave({ type: "route", href });
@@ -695,15 +715,10 @@ export default function SeriesManager() {
                       <h2>Capítulos da série</h2>
                       <p>Até 100 artigos. Reordene ou remova capítulos e salve quando terminar.</p>
                     </div>
-                    <button
-                      type="button"
-                      className={styles.secondaryBtn}
-                      onClick={() => setDetailTab("add")}
-                      disabled={busy || uncertain}
-                    >
+                    <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
                       <Plus size={15} aria-hidden="true" />
-                      <span>Adicionar artigos</span>
-                    </button>
+                      <span>Escrever capítulo</span>
+                    </Link>
                   </div>
 
                   {changedItems && (
@@ -737,10 +752,10 @@ export default function SeriesManager() {
                       </span>
                       <h3>Nenhum capítulo nesta série</h3>
                       <p>Adicione seus contos publicados ou rascunhos para começar a montar a sequência.</p>
-                      <button type="button" className={styles.primaryBtn} onClick={() => setDetailTab("add")}>
+                      <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
                         <Plus size={16} aria-hidden="true" />
-                        <span>Adicionar artigos</span>
-                      </button>
+                        <span>Escrever cap?tulo</span>
+                      </Link>
                     </div>
                   ) : (
                     <ol className={styles.chapterList}>
@@ -756,6 +771,7 @@ export default function SeriesManager() {
                             </span>
                           </div>
                           <div className={styles.chapterActions}>
+                            <Link href={`/studio/${item.id}`} className={styles.iconBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/${item.id}`)}>Editar</Link>
                             <button
                               type="button"
                               className={styles.iconBtn}
@@ -842,8 +858,8 @@ export default function SeriesManager() {
                         <div className={styles.empty}>
                           <h3>Você ainda não tem artigos</h3>
                           <p>Crie um conto primeiro para poder adicioná-lo a esta série.</p>
-                          <Link href="/studio/novo" className={styles.primaryBtn}>
-                            Novo conto
+                          <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
+                            Escrever cap?tulo
                           </Link>
                         </div>
                       ) : (

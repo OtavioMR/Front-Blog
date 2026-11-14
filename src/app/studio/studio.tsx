@@ -107,7 +107,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
       } else if (canWriteArticles(profile.role)) {
         const response = await authenticatedFetchForSubject(
           profile.id,
-          `/api/v1/posts/me?page=${requestedPage}&limit=10`,
+          `/api/v1/posts/me?page=${requestedPage}&limit=10&kind=standalone`,
           { cache: "no-store" },
         );
         if (current !== revision.current) return;

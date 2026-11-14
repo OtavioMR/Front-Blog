@@ -71,14 +71,16 @@ export default function StudioHeader({
             </Link>
           </div>
 
-          <Link
-            href="/studio/novo"
-            className={styles.cta}
-            onClick={handleClick("/studio/novo")}
-          >
-            <PenLine size={16} strokeWidth={2} aria-hidden="true" />
-            <span>Novo conto</span>
-          </Link>
+          {activeTab === "contos" && (
+            <Link
+              href="/studio/novo"
+              className={styles.cta}
+              onClick={handleClick("/studio/novo")}
+            >
+              <PenLine size={16} strokeWidth={2} aria-hidden="true" />
+              <span>Novo conto</span>
+            </Link>
+          )}
         </nav>
       )}
     </header>
