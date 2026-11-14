@@ -1,3 +1,4 @@
+import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
 import { once } from "node:events";
@@ -25,9 +26,9 @@ test("revision preview restore pending and account switch", { timeout: 120000 },
   const revision = { id: revisionId, title: "Versao antiga", content: "Conteudo privado anterior", createdAt: "2026-01-01T12:00:00Z" }; let restores = 0, saves = 0, covers = 0, photos = 0;
   const api = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk;
-    const respond = (status, data) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
+    const respond = (status, data) => { const payload = v2FixtureResponse(data, req, res); res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(payload)); };
     if (req.url === "/api/v1/auth/login") { const role = JSON.parse(body).password; if (!ids[role]) return respond(401, {}); res.setHeader("Set-Cookie", `refreshToken=${role}; HttpOnly; Path=/api/v1/auth; SameSite=Strict`); return respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 }); }
-    if (req.url === "/api/v1/auth/refresh") { const role = /refreshToken=(AUTHOR|OTHER)/.exec(req.headers.cookie || "")?.[1]; return role ? respond(200, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {}); }
+    if (req.url === "/api/v1/auth/refresh/v2") { const role = /refreshToken=(AUTHOR|OTHER)/.exec(req.headers.cookie || "")?.[1]; return role ? respond(200, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {}); }
     const role = Object.keys(ids).find(value => req.headers.authorization === `Bearer ${token(value)}`);
     if (role && req.url === `/api/v1/users/${ids[role]}/profile-photo` && req.method === "POST") { photos++; return respond(201, { id: ids[role], profilePhoto: "/uploads/profile-photos/550e8400-e29b-41d4-a716-446655440000.webp" }); }
     if (role && req.url === `/api/v1/users/${ids[role]}`) return respond(200, { id: ids[role], role: "AUTHOR", name: "Pessoa", email: "pessoa@example.test", emailVerified: true, bio: null, firstPostApproved: true });

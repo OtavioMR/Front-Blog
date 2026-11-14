@@ -8,7 +8,7 @@ const reply = (status: number) => new Response(null, { status, headers: { "Cache
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (process.env.ENABLE_ADMIN_BFF !== "true") return reply(404);
   const sessionId = (await cookies()).get(cookieName)?.value;
-  const current = getSession(sessionId);
+  const current = await getSession(sessionId);
   if (!current) return reply(401);
   const { id } = await params, form = await formBody(request);
   if (!form || !sameSecret(form.get("csrf") ?? undefined, current.csrf)) return reply(403);
@@ -37,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (process.env.ENABLE_ADMIN_BFF !== "true") return reply(404);
   const sessionId = (await cookies()).get(cookieName)?.value;
-  const current = getSession(sessionId);
+  const current = await getSession(sessionId);
   if (!current) return reply(401);
   const session = await getValidSession(sessionId).catch(() => undefined);
   if (session === undefined) return reply(503);

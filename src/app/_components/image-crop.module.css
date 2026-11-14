@@ -1,5 +1,0 @@
-﻿.crop { display: grid; gap: 0.6rem; margin: 1rem 0; }
-.crop label { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.crop input[type="range"] { width: 100%; }
-.crop p { margin: 0; }
-.preview { display: block; width: 100%; max-width: 32rem; height: auto; border: 1px solid var(--border); border-radius: 0.5rem; }

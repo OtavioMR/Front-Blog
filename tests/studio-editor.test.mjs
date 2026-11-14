@@ -10,7 +10,8 @@ test("editor aceita somente rascunhos da conta e confirmação PENDING válida",
   const owner = "4c781e0d-b963-493c-b2df-0a8fa66c0615";
   const draft = { id: "d28beb9c-6a69-4c3a-841c-7593a8a63265", authorId: owner, title: "Título", content: "Conteúdo de teste", published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
   assert.deepEqual(parseDraft(draft, owner), draft);
-  const { isActive: _active, ...patchResponse } = draft;
+  const patchResponse = { ...draft };
+  delete patchResponse.isActive;
   assert.throws(() => parseDraft(patchResponse, owner));
   assert.equal(parseUpdatedDraft(patchResponse, owner).isActive, true);
   assert.throws(() => parseUpdatedDraft({ ...draft, isActive: false }, owner));
@@ -55,7 +56,8 @@ test("publication requires an approved owner and validates the resulting state",
   const id = "d28beb9c-6a69-4c3a-841c-7593a8a63265";
   const draft = { id, authorId: owner, title: "Title", content: "Test content", published: true, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
   assert.equal(parsePublicationResponse(draft, owner, id, true).published, true);
-  const { isActive: _active, ...patchResponse } = draft;
+  const patchResponse = { ...draft };
+  delete patchResponse.isActive;
   assert.equal(parsePublicationResponse(patchResponse, owner, id, true).isActive, true);
   assert.throws(() => parsePublicationResponse({ ...draft, isActive: false }, owner, id, true));
   assert.equal(parsePublicationResponse({ ...draft, published: false }, owner, id, false).published, false);
@@ -79,7 +81,8 @@ test("schedule conversion validates local dates and API response", async () => {
   const id = "d28beb9c-6a69-4c3a-841c-7593a8a63265";
   const draft = { id, authorId: owner, title: "Title", content: "Test content", published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: iso };
   assert.equal(parseScheduleResponse(draft, owner, id, iso).scheduledAt, iso);
-  const { isActive: _active, ...patchResponse } = draft;
+  const patchResponse = { ...draft };
+  delete patchResponse.isActive;
   assert.equal(parseScheduleResponse(patchResponse, owner, id, iso).scheduledAt, iso);
   assert.throws(() => parseScheduleResponse({ ...draft, isActive: false }, owner, id, iso));
   assert.equal(parseScheduleResponse({ ...draft, scheduledAt: null }, owner, id, null).scheduledAt, null);

@@ -1,3 +1,4 @@
+import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
 import { once } from "node:events";
@@ -25,9 +26,9 @@ test("collections create rename add remove and delete", { timeout: 120000 }, asy
   let collection = null, included = false, wrongName = false, writes = 0;
   const api = createServer(async (req, res) => {
     let body = ""; for await (const chunk of req) body += chunk; const url = new URL(req.url, "http://localhost");
-    const respond = (status, data) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(data)); };
+    const respond = (status, data) => { const payload = v2FixtureResponse(data, req, res); res.writeHead(status, { "Content-Type": "application/json" }); res.end(JSON.stringify(payload)); };
     if (url.pathname === "/api/v1/auth/login") { const second = JSON.parse(body).email === "outra@example.test"; res.setHeader("Set-Cookie", `refreshToken=${second ? "second" : "synthetic"}; HttpOnly; Path=/api/v1/auth; SameSite=Strict`); return respond(201, { access_token: second ? secondToken : token, token_type: "Bearer", expires_in: 900 }); }
-    if (url.pathname === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=second") ? respond(200, { access_token: secondToken, token_type: "Bearer", expires_in: 900 }) : req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token, token_type: "Bearer", expires_in: 900 }) : respond(401, {});
+    if (url.pathname === "/api/v1/auth/refresh/v2") return req.headers.cookie?.includes("refreshToken=second") ? respond(200, { access_token: secondToken, token_type: "Bearer", expires_in: 900 }) : req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token, token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     const second = req.headers.authorization === `Bearer ${secondToken}`;
     if (!second && req.headers.authorization !== `Bearer ${token}`) return respond(401, {});
     if (second && url.pathname === `/api/v1/users/${secondId}`) return respond(200, { id: secondId, role: "READER", name: "Outra pessoa", email: "outra@example.test", emailVerified: true, bio: null });

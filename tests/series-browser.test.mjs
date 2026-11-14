@@ -1,3 +1,4 @@
+import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
 import { once } from "node:events";
@@ -27,13 +28,13 @@ test("autor gerencia series e protege alteracoes no navegador", { timeout: 12000
   const api = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     let body = ""; for await (const chunk of req) body += chunk;
-    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(data)); };
+    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(v2FixtureResponse(data, req, res))); };
     if (req.method === "POST" && req.url === "/api/v1/auth/login") {
       const role = JSON.parse(body).password;
       if (role === "AUTHOR") res.setHeader("Set-Cookie", "refreshToken=synthetic; HttpOnly; Path=/api/v1/auth; SameSite=Strict");
       return ["AUTHOR", "ADMIN"].includes(role) ? respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     }
-    if (req.method === "POST" && req.url === "/api/v1/auth/refresh") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token("AUTHOR"), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
+    if (req.method === "POST" && req.url === "/api/v1/auth/refresh/v2") return req.headers.cookie?.includes("refreshToken=synthetic") ? respond(200, { access_token: token("AUTHOR"), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     const bearer = (req.headers.authorization || "").replace(/^Bearer /, "");
     const role = bearer === token("AUTHOR") ? "AUTHOR" : bearer === token("ADMIN") ? "ADMIN" : "";
     if (!role) return respond(401, {});

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const id = (await cookies()).get(cookieName)?.value;
   const form = await formBody(request);
   if (!form || form.getAll("csrf").length !== 1 || [...form.keys()].some(key => key !== "csrf")) return reply(403);
-  const current = getSession(id);
+  const current = await getSession(id);
   if (!current) return reply(401);
   if (!sameSecret(form.get("csrf") ?? undefined, current.csrf)) return reply(403);
   try {

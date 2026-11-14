@@ -1,9 +1,10 @@
 "use client";
 
 // This record holds coordination state only. Credentials never enter browser storage or messages.
-const KEY = "blog-session-coordination-v1";
-const LOCK = "blog-session-v1";
-type RecordState = { epoch: string; pending: boolean };
+const KEY = "blog-session-coordination-v2";
+const LOCK = "blog-session-v2";
+type RefreshOperation = { id: string; generation: number; deadline?: number };
+type RecordState = { epoch: string; pending: boolean; sessionId?: string; generation?: number; operation?: RefreshOperation; loggedOut?: boolean };
 type Token = { value: string; expiresAt: number; epoch: string };
 let token: Token | null = null;
 let inflight: Promise<boolean> | null = null;
@@ -17,7 +18,10 @@ function readState(): RecordState | null {
   if (!raw) return null;
   const state: unknown = JSON.parse(raw);
   if (!state || typeof state !== "object" || !("epoch" in state) || typeof state.epoch !== "string" || !("pending" in state) || typeof state.pending !== "boolean") throw new Error("Coordenação indisponível. Entre novamente.");
-  return state as RecordState;
+  const record = state as RecordState;
+  if (record.sessionId !== undefined && (!/^[0-9a-f-]{36}$/i.test(record.sessionId) || !Number.isSafeInteger(record.generation) || record.generation! < 0)) throw new Error("Coordenação de sessão inválida.");
+  if (record.operation && (!record.sessionId || !/^[A-Za-z0-9_-]{43}$/.test(record.operation.id) || !Number.isSafeInteger(record.operation.generation) || record.operation.generation < 0)) throw new Error("Operação de sessão inválida.");
+  return record;
 }
 function saveState(state: RecordState) { localStorage.setItem(KEY, JSON.stringify(state)); }
 function restoreState(state: RecordState | null) {
@@ -28,7 +32,12 @@ function ready() {
   if (!("locks" in navigator) || typeof BroadcastChannel === "undefined") throw new Error("Este navegador não oferece a coordenação necessária para entrar com segurança.");
   if (!channel) {
     channel = new BroadcastChannel(LOCK);
-    channel.onmessage = (event) => { if (event.data?.type === "session-changed") { token = null; notify(); } };
+    channel.onmessage = (event) => {
+      if (event.data?.type === "session-changed") {
+        if (token?.epoch !== readState()?.epoch) token = null;
+        notify();
+      }
+    };
   }
 }
 async function locked<T>(action: () => Promise<T>): Promise<T> {
@@ -37,8 +46,23 @@ async function locked<T>(action: () => Promise<T>): Promise<T> {
 }
 async function tokensFrom(response: Response, epoch: string) {
   const data: unknown = await response.json();
+  acceptLogin(data, epoch);
+}
+function accessToken(data: unknown, epoch: string): Token {
   if (!data || typeof data !== "object" || !("access_token" in data) || typeof data.access_token !== "string" || !data.access_token || !("token_type" in data) || data.token_type !== "Bearer" || !("expires_in" in data) || typeof data.expires_in !== "number" || !Number.isFinite(data.expires_in) || data.expires_in <= 0) throw new Error("Resposta de sessão inválida. Entre novamente.");
-  token = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000, epoch };
+  return { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000, epoch };
+}
+function acceptLogin(data: unknown, epoch: string) {
+  const issued = accessToken(data, epoch);
+  const value = data as Record<string, unknown>;
+  if (value.refresh_protocol !== 2 || typeof value.session_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.session_id) || value.refresh_generation !== 0) throw new Error("Protocolo de sessão inválido.");
+  if (readState()?.epoch !== epoch) throw new Error("Conta alterada durante a entrada.");
+  saveState({ epoch, pending: false, sessionId: value.session_id, generation: 0 });
+  token = issued;
+}
+function operationId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 const profileListeners = new Set<() => void>();
@@ -59,7 +83,7 @@ export async function login(email: string, password: string, totpCode?: string):
     let response: Response;
     try {
       response = await fetch("/api/v1/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000), body: JSON.stringify({ email, password, ...(totpCode && { totpCode }) }) });
-    } catch { token = null; broadcast(); throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
+    } catch { restoreState(previousState); token = previousToken; throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
     if ([400, 401, 403, 429].includes(response.status)) {
       restoreState(previousState);
       token = previousToken;
@@ -97,9 +121,8 @@ export async function login(email: string, password: string, totpCode?: string):
       if (!data || typeof data !== "object" || !("access_token" in data) || typeof data.access_token !== "string" || !data.access_token || !("token_type" in data) || data.token_type !== "Bearer" || !("expires_in" in data) || typeof data.expires_in !== "number" || !Number.isFinite(data.expires_in) || data.expires_in <= 0) {
         throw new Error("Resposta de sessão inválida.");
       }
-      token = { value: data.access_token, expiresAt: Date.now() + data.expires_in * 1000, epoch };
-      saveState({ epoch, pending: false });
-    } catch { token = null; broadcast(); throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
+      acceptLogin(data, epoch);
+    } catch { restoreState(previousState); token = previousToken; throw new Error("Não foi possível confirmar a entrada. Tente entrar novamente."); }
     broadcast();
     notifyProfile();
     return { ok: true };
@@ -108,6 +131,8 @@ export async function login(email: string, password: string, totpCode?: string):
 
 export async function verify2fa(preAuthToken: string, code: string): Promise<void> {
   return locked(async () => {
+    const previousState = readState();
+    const previousToken = token;
     const epoch = crypto.randomUUID();
     saveState({ epoch, pending: true });
     let response: Response;
@@ -121,13 +146,11 @@ export async function verify2fa(preAuthToken: string, code: string): Promise<voi
         body: JSON.stringify({ preAuthToken, code }),
       });
     } catch {
-      token = null;
-      broadcast();
+      restoreState(previousState); token = previousToken;
       throw new Error("Não foi possível validar o código de autenticação.");
     }
     if ([400, 401, 403, 429].includes(response.status)) {
-      token = null;
-      broadcast();
+      restoreState(previousState); token = previousToken;
       if (response.status === 401) throw new Error("Código de autenticação ou de recuperação inválido ou expirado.");
       if (response.status === 429) throw new Error("Muitas tentativas. Aguarde um pouco e tente novamente.");
       throw new Error("Não foi possível validar o código informado.");
@@ -135,10 +158,8 @@ export async function verify2fa(preAuthToken: string, code: string): Promise<voi
     try {
       if (!response.ok) throw new Error();
       await tokensFrom(response, epoch);
-      saveState({ epoch, pending: false });
     } catch {
-      token = null;
-      broadcast();
+      restoreState(previousState); token = previousToken;
       throw new Error("Não foi possível confirmar a autenticação.");
     }
     broadcast();
@@ -146,33 +167,57 @@ export async function verify2fa(preAuthToken: string, code: string): Promise<voi
   });
 }
 
-// Must only run while holding LOCK. A pending marker remains after any uncertain result.
-async function refreshLocked(state: RecordState): Promise<"ok" | "unauthorized" | "uncertain"> {
-  saveState({ ...state, pending: true });
+// Persist the operation BEFORE sending. A reload/retry must present the same ID,
+// generation and HttpOnly proof; creating a different ID after a lost commit is reuse.
+async function refreshLocked(state: RecordState, retries = 1): Promise<"ok" | "unauthorized" | "uncertain"> {
+  if (!state.sessionId || state.generation === undefined || state.loggedOut) return "unauthorized";
+  const operation = state.operation && (state.pending || (state.operation.deadline ?? 0) > Date.now() + 5000)
+    ? state.operation : { id: operationId(), generation: state.generation };
+  saveState({ ...state, pending: true, operation });
   try {
-    const response = await fetch("/api/v1/auth/refresh", { method: "POST", credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000) });
-    if (!response.ok) { token = null; broadcast(); return response.status === 401 ? "unauthorized" : "uncertain"; }
-    await tokensFrom(response, state.epoch);
-    saveState({ ...state, pending: false });
+    const response = await fetch("/api/v1/auth/refresh/v2", { method: "POST", headers: {
+      "X-Session-Id": state.sessionId, "X-Refresh-Operation": operation.id, "X-Refresh-Generation": String(operation.generation),
+    }, credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000) });
+    const data: unknown = await response.json();
+    const current = readState();
+    if (current?.epoch !== state.epoch || current.loggedOut || current.operation?.id !== operation.id) return "unauthorized";
+    if (!response.ok) {
+      token = null;
+      const failure = data && typeof data === "object" ? data as Record<string, unknown> : {};
+      if (response.status === 409 && ["RECOVERY_EXPIRED", "GENERATION_MISMATCH"].includes(String(failure.code))
+        && typeof failure.retry_generation === "number" && Number.isSafeInteger(failure.retry_generation) && failure.retry_generation >= state.generation) {
+        const next = { ...state, generation: failure.retry_generation, pending: false, operation: undefined };
+        saveState(next);
+        return retries ? refreshLocked(next, retries - 1) : "uncertain";
+      }
+      if (response.status === 401 || (response.status === 409 && failure.code === "RECOVERY_EXPIRED")) {
+        saveState({ epoch: crypto.randomUUID(), pending: true, loggedOut: true, sessionId: state.sessionId, generation: state.generation });
+        broadcast();
+        return "unauthorized";
+      }
+      return "uncertain";
+    }
+    const issued = accessToken(data, state.epoch);
+    const value = data as Record<string, unknown>;
+    const deadline = typeof value.recovery_deadline === "string" ? Date.parse(value.recovery_deadline) : NaN;
+    if (value.session_id !== state.sessionId || value.operation_id !== operation.id || value.generation !== operation.generation + 1 || !Number.isFinite(deadline)) throw new Error("Resposta de renovação inválida.");
+    saveState({ ...state, generation: value.generation as number, pending: false, operation: { ...operation, deadline } });
+    token = issued;
     return "ok";
-  } catch { token = null; broadcast(); return "uncertain"; }
+  } catch { token = null; return "uncertain"; }
 }
 
 export function restoreSession(): Promise<boolean> {
   if (inflight) return inflight;
   inflight = locked(async () => {
-    const state = readState();
-    if (token && token.epoch === state?.epoch && token.expiresAt > Date.now() + 5000 && !state.pending) return true;
-    token = null;
-    if (!state || state.pending) return false;
-    return (await refreshLocked(state)) === "ok";
+    return ensureTokenLocked();
   }).finally(() => { inflight = null; });
   return inflight;
 }
 
 async function ensureTokenLocked(): Promise<boolean> {
   const state = readState();
-  if (!state || state.pending) { token = null; return false; }
+  if (!state || state.loggedOut || (state.pending && !state.operation)) { token = null; return false; }
   if (token && token.epoch === state.epoch && token.expiresAt > Date.now() + 5000) return true;
   token = null;
   const result = await refreshLocked(state);
@@ -194,7 +239,7 @@ async function fetchLocked(path: string, init: RequestInit = {}): Promise<Respon
   let response = await send();
   if (response.status === 401 && (method === "GET" || method === "HEAD")) {
     const state = readState();
-    if (state && !state.pending) {
+    if (state && !state.loggedOut) {
       const refresh = await refreshLocked(state);
       if (refresh === "uncertain") throw new Error("Não foi possível confirmar a sessão.");
       if (refresh === "ok" && token) response = await send();
@@ -257,16 +302,16 @@ export async function getOwnProfile(): Promise<OwnProfile | null> {
 export async function logout(): Promise<boolean> {
   return locked(async () => {
     const state = readState();
-    if (!token || !state || token.epoch !== state.epoch || state.pending) { token = null; return false; }
-    if (token.expiresAt <= Date.now() + 5000 && (await refreshLocked(state)) !== "ok") return false;
-    const current = token;
-    if (!current) return false;
+    const current = token?.epoch === state?.epoch ? token : null;
     token = null;
-    saveState({ epoch: crypto.randomUUID(), pending: true });
+    saveState({ epoch: crypto.randomUUID(), pending: true, loggedOut: true, sessionId: state?.sessionId, generation: state?.generation });
     broadcast();
     notifyProfile();
+    if (!state?.sessionId) return false;
     try {
-      const response = await fetch("/api/v1/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${current.value}` }, credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000) });
+      const response = await fetch("/api/v1/auth/logout/v2", { method: "POST", headers: {
+        "X-Session-Id": state.sessionId, ...(current ? { Authorization: `Bearer ${current.value}` } : {}),
+      }, credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10000) });
       return response.ok;
     } catch { return false; }
   });

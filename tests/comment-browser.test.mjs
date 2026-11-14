@@ -1,3 +1,4 @@
+import { v2FixtureResponse } from "./support/v2-response.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFile } from "node:child_process";
 import { once } from "node:events";
@@ -36,7 +37,7 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   const api = createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     let body = ""; for await (const chunk of req) body += chunk;
-    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(data)); };
+    const respond = (status, data) => { res.statusCode = status; res.end(JSON.stringify(v2FixtureResponse(data, req, res))); };
     const url = new URL(req.url, "http://localhost");
     if (url.pathname === "/api/v1/auth/login") {
       const role = JSON.parse(body).password;
@@ -44,7 +45,7 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
       res.setHeader("Set-Cookie", `refreshToken=${role}; HttpOnly; Path=/api/v1/auth; SameSite=Strict`);
       return respond(201, { access_token: token(role), token_type: "Bearer", expires_in: 900 });
     }
-    if (url.pathname === "/api/v1/auth/refresh") {
+    if (url.pathname === "/api/v1/auth/refresh/v2") {
       const role = /refreshToken=(READER|AUTHOR|ADMIN)/.exec(req.headers.cookie || "")?.[1];
       return role ? respond(200, { access_token: token(role), token_type: "Bearer", expires_in: 900 }) : respond(401, {});
     }
@@ -123,7 +124,7 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   const target = await waitFor(async () => (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(item => item.type === "page" && item.url === "about:blank"), "Chromium; defina CHROME_PATH");
   socket = new WebSocket(target.webSocketDebuggerUrl); await once(socket, "open");
   let sequence = 0; const pending = new Map();
-  socket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); data.error ? reject(new Error(data.error.message)) : resolve(data.result); } });
+  socket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); if (data.error) reject(new Error(data.error.message)); else resolve(data.result); } });
   const cdp = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); socket.send(JSON.stringify({ id, method, params })); });
   const evaluate = async expression => { const result = await cdp("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
   const has = text => evaluate(`document.body.innerText.includes(${JSON.stringify(text)})`);
@@ -254,7 +255,7 @@ test("comentarios e respostas preservam permissoes e discussao na API simulada",
   const secondTarget = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(base + "/entrar")}`, { method: "PUT" })).json();
   secondSocket = new WebSocket(secondTarget.webSocketDebuggerUrl); await once(secondSocket, "open");
   let seq2 = 0; const pending2 = new Map();
-  secondSocket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending2.has(data.id)) { const { resolve, reject } = pending2.get(data.id); pending2.delete(data.id); data.error ? reject(new Error(data.error.message)) : resolve(data.result); } });
+  secondSocket.addEventListener("message", event => { const data = JSON.parse(event.data); if (pending2.has(data.id)) { const { resolve, reject } = pending2.get(data.id); pending2.delete(data.id); if (data.error) reject(new Error(data.error.message)); else resolve(data.result); } });
   const cdp2 = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq2; pending2.set(id, { resolve, reject }); secondSocket.send(JSON.stringify({ id, method, params })); });
   const eval2 = async expression => { const result = await cdp2("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result.value; };
   const loginSecond = async role => {

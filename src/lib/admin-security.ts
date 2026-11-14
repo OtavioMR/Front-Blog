@@ -1,13 +1,9 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
-type Session = { token: string; refreshToken?: string; tokenExpires: number; csrf: string; expires: number; idleExpires: number; revoked: boolean; timer?: ReturnType<typeof setTimeout>; refreshing?: Promise<boolean>; usedConfirmations: Set<string> };
-const state = globalThis as typeof globalThis & { __editorialSessions?: Map<string, Session> };
-const sessions = state.__editorialSessions ??= new Map();
-function removeSession(key: string) {
-  const session = sessions.get(key);
-  if (session) { session.revoked = true; session.refreshToken = undefined; if (session.timer) clearTimeout(session.timer); }
-  sessions.delete(key);
-}
+import { createStoredSession, deleteStoredSession, readStoredSession, withStoredSession } from "./admin-session-store.ts";
+
+type RefreshState = { sessionId: string; generation: number; cookies: Record<string, string>; operation?: { id: string; generation: number } };
+type Session = { key: string; token: string; refresh?: RefreshState; tokenExpires: number; csrf: string; expires: number; idleExpires: number; usedConfirmations: string[] };
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 export const randomSecret = () => randomBytes(32).toString("base64url");
 export const cookieName = process.env.NODE_ENV === "production" ? "__Host-editorial-session" : "editorial-session-dev";
@@ -26,67 +22,115 @@ const duration = (name: string, fallback: number) => {
   const value = Number(process.env[name]);
   return Number.isSafeInteger(value) && value >= 60 && value <= 604800 ? value * 1000 : fallback;
 };
-export function refreshCookie(response: Response): string | null {
-  const headers = response.headers.getSetCookie?.() ?? [response.headers.get("set-cookie") ?? ""];
-  for (const header of headers) {
-    const match = /^refreshToken=([A-Za-z0-9._-]+)(?:;|$)/.exec(header);
-    if (match) return match[1];
+function sessionCookies(response: Response, sessionId: string, generation: number): Record<string, string> {
+  const prefix = process.env.NODE_ENV === "production" ? "__Secure-griforio" : "griforio-dev";
+  const names = [`${prefix}-rt-${sessionId}-${generation}`, `${prefix}-proof-${sessionId}-${generation}`];
+  const result: Record<string, string> = {};
+  for (const header of response.headers.getSetCookie()) {
+    const [pair] = header.split(";");
+    const index = pair.indexOf("=");
+    const name = pair.slice(0, index), value = pair.slice(index + 1);
+    if (names.includes(name) && /^[A-Za-z0-9._-]+$/.test(value) && /;\s*HttpOnly(?:;|$)/i.test(header)
+      && (process.env.NODE_ENV !== "production" || /;\s*Secure(?:;|$)/i.test(header))) result[name] = value;
   }
-  return null;
+  if (names.some(name => !result[name])) throw new Error("missing v2 session cookies");
+  return result;
 }
-export function createSession(token: string, seconds: number, refreshToken?: string) {
-  for (const [key, session] of sessions) if (session.expires <= Date.now() || session.idleExpires <= Date.now()) removeSession(key);
-  if (sessions.size >= 1000) throw new Error("capacity");
-  const id = randomSecret();
+export function loginRefreshState(response: Response, payload: Record<string, unknown>): RefreshState {
+  if (payload.refresh_protocol !== 2 || typeof payload.session_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.session_id) || payload.refresh_generation !== 0) throw new Error("invalid v2 login");
+  return { sessionId: payload.session_id, generation: 0, cookies: sessionCookies(response, payload.session_id, 0) };
+}
+function sessionOrigin(): string {
+  const origin = process.env.SITE_ORIGIN || "http://localhost:3000";
+  if (!allowedOrigin(origin)) throw new Error("invalid session origin");
+  return origin;
+}
+function cookieHeader(refresh: RefreshState): string {
+  return Object.entries(refresh.cookies).map(([name, value]) => `${name}=${value}`).join("; ");
+}
+export function logoutUpstream(session: Pick<Session, "token" | "refresh">): Promise<Response> {
+  return upstream("/auth/logout/v2", { method: "POST", headers: {
+    Origin: sessionOrigin(), Authorization: `Bearer ${session.token}`,
+    ...(session.refresh ? { "X-Session-Id": session.refresh.sessionId, Cookie: cookieHeader(session.refresh) } : {}),
+  } });
+}
+export async function createSession(token: string, seconds: number, refresh?: RefreshState) {
   if (seconds <= 10 || !Number.isFinite(seconds)) throw new Error("expired");
-  const now = Date.now();
-  const session: Session = { token, refreshToken, tokenExpires: now + (seconds - 10) * 1000, csrf: randomSecret(), expires: now + (refreshToken ? duration("ADMIN_SESSION_MAX_SECONDS", 12 * 60 * 60 * 1000) : Math.min(300, seconds - 10) * 1000), idleExpires: now + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000), revoked: false, usedConfirmations: new Set() };
-  const key = hash(id);
-  sessions.set(key, session);
-  session.timer = setTimeout(() => { if (sessions.get(key) === session) removeSession(key); }, session.expires - Date.now());
-  session.timer.unref();
+  const id = randomSecret(), now = Date.now();
+  const session: Session = { key: hash(id), token, refresh, tokenExpires: now + (seconds - 10) * 1000, csrf: randomSecret(), expires: now + (refresh ? duration("ADMIN_SESSION_MAX_SECONDS", 12 * 60 * 60 * 1000) : Math.min(300, seconds - 10) * 1000), idleExpires: now + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000), usedConfirmations: [] };
+  // A successful redirect is issued only after the shared store acknowledges it.
+  await createStoredSession(session.key, session, Math.min(session.expires, session.idleExpires));
   return { id, session };
 }
-export function getSession(id?: string): Session | null {
+export async function getSession(id?: string): Promise<Session | null> {
   if (!id || !/^[A-Za-z0-9_-]{43}$/.test(id)) return null;
-  const key = hash(id); const value = sessions.get(key);
-  if (!value || value.revoked || value.expires <= Date.now() || value.idleExpires <= Date.now()) { removeSession(key); return null; }
+  const key = hash(id), value = await readStoredSession<Session>(key);
+  if (!value || value.key !== key || value.expires <= Date.now() || value.idleExpires <= Date.now()) return null;
   return value;
 }
-export function deleteSession(id?: string) { if (id) removeSession(hash(id)); }
+export async function deleteSession(id?: string) { if (id && /^[A-Za-z0-9_-]{43}$/.test(id)) await deleteStoredSession(hash(id)); }
 export async function getValidSession(id?: string): Promise<Session | null> {
-  const session = getSession(id);
-  if (!session) return null;
-  if (session.tokenExpires <= Date.now()) {
-    if (!session.refreshToken) { deleteSession(id); return null; }
-    session.refreshing ??= (async () => {
-      const response = await upstream("/auth/refresh", { method: "POST", headers: { Cookie: `refreshToken=${session.refreshToken}` } });
-      if (response.status === 401 || response.status === 403) return false;
-      if (!response.ok) throw new Error("refresh unavailable");
-      const next = refreshCookie(response);
-      const payload: unknown = await response.json();
-      if (!next || !payload || typeof payload !== "object" || !("access_token" in payload) || typeof payload.access_token !== "string" || !payload.access_token || !("expires_in" in payload) || typeof payload.expires_in !== "number" || !Number.isFinite(payload.expires_in) || payload.expires_in <= 10) throw new Error("invalid refresh response");
-      if (session.revoked) return false;
-      session.token = payload.access_token;
-      session.refreshToken = next;
-      session.tokenExpires = Date.now() + (payload.expires_in - 10) * 1000;
-      return true;
-    })().finally(() => { session.refreshing = undefined; });
-    let refreshed: boolean;
-    try { refreshed = await session.refreshing; } catch (error) { deleteSession(id); throw error; }
-    if (!refreshed) { deleteSession(id); return null; }
-  }
-  if (!getSession(id)) return null;
-  session.idleExpires = Date.now() + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000);
-  return session;
+  return validSession(id);
 }
-// Apenas leituras seguras devem ser repetidas após um 401 inesperado. Uma
-// rotação já concluída por outra requisição é reutilizada, sem renovar de novo.
+async function validSession(id?: string, rejectedToken?: string): Promise<Session | null> {
+  if (!id || !/^[A-Za-z0-9_-]{43}$/.test(id)) return null;
+  return withStoredSession(hash(id), async (save, remove) => {
+    const session = await getSession(id);
+    if (!session) return null;
+    const persist = () => save(session, Math.min(session.expires, session.idleExpires));
+    if (session.token === rejectedToken) session.tokenExpires = 0;
+    if (session.tokenExpires <= Date.now()) {
+      if (!session.refresh) { await remove(); return null; }
+      async function renew(retries = 1): Promise<boolean> {
+        const refresh = session!.refresh!;
+        const operation = refresh.operation ??= { id: randomSecret(), generation: refresh.generation };
+        // Persist before the remote commit, so another instance retries the SAME
+        // operation if this process dies or loses the response.
+        await persist();
+        const response = await upstream("/auth/refresh/v2", { method: "POST", headers: {
+          Origin: sessionOrigin(), Cookie: cookieHeader(refresh), "X-Session-Id": refresh.sessionId,
+          "X-Refresh-Operation": operation.id, "X-Refresh-Generation": String(operation.generation),
+        } });
+        if (!await getSession(id)) return false;
+        if (response.status === 401) return false;
+        if (response.status === 409) {
+          const failure = await response.json().catch(() => null);
+          if (["RECOVERY_EXPIRED", "GENERATION_MISMATCH"].includes(failure?.code)
+            && Number.isSafeInteger(failure.retry_generation) && failure.retry_generation >= refresh.generation && retries) {
+            refresh.generation = failure.retry_generation;
+            refresh.operation = undefined;
+            return renew(retries - 1);
+          }
+          if (failure?.code === "RECOVERY_EXPIRED") return false;
+        }
+        if (!response.ok) throw new Error("refresh unavailable");
+        const next = sessionCookies(response, refresh.sessionId, operation.generation + 1);
+        Object.assign(refresh.cookies, next);
+        // Headers can arrive before a lost/truncated body. Keep both generations.
+        await persist();
+        const payload: unknown = await response.json();
+        if (!payload || typeof payload !== "object" || !("access_token" in payload) || typeof payload.access_token !== "string" || !payload.access_token || !("expires_in" in payload) || typeof payload.expires_in !== "number" || !Number.isFinite(payload.expires_in) || payload.expires_in <= 0
+          || !("session_id" in payload) || payload.session_id !== refresh.sessionId || !("operation_id" in payload) || payload.operation_id !== operation.id || !("generation" in payload) || payload.generation !== operation.generation + 1) throw new Error("invalid refresh response");
+        session!.token = payload.access_token;
+        refresh.cookies = next;
+        refresh.generation = payload.generation as number;
+        refresh.operation = undefined;
+        session!.tokenExpires = Date.now() + Math.max(0, payload.expires_in - 5) * 1000;
+        return true;
+      }
+      let refreshed: boolean;
+      try { refreshed = await renew(); } catch (error) { if (!await getSession(id)) return null; throw error; }
+      if (!refreshed) { await remove(); return null; }
+    }
+    if (!await getSession(id)) return null;
+    session.idleExpires = Date.now() + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000);
+    await persist();
+    return session;
+  });
+}
+// Retry safe reads only; reuse a rotation already completed by another request.
 export async function refreshAfterUnauthorized(id: string | undefined, rejectedToken: string): Promise<Session | null> {
-  const session = getSession(id);
-  if (!session) return null;
-  if (session.token === rejectedToken) session.tokenExpires = 0;
-  return getValidSession(id);
+  return validSession(id, rejectedToken);
 }
 export type AdminActorInfo = {
   id: string;
@@ -116,10 +160,14 @@ export async function adminActor(token: string): Promise<AdminActorInfo | null> 
     return { id: payload.sub, role: value.role, name, email, profilePhoto, totpEnabled };
   } catch { throw new Error("admin identity unavailable"); }
 }
-export function consumeConfirmation(session: Session, signature: string): boolean {
-  if (session.usedConfirmations.size >= 1000 || session.usedConfirmations.has(signature)) return false;
-  session.usedConfirmations.add(signature);
-  return true;
+export async function consumeConfirmation(session: Session, signature: string): Promise<boolean> {
+  return withStoredSession(session.key, async save => {
+    const current = await readStoredSession<Session>(session.key);
+    if (!current || current.expires <= Date.now() || current.idleExpires <= Date.now() || current.usedConfirmations.length >= 1000 || current.usedConfirmations.includes(signature)) return false;
+    current.usedConfirmations.push(signature);
+    await save(current, Math.min(current.expires, current.idleExpires));
+    return true;
+  });
 }
 
 export async function upstream(path: string, init: RequestInit = {}): Promise<Response> {
