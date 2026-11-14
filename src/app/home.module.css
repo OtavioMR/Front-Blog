@@ -640,3 +640,4 @@
 .discovery .search { max-width: 760px; }
 .discovery .categoryNav { margin-top: 28px; }
 .categoryPill:focus-visible { outline: 3px solid #BD532B; outline-offset: 3px; }
+.seriesSection { margin: 4rem 0; }

@@ -382,3 +382,9 @@ Esses itens são propostas ou verificações, não funcionalidades garantidas. A
 - [ ] Validar implantação distribuída antes de usá-la. O BFF atual mantém sessões em memória de um único processo; reinício invalida as sessões locais.
 
 As consultas de auditoria e das filas de artigos e comentários foram verificadas no PostgreSQL configurado com dados sintéticos em transação revertida. A tomada simultânea de denúncia foi testada em transações reais. `BLOG_ADMIN_REFRESH_REAL=1 node --test tests/admin-refresh-real.test.mjs` valida renovação após expiração, concorrência, moderação, rebaixamento, suspensão e logout entre os dois servidores, com dados sintéticos removidos ao final. `npm run test:editorial-e2e` cobre aprovação editorial, tomada e decisão de denúncia, tema, teclado e telas em largura móvel contra API simulada. A validação da topologia distribuída e a cobertura adicional de formulários permanecem pendentes.
+# Ajustes de séries e descoberta
+
+- Séries e contos compartilham a listagem inicial; séries abrem uma página de capítulos com capas e cartões clicáveis.
+- Studio apresenta cartões, ordem dos capítulos e envio de capa. O backend fornece também as capas na consulta privada.
+- Validação: build e testes públicos e do Studio; integração visual com API real pendente, pois a API local não estava disponível.
+

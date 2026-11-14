@@ -1,7 +1,7 @@
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
-export type Series = { id: string; authorId: string; title: string; description: string; createdAt: string; updatedAt: string };
-export type Item = { id: string; title: string; slug: string; published: boolean; isActive: boolean; position: number };
+export type Series = { id: string; authorId: string; title: string; description: string; coverImage?: string | null; fallbackCoverImage?: string | null; chapterCount?: number; createdAt: string; updatedAt: string };
+export type Item = { id: string; title: string; slug: string; coverImage?: string | null; published: boolean; isActive: boolean; position: number };
 export type Detail = Series & { posts: Item[] };
 
 export function parseSeries(value: unknown, owner: string): Series {

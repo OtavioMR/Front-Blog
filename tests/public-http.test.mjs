@@ -24,6 +24,9 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     const meta = { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
     const category = { id: "c1", slug: "cultura", name: "Cultura", description: "Boas ideias", isActive: true };
     const tag = { id: "t1", slug: "ideias", name: "Ideias" };
+    const series = { id: "8d779824-0a9f-442f-8652-a81600000002", title: "Série de teste", description: "Sinopse da série", coverImage: "/uploads/post-covers/8d779824-0a9f-442f-8652-a81600000002.webp", publishedCount: 2, contentRating: "LIVRE", posts: [{ ...article, position: 1, contentRating: "LIVRE" }, { ...article, id: "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", slug: "proximo-capitulo", title: "Próximo capítulo", position: 2, contentRating: "LIVRE" }] };
+    if (url.pathname === "/api/v1/series") return response.end(JSON.stringify({ data: [series], meta }));
+    if (url.pathname === `/api/v1/series/${series.id}`) return response.end(JSON.stringify(series));
     if (url.pathname === "/api/v1/tags") return response.end(JSON.stringify({ data: [tag], meta }));
     if (url.pathname === "/api/v1/tags/ideias") return response.end(JSON.stringify(tag));
     if (url.pathname === `/api/v1/authors/${article.author.id}`) return response.end(JSON.stringify({ id: article.author.id, name: article.author.name, profilePhoto: null, bio: "Biografia de teste", websiteUrl: null, socialUrl: null, publicationCount: 1 }));
@@ -47,7 +50,7 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
       if (url.searchParams.get("search") === "indisponivel") { response.statusCode = 503; return response.end("{}"); }
       if (url.searchParams.get("search") === "vazio") return response.end(JSON.stringify({ data: [], meta: { page: 1, totalPages: 0, hasNextPage: false, hasPreviousPage: false } }));
       if (url.searchParams.get("search") === "paginar") return response.end(JSON.stringify({ data: [article], meta: { page: 1, totalPages: 2, hasNextPage: true, hasPreviousPage: false } }));
-      return response.end(JSON.stringify({ data: [article], meta: { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false } }));
+      return response.end(JSON.stringify({ data: [article, { ...article, id: "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", slug: "proximo-capitulo", title: "Próximo capítulo", coverImage: "/uploads/post-covers/76f781e0-9f94-42a3-ac2a-8dc5a41a983d.webp", discoverySeries: { ...series, coverImage: null } }], meta: { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false } }));
     }
     if (url.pathname === "/api/v1/posts/ausente") { response.statusCode = 404; return response.end("{}"); }
     if (url.pathname === "/api/v1/posts/erro") { response.statusCode = 503; return response.end("{}"); }
@@ -89,6 +92,16 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   const home = await fetch(base);
   const homeHtml = await home.text();
   assert.match(homeHtml, /Uma história de teste/);
+  assert.match(homeHtml, /Sinopse da série/);
+  assert.match(homeHtml, /\/uploads\/post-covers\/76f781e0-9f94-42a3-ac2a-8dc5a41a983d\.webp/);
+  assert.match(homeHtml, /href="\/series\/8d779824-0a9f-442f-8652-a81600000002"/);
+  assert.equal(lastPostQuery.get("discovery"), "true");
+  const seriesPage = await fetch(`${base}/series/8d779824-0a9f-442f-8652-a81600000002`);
+  assert.equal(seriesPage.status, 200);
+  const seriesHtml = await seriesPage.text();
+  assert.match(seriesHtml, /Sinopse da série/);
+  assert.match(seriesHtml, /Próximo capítulo/);
+  assert.ok(seriesHtml.indexOf("Uma história de teste") < seriesHtml.indexOf("Próximo capítulo"));
   assert.match(homeHtml, /href="\/sobre"/);
   assert.match(homeHtml, /PUBLICAÇÃO RECENTE/);
   assert.match(homeHtml, /aria-label="Ler artigo: Uma história de teste"/);

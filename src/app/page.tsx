@@ -3,6 +3,7 @@ import Form from "next/form";
 import type { Metadata } from "next";
 import Image from "next/image";
 import styles from "./home.module.css";
+import { publicCoverPath } from "@/lib/public-post";
 
 type ArticleSummary = {
   id: string;
@@ -14,6 +15,7 @@ type ArticleSummary = {
   coverImage?: string | null;
   author?: { id: string; name: string };
   categories?: { name: string }[];
+  discoverySeries?: { id: string; title: string; description: string; coverImage: string | null; fallbackCoverImage?: string | null; publishedCount: number; contentRating: string };
 };
 
 type ArticlePage = {
@@ -44,6 +46,7 @@ function isArticleSummary(value: unknown): value is ArticleSummary {
     && value.isActive === true
     && (value.publishedAt === null || typeof value.publishedAt === "string")
     && typeof value.readingTimeMinutes === "number"
+    && (value.discoverySeries === undefined || (isRecord(value.discoverySeries) && typeof value.discoverySeries.id === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value.discoverySeries.id) && typeof value.discoverySeries.title === "string" && typeof value.discoverySeries.description === "string" && (value.discoverySeries.coverImage === null || typeof value.discoverySeries.coverImage === "string") && typeof value.discoverySeries.publishedCount === "number"))
     && (value.coverImage === undefined || value.coverImage === null || typeof value.coverImage === "string")
     && (value.author === undefined || (isRecord(value.author) && typeof value.author.id === "string" && typeof value.author.name === "string"))
     && (value.categories === undefined || (Array.isArray(value.categories) && value.categories.every((category: unknown) => isRecord(category) && typeof category.name === "string")));
@@ -60,7 +63,7 @@ function pageLink(page: number, search: string, author: string, category: string
 }
 
 async function getArticles(page: number, search: string, author: string, category: string): Promise<ArticlePage> {
-  const params = new URLSearchParams({ page: String(page), limit: "6" });
+  const params = new URLSearchParams({ page: String(page), limit: "6", discovery: "true" });
   if (search) params.set("search", search);
   if (author) params.set("author", author);
   if (category) params.set("categorySlug", category);
@@ -102,9 +105,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
   const [articles, categories] = await Promise.all([getArticles(page, search, author, category), getCategories()]);
   const filtering = Boolean(search || author || category);
   const showFeatured = page === 1 && !filtering && articles.data.length > 0;
-  const featured = showFeatured ? articles.data[0] : null;
-  const rest = showFeatured ? articles.data.slice(1) : articles.data;
-  const cover = (a: ArticleSummary) => Boolean(a.coverImage && /^\/uploads\/post-covers\/[a-z0-9-]+\.webp$/i.test(a.coverImage));
+  const cover = (a: ArticleSummary) => Boolean(publicCoverPath(a.coverImage ?? null));
+  const destination = (a: ArticleSummary) => a.discoverySeries ? `/series/${a.discoverySeries.id}` : `/posts/${encodeURIComponent(a.slug)}`;
+  const present = (a: ArticleSummary): ArticleSummary => a.discoverySeries ? { ...a, title: a.discoverySeries.title, excerpt: a.discoverySeries.description.length > 150 ? `${a.discoverySeries.description.slice(0, 147).trimEnd()}…` : a.discoverySeries.description, coverImage: publicCoverPath(a.discoverySeries.coverImage) ?? publicCoverPath(a.discoverySeries.fallbackCoverImage ?? null) ?? publicCoverPath(a.coverImage ?? null), categories: [{ name: `SÉRIE · ${a.discoverySeries.publishedCount} ${a.discoverySeries.publishedCount === 1 ? "CAPÍTULO" : "CAPÍTULOS"}${a.discoverySeries.contentRating === "18+" ? " · 18+" : ""}` }] } : a;
+  const featured = showFeatured ? present(articles.data[0]) : null;
+  const rest = (showFeatured ? articles.data.slice(1) : articles.data).map(present);
 
   return (
     <main className={styles.homeContainer}>
@@ -182,26 +187,26 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
             <>
               {featured && (
                 <article className={`${styles.featured} article-surface`}>
-                  {cover(featured) && <Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" unoptimized /><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
+                  {cover(featured) && <Link prefetch={false} href={destination(featured)} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" unoptimized /><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
                   <div className={styles.featuredBody}>
                     <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
                     <p className={styles.articleCategory}>{featured.categories?.[0]?.name || "LEITURA"}</p>
-                    <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`}>{featured.title}</Link></h3>
+                    <h3><Link prefetch={false} href={destination(featured)}>{featured.title}</Link></h3>
                     <p className={styles.articleExcerpt}>{featured.excerpt}</p>
-                    <p className={styles.articleMeta}>{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
-                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={`/posts/${encodeURIComponent(featured.slug)}`} aria-label={`Ler artigo: ${featured.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                    <p className={styles.articleMeta}>{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {!featured.discoverySeries && featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
+                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(featured)} aria-label={`${featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"}: ${featured.title}`}>{featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"} <span aria-hidden="true">↗</span></Link>
                   </div>
                 </article>
               )}
               {rest.length > 0 && <div className={styles.articleGrid}>
                 {rest.map((article) => (
                   <article className={`${styles.card} article-surface`} key={article.id}>
-                    {cover(article) && <Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
+                    {cover(article) && <Link prefetch={false} href={destination(article)} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
                     <p className={styles.articleCategory}>{article.categories?.[0]?.name || "LEITURA"}</p>
-                    <h3><Link prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`}>{article.title}</Link></h3>
+                    <h3><Link prefetch={false} href={destination(article)}>{article.title}</Link></h3>
                     <p className={styles.articleExcerpt}>{article.excerpt}</p>
-                    <p className={styles.articleMeta}>{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
-                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={`/posts/${encodeURIComponent(article.slug)}`} aria-label={`Ler artigo: ${article.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+                    <p className={styles.articleMeta}>{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {!article.discoverySeries && article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
+                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(article)} aria-label={`${article.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"}: ${article.title}`}>{article.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"} <span aria-hidden="true">↗</span></Link>
                   </article>
                 ))}
               </div>}
