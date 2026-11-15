@@ -104,12 +104,12 @@ export default async function PostPage({ params, searchParams }: Props) {
           </Link>
           {post.aiTextDeclaration && aiTextLabels[post.aiTextDeclaration] && (
             <Link href="/diretrizes/ia" className={styles.aiBadge} title="Política de Transparência de IA">
-              <span aria-hidden="true">🤖</span> {aiTextLabels[post.aiTextDeclaration]}
+              {aiTextLabels[post.aiTextDeclaration]}
             </Link>
           )}
           {post.aiCoverDeclaration && aiCoverLabels[post.aiCoverDeclaration] && (
             <Link href="/diretrizes/ia" className={styles.aiBadge} title="Política de Transparência de IA">
-              <span aria-hidden="true">🎨</span> {aiCoverLabels[post.aiCoverDeclaration]}
+              {aiCoverLabels[post.aiCoverDeclaration]}
             </Link>
           )}
         </div>
@@ -121,6 +121,7 @@ export default async function PostPage({ params, searchParams }: Props) {
           </div>
           <EditArticleLink postId={post.id} authorId={post.author?.id} />
         </div>
+        {post.isRestricted && cover && <div className={styles.cover}><Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized /><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
         {post.isRestricted ? (
           <RestrictedPostUnlocker
             slug={post.slug}
@@ -128,13 +129,13 @@ export default async function PostPage({ params, searchParams }: Props) {
               <div className={styles.restrictedWarning}>
                 <h2>Conteúdo Restrito (18+)</h2>
                 <p>
-                  Esta publicação possui classificação indicativa 18+. O acesso ao conteúdo integral e à imagem de capa é reservado a maiores de idade autenticados.
+                  Esta publicação possui classificação indicativa 18+. Entre na sua conta para ler o conteúdo integral.
                 </p>
                 <div className={styles.restrictedButtons}>
                   <Link href="/entrar" className={styles.restrictedBtnPrimary}>
                     Entrar na minha conta
                   </Link>
-                  <Link href="/criar-conta" className={styles.restrictedBtnSecondary}>
+                  <Link href="/cadastro" className={styles.restrictedBtnSecondary}>
                     Criar conta (18+)
                   </Link>
                 </div>

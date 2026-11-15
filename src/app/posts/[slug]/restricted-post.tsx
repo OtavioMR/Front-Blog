@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import sanitizeHtml from "sanitize-html";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
-import { publicCoverPath } from "@/lib/public-post";
 import styles from "./post.module.css";
 
 export default function RestrictedPostUnlocker({
@@ -15,7 +14,6 @@ export default function RestrictedPostUnlocker({
 }) {
   const [unlocked, setUnlocked] = useState(false);
   const [content, setContent] = useState<string | null>(null);
-  const [cover, setCover] = useState<string | null>(null);
   const revision = useRef(0);
 
   useEffect(() => {
@@ -41,9 +39,7 @@ export default function RestrictedPostUnlocker({
 
         const data: unknown = await response.json();
         if (data && typeof data === "object" && "content" in data && typeof data.content === "string") {
-          const coverUrl = "coverImage" in data && typeof data.coverImage === "string" ? publicCoverPath(data.coverImage) : null;
-          setContent(data.content);
-          setCover(coverUrl);
+          setContent(sanitizeHtml(data.content, { allowedTags: ["p", "br", "strong", "em", "b", "i", "u", "s", "ul", "ol", "li", "blockquote", "pre", "code", "h2", "h3", "h4", "a"], allowedAttributes: { a: ["href", "title"] }, allowedSchemes: ["http", "https", "mailto"], allowProtocolRelative: false }));
           setUnlocked(true);
         } else {
           setUnlocked(false);
@@ -76,12 +72,6 @@ export default function RestrictedPostUnlocker({
 
   return (
     <>
-      {cover && (
-        <div className={styles.cover}>
-          <Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized />
-          <Image src={cover} alt="" width={1920} height={1080} unoptimized />
-        </div>
-      )}
       <div
         className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content}
         data-reading-body

@@ -68,3 +68,188 @@
 .keyHeader { gap: 12px; flex-wrap: wrap; }
 .stack > div:has(> #totp-code) { display: grid; gap: 10px; }
 .qrImg { max-width: 100%; height: auto; }
+
+/* Enhanced Account Hub */
+.heroSub {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.summaryHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.summaryBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+
+.badgeIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.summaryDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 18px 0;
+}
+
+.logoutBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.logoutBtn:hover {
+  border-color: light-dark(#c6382c, #e57368);
+  color: light-dark(#a42318, #f2948b);
+  background: light-dark(#fdf2f1, #351917);
+}
+
+.filterTabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.filterTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filterTab:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.filterTabActive {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.filterTabActive svg {
+  color: var(--brand);
+}
+
+.cardGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.navCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  height: 100%;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.navCard:hover {
+  border-color: var(--brand-accent);
+  background: var(--brand-light);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.navCard:focus-visible,
+.filterTab:focus-visible,
+.logoutBtn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.navCardIcon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-light);
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.navCard:hover .navCardIcon {
+  background: var(--brand);
+  color: #fff;
+}
+
+.navCardBody {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.navCardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.navCardDesc {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.navCardChevron {
+  color: var(--text-subtle);
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.navCard:hover .navCardChevron {
+  color: var(--brand);
+  transform: translateX(2px);
+}
