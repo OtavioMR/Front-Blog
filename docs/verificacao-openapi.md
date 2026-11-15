@@ -1,3 +1,5 @@
+> **Registro histórico anterior à refatoração de 14/11/2026.** A infraestrutura e as evidências abaixo descrevem a versão anterior. Operação vigente: [arquitetura PostgreSQL](../../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação atual](../../Backend-Blog/docs/POSTGRES_VALIDATION.md).
+
 # Verificação parcial do Swagger do backend
 
 Execute a partir da pasta do frontend no Windows:

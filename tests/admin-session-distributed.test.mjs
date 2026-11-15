@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { Redis } from 'ioredis';
+import pg from 'pg';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const next = fileURLToPath(new URL('../node_modules/next/dist/bin/next', import.meta.url));
@@ -52,7 +52,7 @@ test('login survives another Next process, reload and restart; invalid sessions 
   t.after(() => children.forEach(child => child.kill()));
   async function start(overrides = {}) {
     const listen = await port();
-    const child = spawn(process.execPath, [next, 'start', '-p', String(listen)], { cwd: root, env: { ...process.env, NODE_ENV: 'production', SITE_ORIGIN: origin, API_ORIGIN: `http://127.0.0.1:${api.address().port}`, ENABLE_ADMIN_BFF: 'true', ...overrides }, stdio: 'ignore' });
+    const child = spawn(process.execPath, [next, 'start', '-p', String(listen)], { cwd: root, env: { ...process.env, NODE_ENV: 'production', SITE_ORIGIN: origin, API_ORIGIN: `http://127.0.0.1:${api.address().port}`, ENABLE_ADMIN_BFF: 'true', ...overrides }, windowsHide: true, stdio: 'ignore' });
     children.push(child);
     const base = `http://127.0.0.1:${listen}`;
     for (let i = 0; i < 100; i++) {
@@ -86,21 +86,22 @@ test('login survives another Next process, reload and restart; invalid sessions 
   const { readStoredSession, withStoredSession, closeAdminSessionStore } = await import('../src/lib/admin-session-store.ts');
   const previousOrigin = process.env.SITE_ORIGIN; process.env.SITE_ORIGIN = origin;
   const key = createHash('sha256').update(cookie.split('=')[1]).digest('hex');
-  const redis = new Redis(process.env.REDIS_URL);
+  const db = new pg.Pool({ connectionString: process.env.ADMIN_SESSION_DATABASE_URL });
   const storageKey = `griforio:editorial:${createHash('sha256').update(origin).digest('hex')}:${key}`;
-  t.after(async () => { try { await redis.del(storageKey); } finally { redis.disconnect(); } });
+  t.after(async () => { try { await db.query('DELETE FROM admin_bff_sessions WHERE key=$1', [storageKey]); } finally { await db.end(); } });
   try {
-    const ciphertext = await redis.get(storageKey);
-    assert.ok(ciphertext); assert.ok((await redis.pttl(storageKey)) > 0);
+    const { rows: [persisted] } = await db.query('SELECT payload,expires_at FROM admin_bff_sessions WHERE key=$1', [storageKey]);
+    const ciphertext = persisted.payload;
+    assert.ok(ciphertext); assert.ok(persisted.expires_at.getTime() > Date.now());
     assert.ok(!ciphertext.includes(token) && !ciphertext.includes('synthetic.refresh'));
     await withStoredSession(key, async (save, remove) => {
       // Simulate a paused instance whose lease has expired and been acquired elsewhere.
-      await redis.set(`${storageKey}:lock`, 'another-owner', 'PX', 60000);
+      await db.query("UPDATE admin_bff_sessions SET lease_owner=$2,lease_until=now()+interval '60 seconds',version=version+1 WHERE key=$1", [storageKey, 'o'.repeat(43)]);
       await assert.rejects(save(await readStoredSession(key), Date.now() + 60000), /lock expired/);
       await assert.rejects(remove(), /lock expired/);
     });
-    assert.equal(await redis.get(`${storageKey}:lock`), 'another-owner');
-    await redis.del(`${storageKey}:lock`);
+    assert.equal((await db.query('SELECT lease_owner FROM admin_bff_sessions WHERE key=$1', [storageKey])).rows[0].lease_owner, 'o'.repeat(43));
+    await db.query('UPDATE admin_bff_sessions SET lease_owner=NULL,lease_until=NULL WHERE key=$1', [storageKey]);
     await withStoredSession(key, async save => { const session = await readStoredSession(key); session.tokenExpires = 0; await save(session, Math.min(session.expires, session.idleExpires)); });
     const concurrent = await Promise.all([request(b, cookie), request(restarted, cookie)]);
     assert.deepEqual(concurrent.map(value => value.status), [200, 200]); assert.equal(rotations, 1);
@@ -112,13 +113,13 @@ test('login survives another Next process, reload and restart; invalid sessions 
     const failed = await login(unconfigured, '123456'); assert.equal(failed.status, 503); assert.equal(cookieFrom(failed), undefined);
     // The failed login's cleanup revokes only its upstream session in production.
     revoked = false;
-    await redis.set(storageKey, 'tampered', 'PX', 60000);
+    await db.query('UPDATE admin_bff_sessions SET payload=$2 WHERE key=$1', [storageKey, 'tampered']);
     assert.equal((await request(b, cookie)).status, 307);
-    await redis.set(storageKey, ciphertext, 'PX', 60000);
+    await db.query('UPDATE admin_bff_sessions SET payload=$2 WHERE key=$1', [storageKey, ciphertext]);
     const logout = await fetch(b.base + '/gestao-editorial/sair', { method: 'POST', redirect: 'manual', headers: { Origin: origin, Cookie: cookie }, body: new URLSearchParams({ csrf }) });
     assert.equal(logout.status, 303); assert.equal((await request(restarted, cookie)).status, 307);
   } finally {
-    closeAdminSessionStore();
+    await closeAdminSessionStore();
     if (previousOrigin === undefined) delete process.env.SITE_ORIGIN; else process.env.SITE_ORIGIN = previousOrigin;
   }
 });

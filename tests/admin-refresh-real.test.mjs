@@ -22,7 +22,7 @@ test("BFF renova sessão real, modera denúncia e respeita revogação", { skip:
   sql(`INSERT INTO users(id,name,email,password_hash,role,email_verified) VALUES ('${id}','Administrador sintético','${email}','${hash}','ADMIN',true), ('${targetId}','Perfil sintético','${targetEmail}','${hash}','READER',true); INSERT INTO reports(id,reporter_id,user_id,reason) VALUES ('${reportId}','${id}','${targetId}','Denúncia sintética')`);
   t.after(() => sql(`DELETE FROM auth_sessions WHERE user_id='${id}'; DELETE FROM audit_logs WHERE actor_id='${id}' OR target_id='${reportId}'; DELETE FROM reports WHERE id='${reportId}'; DELETE FROM users WHERE (id='${id}' AND email='${email}') OR (id='${targetId}' AND email='${targetEmail}')`));
   const apiPort = await freePort(), frontPort = await freePort();
-  const api = spawn(process.execPath, ["--import", noSchedules, "dist/main.js"], { cwd: backend, env: { ...process.env, PORT: String(apiPort), JWT_EXPIRES_IN: "14", MAIL_QUEUE_PREFIX: `test-refresh-${id}`, SMTP_HOST: "127.0.0.1", SMTP_PORT: "25" }, stdio: "ignore" });
+  const api = spawn(process.execPath, ["--import", noSchedules, "dist/main.js"], { cwd: backend, env: { ...process.env, PORT: String(apiPort), JWT_EXPIRES_IN: "14", MAIL_QUEUE_NAME: `test-refresh-${id}`, SMTP_HOST: "127.0.0.1", SMTP_PORT: "25" }, stdio: "ignore" });
   t.after(() => api.kill());
   const apiOrigin = `http://127.0.0.1:${apiPort}`;
   for (let i = 0; i < 100; i++) { try { await fetch(`${apiOrigin}/api/v1/auth/login`); break; } catch { if (api.exitCode !== null) throw new Error("API não iniciou"); await delay(100); } }

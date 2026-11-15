@@ -1,3 +1,5 @@
+> **Registro histórico anterior à refatoração de 14/11/2026.** A infraestrutura e as evidências abaixo descrevem a versão anterior. Operação vigente: [arquitetura PostgreSQL](../../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação atual](../../Backend-Blog/docs/POSTGRES_VALIDATION.md).
+
 # Ambiente local isolado da Sprint 0
 
 O [Compose de teste](../compose.sprint0.yml) prepara PostgreSQL, Redis e Mailpit apenas para dados sintéticos. Os serviços ficam ligados a `127.0.0.1`: PostgreSQL 15433, Redis 16380, SMTP 11025 e interface do Mailpit 18025. O projeto Compose e seu volume de banco têm nomes próprios; não são os volumes do backend. O Mailpit aceita qualquer autenticação SMTP sem TLS para que o backend possa enviar mensagens de teste; essa configuração é exclusivamente local e não deve ser exposta ou usada em produção.

@@ -58,7 +58,7 @@ test('recovery email, mandatory 2FA and recovery in browser with Docker API and 
   smtp.listen(0, '0.0.0.0'); await once(smtp, 'listening');
   const freePort = async () => { const server = httpServer(); server.listen(0, '127.0.0.1'); await once(server, 'listening'); const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port; };
   const port = await freePort(), debugPort = await freePort(), base = `http://localhost:${port}`, origin = 'http://127.0.0.1:3000';
-  const helper = `blog-recovery-proof-${randomUUID().slice(0, 8)}`, queuePrefix = `recovery-proof-${randomUUID().slice(0, 8)}`;
+  const helper = `blog-recovery-proof-${randomUUID().slice(0, 8)}`, queueName = `recovery-proof-${randomUUID().slice(0, 8)}`;
   const temp = await mkdtemp(join(tmpdir(), 'blog-recovery-real-')); let app, browser, socket, stopped = false;
   t.after(async () => {
     socket?.close();
@@ -67,7 +67,7 @@ test('recovery email, mandatory 2FA and recovery in browser with Docker API and 
     // Remove only this test's encrypted messages before the normal worker is restored.
     try {
       const key = createHmac('sha256', process.env.JWT_SECRET).update('mail-queue-encryption-v1').digest();
-      for (const row of (await db.query('SELECT id,payload FROM mail_outbox')).rows) {
+      for (const row of (await db.query('SELECT id,payload FROM mail_outbox WHERE queue_name=$1', [queueName])).rows) {
         const bytes = Buffer.from(row.payload, 'base64url'), decipher = createDecipheriv('aes-256-gcm', key, bytes.subarray(0,12));
         decipher.setAuthTag(bytes.subarray(12,28));
         const message = JSON.parse(Buffer.concat([decipher.update(bytes.subarray(28)),decipher.final()]).toString());
@@ -90,7 +90,7 @@ test('recovery email, mandatory 2FA and recovery in browser with Docker API and 
   });
   async function waitFor(action, label) { for (let i = 0; i < 300; i++) { try { const result = await action(); if (result) return result; } catch {} await delay(150); } throw new Error(`Timeout: ${label}`); }
   await execute('docker', ['compose', 'stop', 'app'], { cwd: backend }); stopped = true;
-  await execute('docker', ['compose', 'run', '-d', '--name', helper, '--no-deps', '-p', '127.0.0.1:3000:3000', '-e', 'PORT=3000', '-e', `FRONTEND_URL=${base}`, '-e', 'SMTP_HOST=host.docker.internal', '-e', `SMTP_PORT=${smtp.address().port}`, '-e', 'SMTP_USER=synthetic', '-e', 'SMTP_PASS=synthetic', '-e', 'SMTP_FROM=synthetic@example.invalid', '-e', `MAIL_QUEUE_PREFIX=${queuePrefix}`, 'app'], { cwd: backend });
+  await execute('docker', ['compose', 'run', '-d', '--name', helper, '--no-deps', '-p', '127.0.0.1:3000:3000', '-e', 'PORT=3000', '-e', `FRONTEND_URL=${base}`, '-e', 'SMTP_HOST=host.docker.internal', '-e', `SMTP_PORT=${smtp.address().port}`, '-e', 'SMTP_USER=synthetic', '-e', 'SMTP_PASS=synthetic', '-e', 'SMTP_FROM=synthetic@example.invalid', '-e', `MAIL_QUEUE_NAME=${queueName}`, 'app'], { cwd: backend });
   await waitFor(async () => (await fetch(`${origin}/api/v1/health`)).ok, 'Docker API');
   const id = randomUUID(), owner = randomUUID(); ids.push(id, owner);
   const email = `${id}@example.invalid`, recoveryEmail = `recovery-${id}@example.invalid`, password = 'SyntheticPassword123!';

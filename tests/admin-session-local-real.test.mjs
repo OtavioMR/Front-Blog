@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { parseEnv } from 'node:util';
 
-// Opt-in integration against the existing local Nest, Next, PostgreSQL and Redis.
+// Opt-in integration against the existing local Nest, Next, PostgreSQL.
 // No SMTP calls; only this synthetic account and its own sessions are modified.
 test('local real admin completes TOTP login, immediate navigation, reload and logout', {
   skip: process.env.BLOG_ADMIN_LOCAL_REAL !== '1', timeout: 45000,
@@ -16,7 +16,7 @@ test('local real admin completes TOTP login, immediate navigation, reload and lo
   assert.ok(local(backend.DB_HOST), 'This test requires the configured local database');
   assert.ok(local(new URL(frontend.SITE_ORIGIN).hostname));
   assert.ok(local(new URL(frontend.API_ORIGIN).hostname));
-  assert.ok(frontend.REDIS_URL && /^[a-f0-9]{64}$/i.test(frontend.ADMIN_SESSION_ENCRYPTION_KEY || ''), 'Local administrative session configuration is incomplete');
+  assert.ok(frontend.ADMIN_SESSION_DATABASE_URL && /^[a-f0-9]{64}$/i.test(frontend.ADMIN_SESSION_ENCRYPTION_KEY || ''), 'Local administrative session configuration is incomplete');
   const require = createRequire(new URL('../../Backend-Blog/package.json', import.meta.url));
   const { Pool } = require('pg'), bcrypt = require('bcrypt');
   const { generateSecret, generateSync } = require('otplib');
@@ -54,7 +54,7 @@ test('local real admin completes TOTP login, immediate navigation, reload and lo
   const sessionCsrf = html.match(/name="csrf" value="([^"]+)"/)?.[1]; assert.ok(sessionCsrf);
   const reload = await request('/gestao-editorial', { headers: { Cookie: cookie } });
   if (reload.status !== 200) {
-    Object.assign(process.env, { SITE_ORIGIN: base, REDIS_URL: frontend.REDIS_URL, ADMIN_SESSION_ENCRYPTION_KEY: frontend.ADMIN_SESSION_ENCRYPTION_KEY });
+    Object.assign(process.env, { SITE_ORIGIN: base, ADMIN_SESSION_DATABASE_URL: frontend.ADMIN_SESSION_DATABASE_URL, ADMIN_SESSION_ENCRYPTION_KEY: frontend.ADMIN_SESSION_ENCRYPTION_KEY });
     const { getSession } = await import('../src/lib/admin-security.ts');
     const { closeAdminSessionStore } = await import('../src/lib/admin-session-store.ts');
     try {

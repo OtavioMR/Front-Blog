@@ -10,6 +10,19 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: blog_db
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blog_db"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5433/blog_db
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,6 +30,8 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      - run: node scripts/prepare-test-db.mjs
+      - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
       - run: npm run test:public

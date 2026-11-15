@@ -3,7 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createStoredSession, deleteStoredSession, readStoredSession, withStoredSession } from "./admin-session-store.ts";
 
 type RefreshState = { sessionId: string; generation: number; cookies: Record<string, string>; operation?: { id: string; generation: number } };
-type Session = { key: string; token: string; refresh?: RefreshState; tokenExpires: number; csrf: string; expires: number; idleExpires: number; usedConfirmations: string[] };
+type Session = { key: string; token: string; refresh?: RefreshState; tokenExpires: number; csrf: string; expires: number; idleExpires: number };
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 export const randomSecret = () => randomBytes(32).toString("base64url");
 export const cookieName = process.env.NODE_ENV === "production" ? "__Host-editorial-session" : "editorial-session-dev";
@@ -57,7 +57,7 @@ export function logoutUpstream(session: Pick<Session, "token" | "refresh">): Pro
 export async function createSession(token: string, seconds: number, refresh?: RefreshState) {
   if (seconds <= 10 || !Number.isFinite(seconds)) throw new Error("expired");
   const id = randomSecret(), now = Date.now();
-  const session: Session = { key: hash(id), token, refresh, tokenExpires: now + (seconds - 10) * 1000, csrf: randomSecret(), expires: now + (refresh ? duration("ADMIN_SESSION_MAX_SECONDS", 12 * 60 * 60 * 1000) : Math.min(300, seconds - 10) * 1000), idleExpires: now + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000), usedConfirmations: [] };
+  const session: Session = { key: hash(id), token, refresh, tokenExpires: now + (seconds - 10) * 1000, csrf: randomSecret(), expires: now + (refresh ? duration("ADMIN_SESSION_MAX_SECONDS", 12 * 60 * 60 * 1000) : Math.min(300, seconds - 10) * 1000), idleExpires: now + duration("ADMIN_SESSION_IDLE_SECONDS", 2 * 60 * 60 * 1000) };
   // A successful redirect is issued only after the shared store acknowledges it.
   await createStoredSession(session.key, session, Math.min(session.expires, session.idleExpires));
   return { id, session };
@@ -160,16 +160,6 @@ export async function adminActor(token: string): Promise<AdminActorInfo | null> 
     return { id: payload.sub, role: value.role, name, email, profilePhoto, totpEnabled };
   } catch { throw new Error("admin identity unavailable"); }
 }
-export async function consumeConfirmation(session: Session, signature: string): Promise<boolean> {
-  return withStoredSession(session.key, async save => {
-    const current = await readStoredSession<Session>(session.key);
-    if (!current || current.expires <= Date.now() || current.idleExpires <= Date.now() || current.usedConfirmations.length >= 1000 || current.usedConfirmations.includes(signature)) return false;
-    current.usedConfirmations.push(signature);
-    await save(current, Math.min(current.expires, current.idleExpires));
-    return true;
-  });
-}
-
 export async function upstream(path: string, init: RequestInit = {}): Promise<Response> {
   const origin = process.env.API_ORIGIN || "http://localhost:3001";
   return fetch(`${origin}/api/v1${path}`, { ...init, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000) });

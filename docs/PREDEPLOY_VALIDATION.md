@@ -1,3 +1,5 @@
+> **Registro histórico anterior à refatoração de 14/11/2026.** A infraestrutura e as evidências abaixo descrevem a versão anterior. Operação vigente: [arquitetura PostgreSQL](../../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação atual](../../Backend-Blog/docs/POSTGRES_VALIDATION.md).
+
 # Preparação para produção — 12/11/2026
 
 > Atualização posterior: a integração V2 foi concluída e validada com backend/HTTPS/navegador reais. Este documento registra a etapa anterior; o estado atual de sessões e seus limites estão em [SESSION_V2_VALIDATION.md](SESSION_V2_VALIDATION.md).

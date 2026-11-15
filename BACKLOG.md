@@ -1,3 +1,7 @@
+> **Atualização 14/11/2026:** sessões administrativas cifradas, fila persistente e limites compartilhados usam PostgreSQL. [Arquitetura atual](../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação](../Backend-Blog/docs/POSTGRES_VALIDATION.md). Registros anteriores de infraestrutura são históricos.
+
+**Refatoração concluída localmente (14/11/2026):** Redis/BullMQ removidos; sessões administrativas cifradas, fila e limites compartilhados em PostgreSQL. Backend: 455 testes e 42 E2E aprovados, com um skip V2 da newsletter. Frontend: contratos, administração distribuída, matriz real V2/HTTPS e oito regressões de interface aprovados. Lint, typecheck, builds, Docker e 62 migrations validados. Nenhum commit, push ou deploy. Os limites externos do primeiro deploy permanecem documentados.
+
 # Backlog do frontend do blog
 
 **Consolidação final para merge (12/11/2026):** auditoria Git/refs remotas, grafo de imports/entradas Next, assets, dependências, histórico e padrões de segredos concluída. Removidos apenas ImageCrop e seu CSS, sem consumidores; proteção para logs/temporários adicionada. V2, páginas públicas, testes e relatórios anteriores preservados. Lint/typecheck/build, 78 testes frontend, 8 regressões de UI e matriz V2 real (12 checks contando o agrupador) aprovados. Conteúdo APTO PARA MERGE, com integração coordenada ao backend e versionamento dos arquivos ainda pendentes pelo usuário; sem commit/push/merge/deploy. Parecer e inventário completo: [MERGE_READINESS.md](docs/MERGE_READINESS.md).

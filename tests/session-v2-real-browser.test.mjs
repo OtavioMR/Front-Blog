@@ -9,23 +9,23 @@ import { mkdtemp, cp, mkdir, writeFile, readFile, symlink } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
-import { randomUUID, createCipheriv, randomBytes } from 'node:crypto';
+import { randomUUID, createCipheriv, randomBytes, createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
 // Explicit opt-in AND loopback-only synthetic services. Never reads a local .env.
 test('V2: backend + Next/BFF + HTTPS + real Chromium session fault matrix', {
   skip: process.env.GRIFORIO_V2_ISOLATED !== '1', timeout: 360000,
 }, async t => {
-  assert.match(process.env.DB_NAME ?? '', /^griforio_v2(?:_|$)/);
+  assert.ok(process.env.DB_NAME, 'Configured local PostgreSQL required');
   assert.equal(process.env.DB_HOST, '127.0.0.1');
   assert.equal(process.env.SMTP_HOST, '127.0.0.1');
-  assert.match(process.env.REDIS_URL ?? '', /^redis:\/\/127\.0\.0\.1:\d+/);
   const backend = resolve('../Backend-Blog'), front = process.cwd();
   const requireBackend = createRequire(join(backend, 'package.json'));
   const { Client } = requireBackend('pg'), bcrypt = requireBackend('bcrypt');
   const { generateSync, generateSecret } = requireBackend('otplib');
   const db = new Client({ host: process.env.DB_HOST, port: Number(process.env.DB_PORT), user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME });
   await db.connect();
+  const fixtureIds = [];
   const temp = await mkdtemp(join(tmpdir(), 'griforio-v2-browser-'));
   const apiDir = join(temp, 'api'), frontDir = join(temp, 'front');
   await mkdir(apiDir); await mkdir(frontDir);
@@ -88,7 +88,7 @@ test('V2: backend + Next/BFF + HTTPS + real Chromium session fault matrix', {
     } catch { if (!res.destroyed) { res.writeHead(502); res.end(); } }
   });
   const httpsPort = await listen(gateway), origin = `https://localhost:${httpsPort}`;
-  const env = { ...process.env, NODE_ENV: 'production', PORT: String(apiPort), JWT_EXPIRES_IN: '12', FRONTEND_URL: origin, SITE_ORIGIN: origin, API_ORIGIN: `http://127.0.0.1:${bridgePort}`, ENABLE_ADMIN_BFF: 'true', EDITORIAL_WORKFLOW_ENABLED: 'true' };
+  const env = { ...process.env, ADMIN_SESSION_DATABASE_URL: process.env.ADMIN_SESSION_DATABASE_URL, NODE_ENV: 'production', PORT: String(apiPort), JWT_EXPIRES_IN: '12', FRONTEND_URL: origin, SITE_ORIGIN: origin, API_ORIGIN: `http://127.0.0.1:${bridgePort}`, ENABLE_ADMIN_BFF: 'true', EDITORIAL_WORKFLOW_ENABLED: 'true' };
   t.after(async () => {
     if (mode) mode.unblock();
     for (const socket of sockets) socket.close();
@@ -99,6 +99,12 @@ test('V2: backend + Next/BFF + HTTPS + real Chromium session fault matrix', {
       }
     }
     for (const server of servers) { server.closeAllConnections?.(); server.close(); }
+    if (fixtureIds.length) {
+      await db.query('DELETE FROM audit_logs WHERE actor_id=ANY($1::uuid[]) OR target_id=ANY($1::uuid[])', [fixtureIds]);
+      await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])', [fixtureIds]);
+    }
+    await db.query('DELETE FROM admin_bff_sessions WHERE key LIKE $1', [`griforio:editorial:${createHash('sha256').update(origin).digest('hex')}:%`]);
+    if (env.MAIL_QUEUE_NAME?.startsWith('proof-')) await db.query('DELETE FROM mail_outbox WHERE queue_name=$1', [env.MAIL_QUEUE_NAME]);
     await db.end();
   });
   const build = async (dir, args) => { const child = launch(args, dir, env); const [code] = await once(child, 'exit'); assert.equal(code, 0, child.output().slice(-1800)); };
@@ -113,6 +119,7 @@ test('V2: backend + Next/BFF + HTTPS + real Chromium session fault matrix', {
   await wait(async () => (await fetch(`http://127.0.0.1:${nextPort}/sobre`)).status === 200, 'Next');
   assert.equal(api.exitCode, null); assert.equal(app.exitCode, null);
   const password = 'SyntheticV2Password123!', readerId = randomUUID(), adminId = randomUUID(), secret = generateSecret();
+  fixtureIds.push(readerId, adminId);
   const hash = await bcrypt.hash(password, 12), iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', Buffer.from(env.TOTP_ENCRYPTION_KEY, 'hex'), iv);
   const encrypted = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
   const totpSecret = Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64');

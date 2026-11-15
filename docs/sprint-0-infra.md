@@ -1,3 +1,5 @@
+> **Registro histórico anterior à refatoração de 14/11/2026.** A infraestrutura e as evidências abaixo descrevem a versão anterior. Operação vigente: [arquitetura PostgreSQL](../../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação atual](../../Backend-Blog/docs/POSTGRES_VALIDATION.md).
+
 # Sprint 0 — infraestrutura e contratos
 
 Verificação local em 04/11/2026. Backend analisado no commit `f89622ec911fbe69a8f7fb2f46b179444733c04b`; a inspeção é parcial e não substitui os testes de integração da sprint.

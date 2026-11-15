@@ -9,7 +9,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
-// Execute: node --test tests/editorial-e2e.test.mjs
+// Execute: node --test tests/series-browser.test.mjs
 // Requires Node 22+ and a Chromium executable in CHROME_PATH (defaults to Edge on Windows).
 // A temporary project and API are used; no requests reach the configured backend.
 test("autor gerencia series e protege alteracoes no navegador", { timeout: 120000 }, async (t) => {
@@ -57,7 +57,7 @@ test("autor gerencia series e protege alteracoes no navegador", { timeout: 12000
       return respond(200, post);
     }
     if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Artigo em revisao" });
-    if (req.url === "/api/v1/posts/me?page=1&limit=10" && req.method === "GET") return respond(200, { data: post?.isActive ? [post] : [], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } });
+    if (req.url === "/api/v1/posts/me?page=1&limit=10&kind=standalone" && req.method === "GET") return respond(200, { data: post?.isActive ? [post] : [], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } });
     if (req.url === `/api/v1/posts/${postId}` && req.method === "DELETE" && role === "AUTHOR") { post.isActive = false; post.published = false; post.scheduledAt = null; res.statusCode = 204; return res.end(); }
     if (req.url === `/api/v1/post-reviews/${postId}/submit` && req.method === "POST" && role === "AUTHOR" && post?.reviewStatus === "DRAFT") { post.reviewStatus = "PENDING"; return respond(201, { status: "PENDING" }); }
     if (req.url === "/api/v1/post-reviews" && req.method === "GET") return role !== "ADMIN" ? respond(403, {}) : respond(200, post?.reviewStatus === "PENDING" ? [post] : []);

@@ -1,3 +1,5 @@
+> **Atualização 14/11/2026:** sessões administrativas cifradas, fila persistente e limites compartilhados usam PostgreSQL. [Arquitetura atual](../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação](../Backend-Blog/docs/POSTGRES_VALIDATION.md). Registros anteriores de infraestrutura são históricos.
+
 # Frontend do blog
 
 Base inicial em Next.js App Router, React e TypeScript. A página inicial consulta artigos públicos e busca na API; o desenvolvimento das demais jornadas está em andamento.

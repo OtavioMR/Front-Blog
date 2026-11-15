@@ -1,3 +1,5 @@
+> **Registro histórico anterior à refatoração de 14/11/2026.** A infraestrutura e as evidências abaixo descrevem a versão anterior. Operação vigente: [arquitetura PostgreSQL](../../Backend-Blog/docs/POSTGRES_ARCHITECTURE.md); [validação atual](../../Backend-Blog/docs/POSTGRES_VALIDATION.md).
+
 # Sessões V2 — diagnóstico, implementação e prova real
 
 Data: 12/11/2026. Branches: `chore/limpeza-pre-deploy` nos dois repositórios. Alterações anteriores preservadas; sem commit, push, merge ou deploy. Nenhum banco ou volume existente foi usado para escrita.

@@ -23,15 +23,16 @@
     "test:recovery-browser": "node --test tests/recovery-email-docker-browser.test.mjs"
   },
   "dependencies": {
-    "ioredis": "^5.11.1",
     "lucide-react": "^1.72.0",
     "next": "16.4.5",
+    "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.2",
