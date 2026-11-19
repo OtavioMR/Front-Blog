@@ -58,7 +58,7 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
       return respond(201, post);
     }
     if (req.url === `/api/v1/posts/${postId}` && req.method === "GET") return respond(200, post);
-    if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Artigo em revisao" });
+    if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Conto em revisao" });
     if (req.url === "/api/v1/posts/me?page=1&limit=10&kind=standalone" && req.method === "GET") return respond(200, { data: post?.isActive ? [post] : [], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } });
     if (req.url === `/api/v1/posts/${postId}` && req.method === "DELETE" && role === "AUTHOR") { post.isActive = false; post.published = false; post.scheduledAt = null; res.statusCode = 204; return res.end(); }
     if (req.url === `/api/v1/post-reviews/${postId}/submit` && req.method === "POST" && role === "AUTHOR" && post?.reviewStatus === "DRAFT") { post.reviewStatus = "PENDING"; return respond(201, { status: "PENDING" }); }
@@ -114,34 +114,34 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   await cdp("Page.navigate", { url: `${base}/entrar` }); await waitFor(() => evaluate("!!document.querySelector('#email') && Object.keys(document.querySelector('#email')).some(k => k.startsWith('__reactProps'))"), "login hidratado");
   await fill("#email", "autora@example.test"); await fill("#password", "AUTHOR"); await click("Entrar");
   await waitFor(() => evaluate("location.pathname === '/conta'"), "entrada");
-  await cdp("Page.navigate", { url: `${base}/studio/novo` }); await waitFor(() => has("Seu artigo permanece privado"), "editor autenticado");
-  await fill("#article-title", "Título sintético"); await fill("#article-content", "Conteúdo sintético para revisão."); await click("Salvar rascunho"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm save"); await click("Confirmar e salvar");
+  await cdp("Page.navigate", { url: `${base}/studio/novo` }); await waitFor(() => has("Seu conto permanece privado"), "editor autenticado");
+  await fill("#post-title", "Título sintético"); await fill("#post-content", "Conteúdo sintético para revisão."); await click("Salvar rascunho"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm save"); await click("Confirmar e salvar");
   await waitFor(() => has("Rascunho salvo."), "salvamento"); assert.equal(post.reviewStatus, "DRAFT");
   post.scheduledAt = "2099-01-01T12:00:00.000Z";
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
   await waitFor(() => has("Publicação agendada para"), "agendamento exibido");
-  assert.equal(await has("Artigos agendados não podem ser enviados para revisão"), true);
+  assert.equal(await has("Contos agendados não podem ser enviados para revisão"), true);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Enviar para revisão')"), false);
   post.scheduledAt = null;
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
   await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Enviar para revis\u00e3o')"), "rascunho sem agendamento");
   await click("Enviar para revisão");
-  await fill("#article-content", "Conteúdo sintético modificado.");
+  await fill("#post-content", "Conteúdo sintético modificado.");
   assert.equal(await has("Confirmar envio"), false);
   await evaluate("Array.from(document.querySelectorAll('a')).find(a => a.textContent.includes('Voltar ao Studio')).click()");
   await waitFor(() => has("Sair sem salvar?"), "confirmação de saída"); await click("Cancelar");
   assert.equal(await evaluate("location.pathname"), `/studio/${postId}`);
-  assert.equal(await evaluate("document.querySelector('#article-content').value"), "Conteúdo sintético modificado.");
-  await fill("#article-content", "Conteúdo sintético para revisão.");
-  await click("Enviar para revisão"); await click("Confirmar envio"); await waitFor(() => has("Artigo enviado para revisão."), "envio");
-  assert.equal(post.reviewStatus, "PENDING"); assert.equal(await evaluate("document.querySelector('#article-content').readOnly"), true);
+  assert.equal(await evaluate("document.querySelector('#post-content').value"), "Conteúdo sintético modificado.");
+  await fill("#post-content", "Conteúdo sintético para revisão.");
+  await click("Enviar para revisão"); await click("Confirmar envio"); await waitFor(() => has("Conto enviado para revisão."), "envio");
+  assert.equal(post.reviewStatus, "PENDING"); assert.equal(await evaluate("document.querySelector('#post-content').readOnly"), true);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('input,textarea')).every(field => field.readOnly || field.disabled)"), true);
   const deniedEdit = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "PATCH", headers: { Authorization: `Bearer ${token("AUTHOR")}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: "Mudanca indevida" }) });
   const deniedDelete = await fetch(`http://127.0.0.1:${api.address().port}/api/v1/posts/${postId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token("AUTHOR")}` } });
   assert.equal(deniedEdit.status, 409); assert.equal(deniedDelete.status, 409); assert.equal(post.isActive, true);
   await cdp("Page.navigate", { url: `${base}/studio` });
-  await waitFor(() => has("Em revis\u00e3o"), "listagem de artigo pendente");
-  assert.equal(await evaluate("Array.from(document.querySelectorAll('a')).some(x => x.textContent.trim() === 'Editar artigo')"), false);
+  await waitFor(() => has("Em revis\u00e3o"), "listagem de conto pendente");
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('a')).some(x => x.textContent.trim() === 'Editar conto')"), false);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Desativar')?.disabled"), true);
   assert.equal(await evaluate("!!document.querySelector('dialog[open]')"), false);
 
@@ -156,7 +156,7 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   const session = response.headers.getSetCookie().find(c => c.startsWith("editorial-session-dev=")).split(";")[0];
   response = await request("/gestao-editorial", { headers: { Cookie: session } }); const html = await response.text(); assert.match(html, /O Grifório em números/);
   const decisionCsrf = html.match(/name="csrf" value="([^"]+)"/)[1];
-  response = await form(`/gestao-editorial/artigos/${postId}/revisar`, { csrf: decisionCsrf, decision: "APPROVED", reason: "" }, session); assert.equal(response.status, 204);
+  response = await form(`/gestao-editorial/contos/${postId}/revisar`, { csrf: decisionCsrf, decision: "APPROVED", reason: "" }, session); assert.equal(response.status, 204);
   assert.equal(post.reviewStatus, "APPROVED"); assert.equal(post.published, true);
   await cdp("Page.navigate", { url: `${base}/gestao-editorial/entrar` });
   await waitFor(() => evaluate("!!document.querySelector('input[name=email]')"), "entrada administrativa");
@@ -196,9 +196,9 @@ test("autor escreve e envia; administrador revisa na API simulada", { timeout: 1
   await cdp("Emulation.clearDeviceMetricsOverride");
   await cdp("Page.navigate", { url: `${base}/studio` });
   await waitFor(() => has("Título sintético"), "listagem do autor");
-  await click("Desativar"); await waitFor(() => has("Desativar artigo?"), "confirmação de desativação"); await click("Cancelar"); assert.equal(post.isActive, true);
-  await click("Desativar"); await click("Desativar artigo");
-  await waitFor(() => has("Artigo desativado com sucesso."), "desativação confirmada");
+  await click("Desativar"); await waitFor(() => has("Desativar conto?"), "confirmação de desativação"); await click("Cancelar"); assert.equal(post.isActive, true);
+  await click("Desativar"); await click("Desativar conto");
+  await waitFor(() => has("Conto desativado com sucesso."), "desativação confirmada");
   assert.equal(post.isActive, false); assert.equal(post.published, false);
   assert.equal(await has("Título sintético"), false);
 });

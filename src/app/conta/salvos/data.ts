@@ -11,7 +11,7 @@ export function parseSavedPage(value: unknown, requestedPage: number): SavedPage
   if (meta.page !== requestedPage || meta.limit !== 10 || !Number.isSafeInteger(meta.total) || (meta.total as number) < 0 || !Number.isSafeInteger(meta.totalPages) || meta.totalPages !== Math.ceil((meta.total as number) / 10) || meta.hasPreviousPage !== (requestedPage > 1) || meta.hasNextPage !== (requestedPage < (meta.totalPages as number)) || value.data.length > 10 || value.data.length > Math.max(0, (meta.total as number) - (requestedPage - 1) * 10)) throw new Error("Paginação inválida.");
   const ids = new Set<string>();
   const data = value.data.map((item: unknown) => {
-    if (!record(item) || !uuid(item.id) || ids.has(item.id) || typeof item.title !== "string" || typeof item.excerpt !== "string" || item.published !== true || item.isActive !== true || !record(item.author) || typeof item.author.name !== "string") throw new Error("Artigo inválido.");
+    if (!record(item) || !uuid(item.id) || ids.has(item.id) || typeof item.title !== "string" || typeof item.excerpt !== "string" || item.published !== true || item.isActive !== true || !record(item.author) || typeof item.author.name !== "string") throw new Error("Conto inválido.");
     ids.add(item.id);
     return { id: item.id, title: item.title, excerpt: item.excerpt, author: { name: item.author.name } };
   });

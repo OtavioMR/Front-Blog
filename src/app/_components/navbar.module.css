@@ -24,7 +24,7 @@
   max-width: 1500px;
   margin: 0 auto;
   padding: 0 6%;
-  height: 90px;
+  height: 72px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -56,7 +56,7 @@
 .logoLight,
 .logoDark {
   display: block;
-  width: 47px;
+  width: 40px;
   height: auto;
 }
 
@@ -66,7 +66,7 @@
 
 .wordmark {
   font-family: var(--font-serif);
-  font-size: 31px;
+  font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.035em;
   color: var(--logo-text);
@@ -125,8 +125,8 @@
   .inner {
     height: auto;
     min-height: 70px;
-    padding: 14px 6%;
-    gap: 14px;
+    padding: 8px 6%;
+    gap: 10px;
   }
   .logoLight,
   .logoDark {
@@ -147,13 +147,15 @@
 @media (max-width: 440px) {
   .inner {
     flex-wrap: wrap;
-    padding: 10px 5%;
+    padding: 8px 5% 0;
+    row-gap: 0;
   }
   .nav {
     width: 100%;
     justify-content: space-between;
-    gap: 8px;
+    gap: 4px;
   }
+  .settings svg { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTags, pageNumber } from "./data";
 import styles from "../categorias/categories.module.css";
 
-export const metadata: Metadata = { title: "Tags | Grifório", description: "Descubra artigos por tag." };
+export const metadata: Metadata = { title: "Tags | Grifório", description: "Descubra contos por tag." };
 export default async function Tags({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const page = pageNumber((await searchParams).page);
   const result = await getTags(page).catch(() => null);

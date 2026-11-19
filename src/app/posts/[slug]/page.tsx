@@ -13,7 +13,7 @@ import CommentThread from "./comment-thread";
 import { CommentSession } from "./comment-session";
 import PostViewTracker from "./post-view-tracker";
 import Interactions from "./interactions";
-import EditArticleLink from "./edit-article-link";
+import EditPostLink from "./edit-post-link";
 import { PostReport } from "./report-form";
 import Avatar from "@/app/_components/avatar";
 import BackButton from "@/app/_components/back-button";
@@ -26,7 +26,7 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ commen
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPublicPost(slug);
-  if (!post) return { title: "Artigo não encontrado", robots: { index: false } };
+  if (!post) return { title: "Conto não encontrado", robots: { index: false } };
   const { url, image } = postSeo(post);
   return {
     title: post.title,
@@ -119,7 +119,7 @@ export default async function PostPage({ params, searchParams }: Props) {
             {post.author?.name && <strong>{authorPath ? <Link href={authorPath}>{post.author.name}</Link> : post.author.name}</strong>}
             <span>{date && <time dateTime={post.publishedAt!}>{date}</time>}{date && " · "}{post.readingTimeMinutes} min de leitura{updated && <> · Atualizado em <time dateTime={post.updatedAt!}>{updated}</time></>}</span>
           </div>
-          <EditArticleLink postId={post.id} authorId={post.author?.id} />
+          <EditPostLink postId={post.id} authorId={post.author?.id} />
         </div>
         {post.isRestricted && cover && <div className={styles.cover}><Image className={styles.coverBackdrop} src={cover} alt="" width={1920} height={1080} unoptimized /><Image src={cover} alt="" width={1920} height={1080} unoptimized /></div>}
         {post.isRestricted ? (
@@ -148,7 +148,7 @@ export default async function PostPage({ params, searchParams }: Props) {
             <div className={plainText ? `${styles.content} ${styles.plainContent}` : styles.content} data-reading-body dangerouslySetInnerHTML={{ __html: content }} />
           </>
         )}
-        {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (artigo atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
+        {series && <nav className={styles.series} aria-labelledby="series-title"><p className={styles.category}>SÉRIE</p><h2 id="series-title">{series.title}</h2>{series.description && <p>{series.description}</p>}<ol className={styles.seriesList}>{series.posts.map((item, index) => <li key={item.id}>{item.id === post.id ? <span aria-current="page">{index + 1}. {item.title} (conto atual)</span> : <Link href={`/posts/${encodeURIComponent(item.slug)}`}>{index + 1}. {item.title}</Link>}</li>)}</ol></nav>}
         <Interactions postId={post.id} />
         <PostReport postId={post.id} />
         {post.author?.name && <aside className={styles.authorBox} aria-labelledby="author-box-title">
@@ -162,7 +162,7 @@ export default async function PostPage({ params, searchParams }: Props) {
         </aside>}      </article>
       <section className={styles.comments} id="comentarios" aria-labelledby="comments-title">
         <p className={styles.category}>A CONVERSA CONTINUA</p><h2 id="comments-title">Comentários.</h2>
-        {comments.kind === "disabled" ? <p>Os comentários estão desativados neste artigo.</p> : comments.kind === "unavailable" ? <p role="status">Não foi possível carregar os comentários agora. Tente novamente mais tarde.</p> : <>
+        {comments.kind === "disabled" ? <p>Os comentários estão desativados neste conto.</p> : comments.kind === "unavailable" ? <p role="status">Não foi possível carregar os comentários agora. Tente novamente mais tarde.</p> : <>
           {post.id && <CommentForm postId={post.id} slug={post.slug} page={requestedPage} />}
           {comments.page.data.length === 0 ? <p>Ainda não há comentários nesta página.</p> : <CommentSession><ol className={styles.commentsList}>{comments.page.data.map(item => <li key={item.id}>
             <CommentThread item={item} postAuthorId={post.author?.id} slug={post.slug} page={requestedPage} />
@@ -177,7 +177,7 @@ export default async function PostPage({ params, searchParams }: Props) {
           <h3><Link href={`/posts/${encodeURIComponent(item.slug)}`}>{item.title}</Link></h3>
           {item.excerpt && <p>{item.excerpt}</p>}
           <p className={styles.relatedMeta}>{item.author?.name || "Equipe editorial"} · {item.readingTimeMinutes} min de leitura</p>
-          <Link className={`${styles.relatedLink} article-surface-link`} href={`/posts/${encodeURIComponent(item.slug)}`} aria-label={`Ler artigo: ${item.title}`}>Ler artigo <span aria-hidden="true">↗</span></Link>
+          <Link className={`${styles.relatedLink} article-surface-link`} href={`/posts/${encodeURIComponent(item.slug)}`} aria-label={`Ler conto: ${item.title}`}>Ler conto <span aria-hidden="true">↗</span></Link>
         </article>)}</div>
       </section>}
     </main>

@@ -9,7 +9,7 @@ export function parseInteraction(value: unknown): Interaction {
 }
 
 export function interactionRequest(postId: string, kind: InteractionKind, state: Interaction) {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) throw new Error("Artigo inválido.");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) throw new Error("Conto inválido.");
   const enabled = kind === "like" ? state.liked : state.saved;
   return { path: `/api/v1/posts/${postId}/${kind}`, method: enabled ? "DELETE" : "PUT" };
 }

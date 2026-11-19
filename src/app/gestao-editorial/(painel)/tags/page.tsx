@@ -71,7 +71,7 @@ export default async function TagsPage({
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Taxonomia</p>
         <h2>Tags da plataforma</h2>
-        <p>Gerencie termos e etiquetas para indexação temática. Tags sem artigos podem ser excluídas; tags duplicadas podem ser mescladas.</p>
+        <p>Gerencie termos e etiquetas para indexação temática. Tags sem contos podem ser excluídas; tags duplicadas podem ser mescladas.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 26rem), 1fr))", gap: "1.5rem" }}>
@@ -79,7 +79,7 @@ export default async function TagsPage({
         <section className={styles.panel} style={{ margin: 0, height: "fit-content" }}>
           <h2>Nova tag</h2>
           <p style={{ margin: "0 0 1rem", fontSize: "0.88rem" }}>
-            Adicione uma nova palavra-chave para indexação de artigos.
+            Adicione uma nova palavra-chave para indexação de contos.
           </p>
           <TagCreateForm csrf={csrf} />
         </section>
@@ -98,7 +98,7 @@ export default async function TagsPage({
                   <tr>
                     <th>Nome</th>
                     <th>Slug</th>
-                    <th>Artigos</th>
+                    <th>Contos</th>
                     <th>Ações</th>
                   </tr>
                 </thead>
@@ -113,7 +113,7 @@ export default async function TagsPage({
                       </td>
                       <td>
                         <span className={styles.badgeInReview} style={{ fontSize: "0.75rem" }}>
-                          {String(row.postCount)} {Number(row.postCount) === 1 ? "artigo" : "artigos"}
+                          {String(row.postCount)} {Number(row.postCount) === 1 ? "conto" : "contos"}
                         </span>
                       </td>
                       <td>

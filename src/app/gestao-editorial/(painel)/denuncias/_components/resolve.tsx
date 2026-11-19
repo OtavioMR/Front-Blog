@@ -110,7 +110,7 @@ export default function ResolveReport({
   const isAssigned = Boolean(currentModeratorId);
   const actionText =
     action === "HIDE_POST"
-      ? " e ocultar o artigo denunciado"
+      ? " e ocultar o conto denunciado"
       : action === "HIDE_COMMENT"
         ? " e ocultar o comentário denunciado"
         : "";
@@ -190,7 +190,7 @@ export default function ResolveReport({
               disabled={pending || uncertain}
             >
               <option value="NONE">Nenhuma ação direta sobre o conteúdo</option>
-              {targetType === "POST" && <option value="HIDE_POST">Ocultar artigo denunciado</option>}
+              {targetType === "POST" && <option value="HIDE_POST">Ocultar conto denunciado</option>}
               {targetType === "COMMENT" && <option value="HIDE_COMMENT">Ocultar comentário denunciado</option>}
             </select>
           </label>

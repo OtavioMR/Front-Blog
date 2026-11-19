@@ -27,12 +27,12 @@ export default async function PostDetail({
     const access = await adminPostsRead(new URLSearchParams({ page: "1", limit: "1" }));
     if (!access.ok) return <AdminFailure reason={access.reason} />;
     return (
-      <AdminShell title="Artigo" current="posts">
+      <AdminShell title="Conto" current="posts">
         <section className={styles.panel}>
           <h2>Endereço inválido</h2>
-          <p>O identificador do artigo informado não é válido.</p>
-          <Link href="/gestao-editorial/artigos" className={styles.btnSecondary}>
-            Voltar aos artigos
+          <p>O identificador do conto informado não é válido.</p>
+          <Link href="/gestao-editorial/contos" className={styles.btnSecondary}>
+            Voltar aos contos
           </Link>
         </section>
       </AdminShell>
@@ -98,11 +98,11 @@ export default async function PostDetail({
 
   return (
     <AdminShell
-      title="Artigo"
+      title="Conto"
       current="posts"
       actions={
-        <Link href="/gestao-editorial/artigos" className={styles.btnSecondary} style={{ padding: "0.4rem 0.8rem", fontSize: "0.82rem" }} prefetch={false}>
-          Voltar aos artigos
+        <Link href="/gestao-editorial/contos" className={styles.btnSecondary} style={{ padding: "0.4rem 0.8rem", fontSize: "0.82rem" }} prefetch={false}>
+          Voltar aos contos
         </Link>
       }
     >
@@ -115,7 +115,7 @@ export default async function PostDetail({
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 30rem), 1fr))", gap: "1.5rem" }}>
-        {/* Coluna 1: Artigo e Conteúdo */}
+        {/* Coluna 1: Conto e Conteúdo */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <section className={styles.panel} style={{ margin: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap" }}>
@@ -132,7 +132,7 @@ export default async function PostDetail({
             </div>
 
             <h3>Imagem de capa</h3>
-            {cover ? <img src={cover} alt="Capa enviada para avalia??o" style={{ display: "block", width: "100%", maxHeight: "28rem", objectFit: "contain", marginBottom: "1.25rem" }} /> : <p>Este artigo n?o possui capa.</p>}
+            {cover ? <img src={cover} alt="Capa enviada para avaliação" style={{ display: "block", width: "100%", maxHeight: "28rem", objectFit: "contain", marginBottom: "1.25rem" }} /> : <p>Este conto não possui capa.</p>}
 
             {detail.reviewNote && (
               <div style={{ padding: "0.85rem", borderRadius: "0.55rem", background: "var(--brand-light)", border: "1px solid rgba(178, 67, 28, 0.25)", marginBottom: "1.25rem" }}>
@@ -166,7 +166,7 @@ export default async function PostDetail({
                 <h2 style={{ margin: 0 }}>Revisão de Primeira Publicação</h2>
               </div>
               <p style={{ margin: "0 0 1rem", fontSize: "0.88rem" }}>
-                Este autor submeteu seu primeiro artigo para aprovação da equipe editorial.
+                Este autor submeteu seu primeiro conto para aprovação da equipe editorial.
               </p>
               <Review id={id} csrf={csrf} />
             </section>
@@ -177,8 +177,8 @@ export default async function PostDetail({
               <h2>Moderação de Visibilidade</h2>
               <p style={{ margin: "0 0 1rem", fontSize: "0.88rem" }}>
                 {detail.moderationHidden
-                  ? "Este artigo foi ocultado da exibição pública. Você pode restaurá-lo fundamentando a decisão."
-                  : "Oculte o artigo em caso de denúncias ou violações graves dos termos editoriais."}
+                  ? "Este conto foi ocultado da exibição pública. Você pode restaurá-lo fundamentando a decisão."
+                  : "Oculte o conto em caso de denúncias ou violações graves dos termos editoriais."}
               </p>
               <ModerateComment
                 id={id}
@@ -227,8 +227,8 @@ export default async function PostDetail({
       </div>
 
       <p style={{ marginTop: "1.5rem" }}>
-        <Link href="/gestao-editorial/artigos" className={styles.btnSecondary} prefetch={false}>
-          Voltar aos artigos
+        <Link href="/gestao-editorial/contos" className={styles.btnSecondary} prefetch={false}>
+          Voltar aos contos
         </Link>
       </p>
     </AdminShell>

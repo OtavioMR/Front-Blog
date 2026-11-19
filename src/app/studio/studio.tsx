@@ -16,35 +16,35 @@ import {
   Trash2,
 } from "lucide-react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
-import { canWriteArticles } from "@/lib/permissions";
-import { acceptedRules, parseOwnArticles, parseRules, type OwnArticle, type OwnArticles, type Rules } from "./contracts";
+import { canWritePosts } from "@/lib/permissions";
+import { acceptedRules, parseOwnPosts, parseRules, type OwnPost, type OwnPosts, type Rules } from "./contracts";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import CoverImage from "@/app/_components/cover-image";
 import StudioHeader from "./studio-header";
-import { canConfirmRemoval, removeArticleRequest } from "./remove-article";
+import { canConfirmRemoval, removePostRequest } from "./remove-post";
 import styles from "./studio.module.css";
 
 type View = "loading" | "signed-out" | "reader" | "author" | "denied" | "error";
 type StatusFilter = "ALL" | "PUBLISHED" | "DRAFT" | "PENDING" | "SCHEDULED" | "REJECTED";
 
-function getArticleStatus(article: OwnArticle): {
+function getPostStatus(post: OwnPost): {
   key: Exclude<StatusFilter, "ALL">;
   label: string;
   className: string;
 } {
-  if (article.published) {
+  if (post.published) {
     return { key: "PUBLISHED", label: "Publicado", className: styles.statusPublished };
   }
-  if (article.scheduledAt) {
+  if (post.scheduledAt) {
     return { key: "SCHEDULED", label: "Agendado", className: styles.statusScheduled };
   }
-  if (article.reviewStatus === "PENDING") {
+  if (post.reviewStatus === "PENDING") {
     return { key: "PENDING", label: "Em revisão", className: styles.statusPending };
   }
-  if (article.reviewStatus === "REJECTED") {
+  if (post.reviewStatus === "REJECTED") {
     return { key: "REJECTED", label: "Rejeitado", className: styles.statusRejected };
   }
-  if (article.reviewStatus === "APPROVED") {
+  if (post.reviewStatus === "APPROVED") {
     return { key: "PUBLISHED", label: "Aprovado", className: styles.statusPublished };
   }
   return { key: "DRAFT", label: "Rascunho", className: styles.statusDraft };
@@ -69,7 +69,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
   const [view, setView] = useState<View>("loading");
   const [rules, setRules] = useState<Rules | null>(null);
   const [subject, setSubject] = useState("");
-  const [articles, setArticles] = useState<OwnArticles | null>(null);
+  const [posts, setPosts] = useState<OwnPosts | null>(null);
   const [page, setPage] = useState(1);
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -83,7 +83,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
   const load = useCallback(async (requestedPage: number) => {
     const current = ++revision.current;
     setView("loading");
-    setArticles(null);
+    setPosts(null);
     setRules(null);
     setSubject("");
     setChecked(false);
@@ -104,7 +104,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
           setRules(value);
           setView("reader");
         }
-      } else if (canWriteArticles(profile.role)) {
+      } else if (canWritePosts(profile.role)) {
         const response = await authenticatedFetchForSubject(
           profile.id,
           `/api/v1/posts/me?page=${requestedPage}&limit=10&kind=standalone`,
@@ -124,15 +124,15 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
           return;
         }
         if (!response.ok) throw new Error();
-        const value = parseOwnArticles(await response.json());
+        const value = parseOwnPosts(await response.json());
         await Promise.all(
           value.data
-            .filter((article) => article.reviewStatus === "REJECTED")
-            .map(async (article) => {
+            .filter((post) => post.reviewStatus === "REJECTED")
+            .map(async (post) => {
               try {
                 const result = await authenticatedFetchForSubject(
                   profile.id,
-                  `/api/v1/post-reviews/${encodeURIComponent(article.id)}`,
+                  `/api/v1/post-reviews/${encodeURIComponent(post.id)}`,
                   { cache: "no-store" },
                 );
                 if (!result.ok) return;
@@ -145,7 +145,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
                   "reason" in review &&
                   (typeof review.reason === "string" || review.reason === null)
                 ) {
-                  article.reviewReason = review.reason;
+                  post.reviewReason = review.reason;
                 }
               } catch {
                 /* A falha na justificativa não deve ocultar a lista. */
@@ -154,7 +154,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         );
         if (current === revision.current) {
           setSubject(profile.id);
-          setArticles(value);
+          setPosts(value);
           setPage(value.meta.page);
           setView("author");
         }
@@ -246,13 +246,13 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
     }
   }
 
-  async function removeArticle(id: string, openedBy: string) {
+  async function removePost(id: string, openedBy: string) {
     if (!canConfirmRemoval(openedBy, subject) || busy || uncertain) return;
     const current = revision.current;
     setBusy(true);
     setFeedback("");
     try {
-      const result = await removeArticleRequest(authenticatedFetchForSubject, openedBy, id);
+      const result = await removePostRequest(authenticatedFetchForSubject, openedBy, id);
       if (current !== revision.current) return;
       if (result === "changed") {
         await load(1);
@@ -263,19 +263,19 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         return;
       }
       if (result === "forbidden") {
-        setFeedback("Você não tem permissão para desativar este artigo.");
+        setFeedback("Você não tem permissão para desativar este conto.");
         return;
       }
       if (result === "missing") {
-        setFeedback("Artigo não encontrado. Atualize a lista.");
+        setFeedback("Conto não encontrado. Atualize a lista.");
         setUncertain(true);
         return;
       }
       if (result !== "deleted") throw new Error();
-      setArticles((previous) =>
-        previous ? { ...previous, data: previous.data.filter((article) => article.id !== id) } : previous,
+      setPosts((previous) =>
+        previous ? { ...previous, data: previous.data.filter((post) => post.id !== id) } : previous,
       );
-      setFeedback("Artigo desativado com sucesso.");
+      setFeedback("Conto desativado com sucesso.");
     } catch {
       if (current === revision.current) {
         setUncertain(true);
@@ -287,7 +287,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
   }
 
   const counts = useMemo(() => {
-    const items = articles?.data ?? [];
+    const items = posts?.data ?? [];
     const map: Record<StatusFilter, number> = {
       ALL: items.length,
       PUBLISHED: 0,
@@ -297,20 +297,20 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
       REJECTED: 0,
     };
     for (const item of items) {
-      map[getArticleStatus(item).key]++;
+      map[getPostStatus(item).key]++;
     }
     return map;
-  }, [articles]);
+  }, [posts]);
 
-  const filteredArticles = useMemo(() => {
-    if (!articles) return [];
+  const filteredPosts = useMemo(() => {
+    if (!posts) return [];
     const normalized = query.trim().toLowerCase();
-    return articles.data.filter((article) => {
-      if (filter !== "ALL" && getArticleStatus(article).key !== filter) return false;
-      if (normalized && !article.title.toLowerCase().includes(normalized)) return false;
+    return posts.data.filter((post) => {
+      if (filter !== "ALL" && getPostStatus(post).key !== filter) return false;
+      if (normalized && !post.title.toLowerCase().includes(normalized)) return false;
       return true;
     });
-  }, [articles, filter, query]);
+  }, [posts, filter, query]);
 
   const filterOptions: { key: StatusFilter; label: string }[] = [
     { key: "ALL", label: "Todos" },
@@ -362,7 +362,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
         {view === "reader" && rules && (
           <div className={styles.panel}>
             <h2>Compartilhe suas histórias</h2>
-            <p>Para começar, leia e aceite as regras de publicação. Seu primeiro artigo passa por revisão.</p>
+            <p>Para começar, leia e aceite as regras de publicação. Seu primeiro conto passa por revisão.</p>
             <ul className={styles.rules}>
               {rules.rules.map((rule, index) => (
                 <li key={index}>{rule}</li>
@@ -404,7 +404,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
           </div>
         )}
 
-        {view === "author" && articles && (
+        {view === "author" && posts && (
           <>
             <div className={styles.sectionHeading} id="contos">
               <div>
@@ -415,7 +415,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
             </div>
 
             {!editorialEnabled && (
-              <p className={styles.noticeBanner}>A criação e a edição de artigos estarão disponíveis em breve.</p>
+              <p className={styles.noticeBanner}>A criação e a edição de contos estarão disponíveis em breve.</p>
             )}
 
             {feedback && (
@@ -436,7 +436,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
               </div>
             )}
 
-            {articles.data.length > 0 && (
+            {posts.data.length > 0 && (
               <div className={styles.toolbar}>
                 <div className={styles.filterGroup} role="group" aria-label="Filtrar por status">
                   {filterOptions
@@ -481,16 +481,16 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
               </div>
             )}
 
-            {articles.data.length === 0 ? (
+            {posts.data.length === 0 ? (
               <div className={styles.empty}>
                 <span className={styles.emptyIcon} aria-hidden="true">
                   <PenLine size={24} strokeWidth={1.8} />
                 </span>
-                <h3>Nenhum artigo por aqui</h3>
+                <h3>Nenhum conto por aqui</h3>
                 <p>
                   {page === 1
                     ? "Toda boa história começa com uma ideia. Que tal dar o primeiro passo?"
-                    : "Não há artigos nesta página."}
+                    : "Não há contos nesta página."}
                 </p>
                 {editorialEnabled && page === 1 && (
                   <Link className={styles.primaryBtn} href="/studio/novo">
@@ -498,7 +498,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
                   </Link>
                 )}
               </div>
-            ) : filteredArticles.length === 0 ? (
+            ) : filteredPosts.length === 0 ? (
               <div className={styles.empty}>
                 <h3>Nenhum conto encontrado</h3>
                 <p>Nenhum conto corresponde ao filtro ou termo de busca atual.</p>
@@ -515,38 +515,38 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
               </div>
             ) : (
               <ul className={styles.list}>
-                {filteredArticles.map((article) => {
-                  const status = getArticleStatus(article);
+                {filteredPosts.map((post) => {
+                  const status = getPostStatus(post);
                   return (
-                    <li key={article.id} className={styles.articleCard}>
-                      <CoverImage src={article.coverImage} className={styles.storyCover} iconSize={20} />
+                    <li key={post.id} className={styles.postCard}>
+                      <CoverImage src={post.coverImage} className={styles.storyCover} iconSize={20} />
 
-                      <div className={styles.articleMeta}>
-                        <h3 className={styles.articleTitle}>{article.title}</h3>
+                      <div className={styles.postMeta}>
+                        <h3 className={styles.postTitle}>{post.title}</h3>
                         <div className={styles.badgeRow}>
                           <span className={`${styles.statusBadge} ${status.className}`}>
                             <StatusIcon statusKey={status.key} />
                             <span>{status.label}</span>
                           </span>
                         </div>
-                        {article.reviewStatus === "REJECTED" && (
+                        {post.reviewStatus === "REJECTED" && (
                           <p className={styles.reviewReason}>
                             <strong>Justificativa da revisão:</strong>{" "}
-                            {article.reviewReason ||
+                            {post.reviewReason ||
                               "Não foi possível carregar a justificativa. Atualize a lista para tentar novamente."}
                           </p>
                         )}
                       </div>
 
                       <div className={styles.rowActions}>
-                        {article.published && (
-                          <Link className={styles.actionBtn} href={`/posts/${encodeURIComponent(article.slug)}`}>
+                        {post.published && (
+                          <Link className={styles.actionBtn} href={`/posts/${encodeURIComponent(post.slug)}`}>
                             <Eye size={14} aria-hidden="true" />
-                            <span>Ver artigo</span>
+                            <span>Ver conto</span>
                           </Link>
                         )}
-                        {editorialEnabled && article.reviewStatus !== "PENDING" && (
-                          <Link className={styles.actionBtn} href={`/studio/${encodeURIComponent(article.id)}`}>
+                        {editorialEnabled && post.reviewStatus !== "PENDING" && (
+                          <Link className={styles.actionBtn} href={`/studio/${encodeURIComponent(post.id)}`}>
                             <Edit3 size={14} aria-hidden="true" />
                             <span>Editar</span>
                           </Link>
@@ -554,14 +554,14 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
                         <button
                           type="button"
                           className={styles.dangerBtn}
-                          disabled={busy || uncertain || article.reviewStatus === "PENDING"}
+                          disabled={busy || uncertain || post.reviewStatus === "PENDING"}
                           title={
-                            article.reviewStatus === "PENDING"
-                              ? "Artigos em revisão não podem ser desativados."
+                            post.reviewStatus === "PENDING"
+                              ? "Contos em revisão não podem ser desativados."
                               : undefined
                           }
-                          onClick={() => setRemoval({ id: article.id, title: article.title, subject })}
-                          aria-label={`Desativar artigo ${article.title}`}
+                          onClick={() => setRemoval({ id: post.id, title: post.title, subject })}
+                          aria-label={`Desativar conto ${post.title}`}
                         >
                           <Trash2 size={14} aria-hidden="true" />
                           <span>{busy ? "Aguarde…" : "Desativar"}</span>
@@ -573,12 +573,12 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
               </ul>
             )}
 
-            {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
-              <nav className={styles.pagination} aria-label="Paginação dos seus artigos">
+            {(posts.meta.hasPreviousPage || posts.meta.hasNextPage) && (
+              <nav className={styles.pagination} aria-label="Paginação dos seus contos">
                 <button
                   type="button"
                   className={styles.secondaryBtn}
-                  disabled={busy || !articles.meta.hasPreviousPage}
+                  disabled={busy || !posts.meta.hasPreviousPage}
                   onClick={() => void load(page - 1)}
                 >
                   Anterior
@@ -587,7 +587,7 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
                 <button
                   type="button"
                   className={styles.secondaryBtn}
-                  disabled={busy || !articles.meta.hasNextPage}
+                  disabled={busy || !posts.meta.hasNextPage}
                   onClick={() => void load(page + 1)}
                 >
                   Próxima
@@ -600,14 +600,14 @@ export default function Studio({ editorialEnabled }: { editorialEnabled: boolean
 
       {removal && (
         <ConfirmDialog
-          title="Desativar artigo?"
+          title="Desativar conto?"
           description={`“${removal.title}” será removido das listagens e deixará de estar publicado.`}
-          confirmLabel="Desativar artigo"
+          confirmLabel="Desativar conto"
           onCancel={() => setRemoval(null)}
           onConfirm={() => {
             const { id, subject: openedBy } = removal;
             setRemoval(null);
-            void removeArticle(id, openedBy);
+            void removePost(id, openedBy);
           }}
         />
       )}

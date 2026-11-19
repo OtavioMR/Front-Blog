@@ -395,6 +395,24 @@ As consultas de auditoria e das filas de artigos e comentários foram verificada
 # Ajustes de séries e descoberta
 
 - Séries e contos compartilham a listagem inicial; séries abrem uma página de capítulos com capas e cartões clicáveis.
+- Perfil público com abas Contos, Séries e Sobre o autor. As listagens usam os filtros públicos por ID do autor e preservam o retorno à conta na navegação e na paginação.
+- Validação do perfil público: build, typecheck, lint direcionado e 17 testes públicos passaram. A consulta HTTP ao perfil local confirmou as três abas, o retorno à conta e o capítulo disponível pela aba Séries.
 - Studio apresenta cartões, ordem dos capítulos e envio de capa. O backend fornece também as capas na consulta privada.
 - Validação: build e testes públicos e do Studio; integração visual com API real pendente, pois a API local não estava disponível.
+
+## Terminologia e apresentação pública
+
+- A interface, o Studio, a Gestão Editorial e as mensagens da API adotam «conto» e «contos». A rota de gestão `/gestao-editorial/contos` mantém compatibilidade com os endereços anteriores.
+- Perfil com avatar de 64 px, abas que preservam a posição de leitura e cartões de séries com uma prévia da sinopse. A página de detalhes mostra a sinopse integral, preserva os parágrafos e mantém a lista de capítulos. As capas exibem a imagem inteira com preenchimento desfocado.
+- A página inicial, as categorias e a leitura usam títulos e espaçamentos menores. O atalho da página inicial respeita a preferência por movimento reduzido.
+- Build e suítes públicas, de sessão, Studio, tema e administração passaram. O lint do frontend terminou com avisos e zero erros. O fluxo editorial passou no Edge com API simulada. A conferência no Edge a 1440 e 360 px usou o catálogo local e confirmou a troca de abas sem salto, as capas inteiras e os sete parágrafos da série «Quando você parou de me olhar».
+
+## Organização do Studio e da página inicial (19/11/2026)
+
+- Séries usam melhor a largura do desktop: cartões com capa e texto lado a lado, títulos alinhados ao topo e ações dos capítulos abaixo do título. A criação e o detalhe têm uma única volta contextual para Minhas séries; o mesmo destino na navegação respeita alterações não salvas.
+- A sinopse do detalhe mostra até cerca de 600 caracteres no desktop e três linhas no mobile, com expansão para leitura integral e preservação de parágrafos. Descrições curtas não são cortadas sem um controle de expansão.
+- Configurações priorizam o formulário, com descrição ampla no desktop, capa lateral e exclusão separada abaixo. No mobile, o editor conserva o texto completo com rolagem interna; o resumo da série fica compacto nessa aba.
+- Capas do Studio, capítulos e prévias exibem a imagem inteira com ambiente desfocado. Corrigido conflito de estilos que impedia o preenchimento do fundo. O destaque da home ocupa a largura disponível e a grade adapta-se à quantidade de publicações.
+- Validação local: `npm.cmd run typecheck`, `npm.cmd run build`, ESLint dos componentes alterados (zero erros, dois avisos já existentes de imagens) e 15 testes de contratos passaram. Comando dos contratos: `node --test --test-isolation=none tests/studio-contract.test.mjs tests/studio-editor.test.mjs tests/studio-remove.test.mjs tests/series-contracts.test.mjs tests/revisions-contracts.test.mjs tests/editorial-feature-flag.test.mjs tests/public-series.test.mjs`.
+- `node --test tests/series-browser.test.mjs` passou no Edge com API e conteúdo sintéticos, cobrindo home com uma série, descrição de 980 caracteres, títulos longos, navegação por teclado, diálogos, preservação de alterações e configurações a 1440, 768, 390 e 360 px. Capturas desktop e mobile foram revisadas. O teste agora respeita o diálogo aberto ao clicar em botões com o mesmo rótulo. Execução no sandbox encontrou `spawn EPERM`; build e navegador foram executados com permissão fora dele. Sem mudança de contratos/backend, commit, push ou deploy; nenhuma sprint encerrada.
 

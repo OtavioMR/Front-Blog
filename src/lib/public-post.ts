@@ -32,7 +32,7 @@ function parsePost(value: unknown): PublicPost {
       typeof value.readingTimeMinutes !== "number" || !Number.isFinite(value.readingTimeMinutes) || value.readingTimeMinutes < 1 ||
       !Array.isArray(value.categories) || !value.categories.every((category: unknown) => isRecord(category) && typeof category.name === "string") ||
       !(value.author === undefined || (isRecord(value.author) && typeof value.author.name === "string" && (value.author.id === undefined || typeof value.author.id === "string")))) {
-    throw new Error("Resposta inválida do serviço de artigos.");
+    throw new Error("Resposta inválida do serviço de contos.");
   }
   return value as PublicPost;
 }
@@ -47,7 +47,7 @@ export const getPublicPost = cache(async (slug: string): Promise<PublicPost | nu
     signal: AbortSignal.timeout(8000),
   });
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error("Serviço de artigos indisponível.");
+  if (!response.ok) throw new Error("Serviço de contos indisponível.");
   return parsePost(await response.json());
 });
 
@@ -61,4 +61,12 @@ export function publicCoverPath(path: string | null): string | null {
 
 export function publicAuthorPath(id?: string): string | null {
   return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? `/autores/${id}` : null;
+}
+
+export function seriesPreview(description: string): string {
+  const text = description.trim().replace(/\s+/g, " ");
+  if (text.length <= 150) return text;
+  const preview = text.slice(0, 150);
+  const lastSpace = preview.lastIndexOf(" ");
+  return `${lastSpace > 0 ? preview.slice(0, lastSpace) : preview}…`;
 }

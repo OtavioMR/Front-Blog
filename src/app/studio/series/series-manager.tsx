@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowRight,
   ArrowUp,
   BookOpen,
@@ -22,7 +21,7 @@ import { canManageSeries } from "@/lib/permissions";
 import ConfirmDialog from "@/app/_components/confirm-dialog";
 import CoverImage from "@/app/_components/cover-image";
 import StudioHeader from "../studio-header";
-import { parseOwnArticles, type OwnArticles } from "../contracts";
+import { parseOwnPosts, type OwnPosts } from "../contracts";
 import {
   confirmedItems,
   parseDetail,
@@ -39,16 +38,41 @@ type Screen = "list" | "create" | "detail";
 type DetailTab = "chapters" | "add" | "settings";
 type Confirmation = "delete" | "items" | null;
 
+function SeriesDescription({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = text.length > 600;
+  const preview = long ? `${text.slice(0, 600).replace(/\s+\S*$/, "").trimEnd()}…` : text;
+
+  return (
+    <div className={styles.descriptionBlock}>
+      <p id="series-description" className={`${styles.detailDesc} ${!expanded && text.length > 120 ? styles.detailDescCollapsed : ""}`}>
+        {expanded ? text : preview}
+      </p>
+      {text.length > 120 && (
+        <button
+          type="button"
+          className={`${styles.descriptionToggle} ${!long ? styles.descriptionToggleMobile : ""}`}
+          aria-expanded={expanded}
+          aria-controls="series-description"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? "Recolher descrição" : "Ler descrição completa"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 async function fetchDetailForOwner(id: string, owner: string) {
   const response = await authenticatedFetchForSubject(owner, `/api/v1/series/${id}/manage`, { cache: "no-store" });
   if (!response.ok) throw new Error();
   return parseDetail(await response.json(), owner, id);
 }
 
-async function loadArticlesForOwner(owner: string) {
+async function loadPostsForOwner(owner: string) {
   const response = await authenticatedFetchForSubject(owner, "/api/v1/posts/me?page=1&limit=10&kind=standalone", { cache: "no-store" });
   if (!response.ok) throw new Error();
-  return parseOwnArticles(await response.json());
+  return parseOwnPosts(await response.json());
 }
 
 export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: string }) {
@@ -60,7 +84,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
   const [series, setSeries] = useState<Series[]>([]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [items, setItems] = useState<Item[]>([]);
-  const [articles, setArticles] = useState<OwnArticles | null>(null);
+  const [posts, setPosts] = useState<OwnPosts | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,7 +113,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
     setView("loading");
     setOwner("");
     setDetail(null);
-    setArticles(null);
+    setPosts(null);
     setScreen("list");
     setDetailTab("chapters");
     setConfirmation(null);
@@ -126,9 +150,9 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
       if (initialSeriesId) {
         const selected = list.find((item) => item.id === initialSeriesId);
         if (selected) {
-          const [data, page] = await Promise.all([fetchDetailForOwner(selected.id, profile.id), loadArticlesForOwner(profile.id)]);
+          const [data, page] = await Promise.all([fetchDetailForOwner(selected.id, profile.id), loadPostsForOwner(profile.id)]);
           if (current !== revision.current) return;
-          setDetail(data); setItems(data.posts); setTitle(data.title); setDescription(data.description); setArticles(page); setScreen("detail");
+          setDetail(data); setItems(data.posts); setTitle(data.title); setDescription(data.description); setPosts(page); setScreen("detail");
         }
       }
       setView("ready");
@@ -144,7 +168,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
       revision.current++;
       setOwner("");
       setDetail(null);
-      setArticles(null);
+      setPosts(null);
       setView("signed-out");
       setConfirmation(null);
     });
@@ -166,12 +190,12 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
     return parseDetail(await response.json(), subject, id);
   }
 
-  async function loadArticles(page: number, subject = owner) {
+  async function loadPosts(page: number, subject = owner) {
     const response = await authenticatedFetchForSubject(subject, `/api/v1/posts/me?page=${page}&limit=10&kind=standalone`, {
       cache: "no-store",
     });
     if (!response.ok) throw new Error();
-    const result = parseOwnArticles(await response.json());
+    const result = parseOwnPosts(await response.json());
     if (result.meta.page !== page) throw new Error();
     return result;
   }
@@ -187,13 +211,13 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
     running.current = true;
     setMessage("");
     try {
-      const [data, page] = await Promise.all([fetchDetail(item.id), loadArticles(1)]);
+      const [data, page] = await Promise.all([fetchDetail(item.id), loadPosts(1)]);
       if (current !== revision.current) return;
       setDetail(data);
       setItems(data.posts);
       setTitle(data.title);
       setDescription(data.description);
-      setArticles(page);
+      setPosts(page);
       setDetailTab("chapters");
       setScreen("detail");
     } catch {
@@ -233,6 +257,15 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
   }
 
   function handleHeaderNavigate(event: { preventDefault: () => void }, href: string) {
+    if (busy) {
+      event.preventDefault();
+      return;
+    }
+    if (href === "/studio/series" && screen !== "list") {
+      event.preventDefault();
+      requestBackToList();
+      return;
+    }
     if (dirty) {
       event.preventDefault();
       setPendingLeave({ type: "route", href });
@@ -245,10 +278,10 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
     setBusy(true);
     running.current = true;
     try {
-      const result = await loadArticles(page);
-      if (current === revision.current) setArticles(result);
+      const result = await loadPosts(page);
+      if (current === revision.current) setPosts(result);
     } catch {
-      if (current === revision.current) setMessage("Não foi possível carregar os artigos desta página.");
+      if (current === revision.current) setMessage("Não foi possível carregar os contos desta página.");
     } finally {
       running.current = false;
       setBusy(false);
@@ -339,13 +372,13 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
         setMessage("Informações da série atualizadas.");
       } else {
         // Newly created: open its dedicated workspace right away
-        const [createdDetail, page] = await Promise.all([fetchDetail(saved.id), loadArticles(1)]);
+        const [createdDetail, page] = await Promise.all([fetchDetail(saved.id), loadPosts(1)]);
         if (current !== revision.current) return;
         setDetail(createdDetail);
         setItems(createdDetail.posts);
         setTitle(createdDetail.title);
         setDescription(createdDetail.description);
-        setArticles(page);
+        setPosts(page);
         setDetailTab("chapters");
         setScreen("detail");
         setMessage("Série criada! Agora você pode adicionar capítulos ou personalizar a capa.");
@@ -397,7 +430,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
       if (current !== revision.current) return;
       if ([400, 401, 403, 404, 409, 422, 429].includes(response.status)) {
         setUncertain(true);
-        setMessage("Não foi possível alterar a série. Atualize os dados; um artigo pode pertencer a outra série.");
+        setMessage("Não foi possível alterar a série. Atualize os dados; um conto pode pertencer a outra série.");
         return;
       }
       if (action === "delete") {
@@ -408,7 +441,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
         setTitle("");
         setDescription("");
         setScreen("list");
-        setMessage("Série excluída. Seus artigos foram preservados.");
+        setMessage("Série excluída. Seus contos foram preservados.");
       } else {
         if (!response.ok || !confirmedItems(await response.json(), ids)) throw new Error();
         const refreshed = await fetchDetail(id);
@@ -417,7 +450,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
         setDetail(refreshed);
         setItems(refreshed.posts);
         setSeries((previous) => previous.map((item) => (item.id === id ? { ...item, ...refreshed } : item)));
-        setMessage("Ordem dos artigos salva com sucesso.");
+        setMessage("Ordem dos contos salva com sucesso.");
       }
     } catch {
       if (current === revision.current) {
@@ -447,12 +480,31 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
     setMessage("Alterações descartadas.");
   }
 
+  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const tabs: DetailTab[] = ["chapters", "add", "settings"];
+    const index = tabs.indexOf(detailTab);
+    let next: DetailTab;
+    if (event.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
+    else if (event.key === "ArrowLeft") next = tabs[(index + tabs.length - 1) % tabs.length];
+    else if (event.key === "Home") next = tabs[0];
+    else if (event.key === "End") next = tabs[tabs.length - 1];
+    else return;
+    event.preventDefault();
+    setDetailTab(next);
+    event.currentTarget.querySelector<HTMLButtonElement>(`#series-tab-${next}`)?.focus();
+  }
+
   return (
     <main className={styles.page}>
       <StudioHeader
         activeTab="series"
         editorialEnabled={view === "ready"}
         onLeaveNavigate={handleHeaderNavigate}
+        backAction={view === "ready" && screen !== "list" ? {
+          label: "Voltar para minhas séries",
+          onClick: requestBackToList,
+          disabled: busy,
+        } : undefined}
       />
 
       {view === "loading" && (
@@ -550,6 +602,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                         onClick={() => void openSeries(item)}
                       >
                         <CoverImage
+                          blurredBackdrop
                           src={item.coverImage ?? item.fallbackCoverImage}
                           className={styles.seriesCover}
                           fallbackLabel="Sem capa"
@@ -584,11 +637,6 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
           {/* SCREEN 2: CREATE SERIES */}
           {screen === "create" && (
             <section aria-labelledby="create-series-title">
-              <button type="button" className={styles.backStepBtn} onClick={requestBackToList} disabled={busy}>
-                <ArrowLeft size={15} aria-hidden="true" />
-                <span>Voltar para minhas séries</span>
-              </button>
-
               <div className={styles.formCard}>
                 <p className={styles.eyebrow}>NOVA COLEÇÃO</p>
                 <h2 id="create-series-title">Criar nova série</h2>
@@ -621,6 +669,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                     </div>
                     <textarea
                       id="create-series-desc"
+                      rows={10}
                       maxLength={1000}
                       placeholder="Conte brevemente sobre o que trata esta série…"
                       value={description}
@@ -649,35 +698,37 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
           {/* SCREEN 3: SELECTED SERIES WORKSPACE */}
           {screen === "detail" && detail && (
             <section aria-labelledby="detail-series-title">
-              <button type="button" className={styles.backStepBtn} onClick={requestBackToList} disabled={busy}>
-                <ArrowLeft size={15} aria-hidden="true" />
-                <span>Voltar para minhas séries</span>
-              </button>
-
-              <div className={styles.detailBanner}>
+              <div className={`${styles.detailBanner} ${detailTab === "settings" ? styles.detailBannerCompact : ""}`}>
                 <CoverImage
+                  blurredBackdrop
                   src={detail.coverImage ?? detail.fallbackCoverImage}
                   className={styles.detailCover}
                   iconSize={20}
                 />
                 <div className={styles.detailInfo}>
                   <div className={styles.detailTitleRow}>
+                    <p className={styles.eyebrow}>SUA SÉRIE</p>
                     <h2 id="detail-series-title" className={styles.detailTitle}>
                       {detail.title}
                     </h2>
+                  </div>
+                  <div className={styles.detailBadges}>
                     <span className={styles.chapterCountPill}>
                       {items.length} {items.length === 1 ? "capítulo" : "capítulos"}
                     </span>
                     {dirty && <span className={styles.dirtyBadge}>Alterações não salvas</span>}
                   </div>
-                  {detail.description && <p className={styles.detailDesc}>{detail.description}</p>}
+                  {detail.description && detailTab !== "settings" && <SeriesDescription key={`${detail.id}:${detail.description}`} text={detail.description} />}
                 </div>
               </div>
 
-              <div className={styles.subTabs} role="tablist" aria-label="Opções da série">
+              <div className={styles.subTabs} role="tablist" aria-label="Opções da série" onKeyDown={handleTabKeyDown}>
                 <button
                   type="button"
                   role="tab"
+                  id="series-tab-chapters"
+                  aria-controls="series-panel-chapters"
+                  tabIndex={detailTab === "chapters" ? 0 : -1}
                   aria-selected={detailTab === "chapters"}
                   className={`${styles.subTab} ${detailTab === "chapters" ? styles.subTabActive : ""}`}
                   onClick={() => setDetailTab("chapters")}
@@ -688,16 +739,22 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                 <button
                   type="button"
                   role="tab"
+                  id="series-tab-add"
+                  aria-controls="series-panel-add"
+                  tabIndex={detailTab === "add" ? 0 : -1}
                   aria-selected={detailTab === "add"}
                   className={`${styles.subTab} ${detailTab === "add" ? styles.subTabActive : ""}`}
                   onClick={() => setDetailTab("add")}
                 >
                   <Plus size={16} aria-hidden="true" />
-                  <span>Adicionar artigos</span>
+                  <span>Adicionar contos</span>
                 </button>
                 <button
                   type="button"
                   role="tab"
+                  id="series-tab-settings"
+                  aria-controls="series-panel-settings"
+                  tabIndex={detailTab === "settings" ? 0 : -1}
                   aria-selected={detailTab === "settings"}
                   className={`${styles.subTab} ${detailTab === "settings" ? styles.subTabActive : ""}`}
                   onClick={() => setDetailTab("settings")}
@@ -709,11 +766,11 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
 
               {/* SUB-SCREEN 3A: CHAPTERS ORDER */}
               {detailTab === "chapters" && (
-                <div role="tabpanel">
+                <div role="tabpanel" id="series-panel-chapters" aria-labelledby="series-tab-chapters">
                   <div className={styles.screenHeader}>
                     <div>
                       <h2>Capítulos da série</h2>
-                      <p>Até 100 artigos. Reordene ou remova capítulos e salve quando terminar.</p>
+                      <p>Até 100 contos. Reordene ou remova capítulos e salve quando terminar.</p>
                     </div>
                     <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
                       <Plus size={15} aria-hidden="true" />
@@ -739,7 +796,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                           disabled={busy || uncertain || changedInfo}
                           onClick={() => setConfirmation("items")}
                         >
-                          Salvar ordem e artigos
+                          Salvar ordem e contos
                         </button>
                       </div>
                     </div>
@@ -754,14 +811,14 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                       <p>Adicione seus contos publicados ou rascunhos para começar a montar a sequência.</p>
                       <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
                         <Plus size={16} aria-hidden="true" />
-                        <span>Escrever cap?tulo</span>
+                        <span>Escrever capítulo</span>
                       </Link>
                     </div>
                   ) : (
                     <ol className={styles.chapterList}>
                       {items.map((item, index) => (
                         <li className={styles.chapterRow} key={item.id}>
-                          <CoverImage src={item.coverImage} className={styles.chapterCover} iconSize={18} />
+                          <CoverImage blurredBackdrop src={item.coverImage} className={styles.chapterCover} iconSize={18} />
                           <div className={styles.chapterMeta}>
                             <p className={styles.chapterNumber}>CAPÍTULO {index + 1}</p>
                             <h3 className={styles.chapterTitle}>{item.title}</h3>
@@ -810,22 +867,14 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                 </div>
               )}
 
-              {/* SUB-SCREEN 3B: ADD ARTICLES */}
+              {/* SUB-SCREEN 3B: ADD POSTS */}
               {detailTab === "add" && (
-                <div role="tabpanel">
+                <div role="tabpanel" id="series-panel-add" aria-labelledby="series-tab-add">
                   <div className={styles.screenHeader}>
                     <div>
-                      <h2>Adicionar artigos à série</h2>
+                      <h2>Adicionar contos à série</h2>
                       <p>Escolha quais dos seus contos farão parte desta série.</p>
                     </div>
-                    <button
-                      type="button"
-                      className={styles.secondaryBtn}
-                      onClick={() => setDetailTab("chapters")}
-                    >
-                      <ArrowLeft size={15} aria-hidden="true" />
-                      <span>Ver capítulos ({items.length})</span>
-                    </button>
                   </div>
 
                   {changedItems && (
@@ -846,38 +895,38 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                           disabled={busy || uncertain || changedInfo}
                           onClick={() => setConfirmation("items")}
                         >
-                          Salvar ordem e artigos
+                          Salvar ordem e contos
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {articles && (
+                  {posts && (
                     <>
-                      {!articles.data.length ? (
+                      {!posts.data.length ? (
                         <div className={styles.empty}>
-                          <h3>Você ainda não tem artigos</h3>
+                          <h3>Você ainda não tem contos</h3>
                           <p>Crie um conto primeiro para poder adicioná-lo a esta série.</p>
                           <Link href={`/studio/novo?seriesId=${encodeURIComponent(detail.id)}`} className={styles.primaryBtn} onNavigate={(event) => handleHeaderNavigate(event, `/studio/novo?seriesId=${encodeURIComponent(detail.id)}`)}>
-                            Escrever cap?tulo
+                            Escrever capítulo
                           </Link>
                         </div>
                       ) : (
-                        <ul className={styles.articlePickerList}>
-                          {articles.data.map((article) => {
-                            const alreadyAdded = items.some((item) => item.id === article.id);
+                        <ul className={styles.postPickerList}>
+                          {posts.data.map((post) => {
+                            const alreadyAdded = items.some((item) => item.id === post.id);
                             return (
-                              <li key={article.id} className={styles.articlePickerRow}>
-                                <div className={styles.articlePickerInfo}>
-                                  <CoverImage src={article.coverImage} className={styles.pickerCover} iconSize={16} />
+                              <li key={post.id} className={styles.postPickerRow}>
+                                <div className={styles.postPickerInfo}>
+                                  <CoverImage blurredBackdrop src={post.coverImage} className={styles.pickerCover} iconSize={16} />
                                   <div className={styles.pickerText}>
-                                    <strong>{article.title}</strong>
+                                    <strong>{post.title}</strong>
                                     <span
                                       className={`${styles.statusPill} ${
-                                        article.published ? styles.statusPublished : ""
+                                        post.published ? styles.statusPublished : ""
                                       }`}
                                     >
-                                      {article.published ? "Publicado" : "Rascunho"}
+                                      {post.published ? "Publicado" : "Rascunho"}
                                     </span>
                                   </div>
                                 </div>
@@ -896,18 +945,18 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                                       setItems((old) => [
                                         ...old,
                                         {
-                                          id: article.id,
-                                          title: article.title,
-                                          slug: article.slug,
-                                          coverImage: article.coverImage,
-                                          published: article.published,
+                                          id: post.id,
+                                          title: post.title,
+                                          slug: post.slug,
+                                          coverImage: post.coverImage,
+                                          published: post.published,
                                           isActive: true,
                                           position: old.length + 1,
                                         },
                                       ]);
-                                      setMessage(`“${article.title}” adicionado. Salve a ordem para confirmar.`);
+                                      setMessage(`“${post.title}” adicionado. Salve a ordem para confirmar.`);
                                     }}
-                                    aria-label={`Adicionar ${article.title} à série`}
+                                    aria-label={`Adicionar ${post.title} à série`}
                                   >
                                     <Plus size={14} aria-hidden="true" />
                                     <span>Adicionar</span>
@@ -919,22 +968,22 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                         </ul>
                       )}
 
-                      {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
-                        <nav className={styles.pagination} aria-label="Paginação dos artigos">
+                      {(posts.meta.hasPreviousPage || posts.meta.hasNextPage) && (
+                        <nav className={styles.pagination} aria-label="Paginação dos contos">
                           <button
                             type="button"
                             className={styles.secondaryBtn}
-                            disabled={busy || !articles.meta.hasPreviousPage}
-                            onClick={() => void changePage(articles.meta.page - 1)}
+                            disabled={busy || !posts.meta.hasPreviousPage}
+                            onClick={() => void changePage(posts.meta.page - 1)}
                           >
                             Anterior
                           </button>
-                          <span>Página {articles.meta.page}</span>
+                          <span>Página {posts.meta.page}</span>
                           <button
                             type="button"
                             className={styles.secondaryBtn}
-                            disabled={busy || !articles.meta.hasNextPage}
-                            onClick={() => void changePage(articles.meta.page + 1)}
+                            disabled={busy || !posts.meta.hasNextPage}
+                            onClick={() => void changePage(posts.meta.page + 1)}
                           >
                             Próxima
                           </button>
@@ -947,46 +996,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
 
               {/* SUB-SCREEN 3C: SETTINGS & DANGER ZONE */}
               {detailTab === "settings" && (
-                <div role="tabpanel" className={styles.settingsStack}>
-                  <div className={styles.settingsCard}>
-                    <h3>Capa da série</h3>
-                    <p className={styles.settingsDesc}>
-                      JPEG, PNG ou WebP de até 5 MB. Salve alterações de texto antes de trocar a capa.
-                    </p>
-                    <div className={styles.coverUploadRow}>
-                      <CoverImage
-                        src={detail.coverImage ?? detail.fallbackCoverImage}
-                        className={styles.coverPreview}
-                        fallbackLabel="Sem capa"
-                        iconSize={26}
-                      />
-                      <div className={styles.coverControls}>
-                        <input
-                          ref={fileInputRef}
-                          id="series-cover"
-                          type="file"
-                          className={styles.fileInputHidden}
-                          accept="image/jpeg,image/png,image/webp"
-                          disabled={busy || uncertain || dirty}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            event.target.value = "";
-                            if (file) void uploadCover(file);
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className={styles.secondaryBtn}
-                          disabled={busy || uncertain || dirty}
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          <ImagePlus size={16} aria-hidden="true" />
-                          <span>{detail.coverImage ? "Trocar capa" : "Enviar capa"}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
+                <div role="tabpanel" id="series-panel-settings" aria-labelledby="series-tab-settings" className={styles.settingsStack}>
                   <div className={styles.settingsCard}>
                     <h3>Informações da série</h3>
                     <p className={styles.settingsDesc}>Atualize o título e a descrição exibidos na página da série.</p>
@@ -1013,6 +1023,7 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                         </div>
                         <textarea
                           id="edit-series-desc"
+                          rows={12}
                           maxLength={1000}
                           value={description}
                           onChange={(event) => setDescription(event.target.value)}
@@ -1042,6 +1053,47 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
                     </form>
                   </div>
 
+                  <div className={styles.settingsCard}>
+                    <h3>Capa da série</h3>
+                    <p className={styles.settingsDesc}>
+                      JPEG, PNG ou WebP de até 5 MB. A imagem é exibida inteira, sem cortes.
+                    </p>
+                    <div className={styles.coverUploadRow}>
+                      <CoverImage
+                        blurredBackdrop
+                        src={detail.coverImage ?? detail.fallbackCoverImage}
+                        className={styles.coverPreview}
+                        fallbackLabel="Sem capa"
+                        iconSize={26}
+                      />
+                      <div className={styles.coverControls}>
+                        <input
+                          ref={fileInputRef}
+                          id="series-cover"
+                          type="file"
+                          className={styles.fileInputHidden}
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={busy || uncertain || dirty}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (file) void uploadCover(file);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.secondaryBtn}
+                          disabled={busy || uncertain || dirty}
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <ImagePlus size={16} aria-hidden="true" />
+                          <span>{detail.coverImage ? "Trocar capa" : "Enviar capa"}</span>
+                        </button>
+                        {dirty && <p className={styles.coverHint}>Salve ou descarte as alterações antes de trocar a capa.</p>}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className={styles.dangerCard}>
                     <h3>Excluir série</h3>
                     <p>
@@ -1067,10 +1119,10 @@ export default function SeriesManager({ initialSeriesId }: { initialSeriesId?: s
 
       {confirmation && (
         <ConfirmDialog
-          title={confirmation === "delete" ? "Excluir série?" : "Salvar artigos e ordem?"}
+          title={confirmation === "delete" ? "Excluir série?" : "Salvar contos e ordem?"}
           description={
             confirmation === "delete"
-              ? "A série será excluída. Seus artigos serão preservados."
+              ? "A série será excluída. Seus contos serão preservados."
               : "A lista completa e a ordem atuais substituirão as que estiverem salvas."
           }
           confirmLabel={confirmation === "delete" ? "Excluir série" : "Salvar ordem"}

@@ -28,7 +28,7 @@ export default function TermosPage() {
 
       <div className={styles.callout}>
         <p>
-          <strong>Resumo essencial:</strong> O Grifório é uma plataforma brasileira de publicação de artigos, contos e histórias. No lançamento, o cadastro é exclusivo para maiores de 18 anos. Você mantém todos os direitos autorais sobre suas criações e concede ao Grifório apenas uma licença para exibi-las. Conteúdos abusivos, plágio e exploração de menores são rigorosamente proibidos.
+          <strong>Resumo essencial:</strong> O Grifório é uma plataforma brasileira de publicação de contos. No lançamento, o cadastro é exclusivo para maiores de 18 anos. Você mantém todos os direitos autorais sobre suas criações e concede ao Grifório apenas uma licença para exibi-las. Conteúdos abusivos, plágio e exploração de menores são rigorosamente proibidos.
         </p>
       </div>
 
@@ -51,10 +51,10 @@ export default function TermosPage() {
           2.1. <strong>Titularidade do autor:</strong> Conforme a Lei de Direitos Autorais brasileira (Lei nº 9.610/98), os direitos morais e patrimoniais sobre os textos, títulos e obras literárias publicadas pertencem integralmente a seus respectivos autores.
         </p>
         <p>
-          2.2. <strong>Licença de exibição:</strong> Ao publicar um artigo ou imagem de capa no Grifório, o autor concede à plataforma uma licença mundial, não exclusiva, gratuita e temporária para hospedar, armazenar, indexar, formatar e exibir publicamente a obra no âmbito da plataforma e de seus canais correlatos (como feeds RSS e sitemap).
+          2.2. <strong>Licença de exibição:</strong> Ao publicar um conto ou imagem de capa no Grifório, o autor concede à plataforma uma licença mundial, não exclusiva, gratuita e temporária para hospedar, armazenar, indexar, formatar e exibir publicamente a obra no âmbito da plataforma e de seus canais correlatos (como feeds RSS e sitemap).
         </p>
         <p>
-          2.3. <strong>Integridade da obra:</strong> A administração e os moderadores do Grifório <strong>não editam o texto literário</strong> nem alteram o conteúdo original de terceiros. Em caso de infração às diretrizes, a moderação pode ocultar o artigo, solicitar revisão ou ajustar a classificação etária nos termos das Diretrizes da Comunidade.
+          2.3. <strong>Integridade da obra:</strong> A administração e os moderadores do Grifório <strong>não editam o texto literário</strong> nem alteram o conteúdo original de terceiros. Em caso de infração às diretrizes, a moderação pode ocultar o conto, solicitar revisão ou ajustar a classificação etária nos termos das Diretrizes da Comunidade.
         </p>
         <p>
           2.4. <strong>Encerramento de conta e publicação:</strong> O autor pode a qualquer momento despublicar suas obras através do Studio ou solicitar o encerramento de sua conta. As condições de retenção e visibilidade de conteúdos após o encerramento seguem as opções descritas nas configurações de conta e em nossa <Link href="/privacidade">Política de Privacidade</Link>.

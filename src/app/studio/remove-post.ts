@@ -3,7 +3,7 @@ export function canConfirmRemoval(openedBy: string, currentSubject: string): boo
 }
 
 type AuthFetch = (subject: string, path: string, init: RequestInit) => Promise<Response>;
-export async function removeArticleRequest(fetchForSubject: AuthFetch, subject: string, id: string): Promise<"deleted" | "unauthorized" | "forbidden" | "missing" | "changed" | "uncertain"> {
+export async function removePostRequest(fetchForSubject: AuthFetch, subject: string, id: string): Promise<"deleted" | "unauthorized" | "forbidden" | "missing" | "changed" | "uncertain"> {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuid.test(subject) || !uuid.test(id)) return "uncertain";
   try {

@@ -95,12 +95,12 @@ test("series no navegador com API isolada", { timeout: 120000, skip: process.env
   const seriesTitle = `Serie sintetica ${suffix}`;
   await fill("form input", seriesTitle); await click("Criar s\u00e9rie");
   await waitFor(() => has("S\u00e9rie criada."), "criacao"); await click(seriesTitle);
-  await waitFor(() => has("Adicionar artigos"), "artigos disponiveis");
+  await waitFor(() => has("Adicionar contos"), "contos disponiveis");
   const add = title => evaluate(`document.querySelector(${JSON.stringify(`button[aria-label="Adicionar ${title} \u00e0 s\u00e9rie"]`)}).click()`);
   await add(draft.title); await add(second.title); await add(hidden.title);
-  await click("Salvar ordem e artigos"); await waitFor(() => has("Salvar artigos e ordem?"), "confirmacao"); await click("Salvar ordem");
-  await waitFor(async () => await has("Ordem dos artigos salva.") || await has("N\u00e3o foi poss\u00edvel"), "ordem");
-  assert.equal(await has("Ordem dos artigos salva."), true, await evaluate("document.body.innerText"));
+  await click("Salvar ordem e contos"); await waitFor(() => has("Salvar contos e ordem?"), "confirmacao"); await click("Salvar ordem");
+  await waitFor(async () => await has("Ordem dos contos salva.") || await has("N\u00e3o foi poss\u00edvel"), "ordem");
+  assert.equal(await has("Ordem dos contos salva."), true, await evaluate("document.body.innerText"));
   const list = await request("/api/v1/series/me", "GET", undefined, author.token);
   const series = list.find(item => item.title === seriesTitle); assert.ok(series);
   const management = await request(`/api/v1/series/${series.id}/manage`, "GET", undefined, author.token);

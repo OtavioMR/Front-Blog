@@ -1,34 +1,35 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  getAuthor,
-  getAuthorArticles,
-  pageNumber,
-  coverPath,
-  formatDate,
-  safeExternalUrl,
-} from "./data";
-import styles from "./profile.module.css";
-import Follow from "./follow";
 import Avatar from "@/app/_components/avatar";
 import backStyles from "@/app/_components/back-button.module.css";
+import CoverImage from "@/app/_components/cover-image";
+import { publicCoverPath, seriesPreview } from "@/lib/public-post";
+import { formatDate, getAuthor, getAuthorSeries, getAuthorStories, pageNumber, safeExternalUrl } from "./data";
+import Follow from "./follow";
+import styles from "./profile.module.css";
 
-export async function generateMetadata({
-  params,
-  searchParams,
-}: {
+type AuthorPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string; aba?: string; origem?: string }>;
-}): Promise<Metadata> {
+};
+
+const tabs = [
+  { id: "contos", label: "Contos" },
+  { id: "series", label: "Séries" },
+  { id: "sobre", label: "Sobre o autor" },
+] as const;
+
+type Tab = (typeof tabs)[number]["id"];
+
+export async function generateMetadata({ params, searchParams }: AuthorPageProps): Promise<Metadata> {
   const { id } = await params;
   const author = await getAuthor(id);
   if (!author) {
     return { title: "Autor não encontrado | Grifório", robots: { index: false } };
   }
   const query = await searchParams;
-  const page = pageNumber(query?.page);
+  const page = query.aba === "sobre" ? 1 : pageNumber(query.page);
   const pageSuffix = page > 1 ? ` — página ${page}` : "";
   return {
     title: `${author.name}${pageSuffix} | Grifório`,
@@ -36,207 +37,135 @@ export async function generateMetadata({
   };
 }
 
-export default async function AuthorPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string; aba?: string; origem?: string }>;
-}) {
-  const { id } = await params;
+export default async function AuthorPage({ params, searchParams }: AuthorPageProps) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const author = await getAuthor(id);
   if (!author) notFound();
 
-  const query = await searchParams;
-  const page = pageNumber(query?.page);
-  const activeTab = query?.aba === "sobre" ? "sobre" : "artigos";
-  const fromAccount = query?.origem === "conta";
-  const originQuery = fromAccount ? "&origem=conta" : "";
+  const page = pageNumber(query.page);
+  const activeTab = tabs.find((tab) => tab.id === query.aba)?.id ?? "contos";
+  const fromAccount = query.origem === "conta";
+  const tabHref = (tab: Tab, targetPage = 1) => {
+    const search = new URLSearchParams({ aba: tab });
+    if (targetPage > 1) search.set("page", String(targetPage));
+    if (fromAccount) search.set("origem", "conta");
+    return `/autores/${encodeURIComponent(author.id)}?${search}`;
+  };
 
-  const articles = await getAuthorArticles(id, author.name, page, 6);
-
+  const publications = activeTab === "contos" ? await getAuthorStories(author.id, page)
+    : activeTab === "series" ? await getAuthorSeries(author.id, page)
+    : null;
   const website = safeExternalUrl(author.websiteUrl);
   const social = safeExternalUrl(author.socialUrl);
-
-  const totalArticles = articles.meta.total;
-  const countText = `${author.publicationCount} ${author.publicationCount === 1 ? "artigo publicado" : "artigos publicados"}`;
 
   return (
     <main className={styles.page}>
       <Link href={fromAccount ? "/conta" : "/"} data-back-button="true" className={backStyles.back}>
         <span aria-hidden="true">←</span><span>{fromAccount ? "Voltar à conta" : "Voltar ao início"}</span>
       </Link>
-      <article className={styles.profile}>
-        <div className={styles.portrait}>
-          <Avatar name={author.name} src={author.profilePhoto} size={240} className={styles.portraitAvatar} />
-        </div>
-        <div>
-          <p className={styles.eyebrow}>Quem escreve</p>
+      <header className={styles.profile}>
+        <Avatar name={author.name} src={author.profilePhoto} size={64} />
+        <div className={styles.profileDetails}>
           <h1>{author.name}</h1>
-          {author.bio && <p className={styles.bio}>{author.bio}</p>}
-          <span className={styles.countBadge}>{countText}</span>
-          <Follow authorId={author.id} />
-          {(website || social) && (
-            <nav className={styles.links} aria-label="Links do autor">
-              {website && (
-                <a href={website} target="_blank" rel="noopener noreferrer">
-                  Site ↗
-                </a>
-              )}
-              {social && (
-                <a href={social} target="_blank" rel="noopener noreferrer">
-                  Rede social ↗
-                </a>
-              )}
-            </nav>
-          )}
+          <div className={styles.follow}><Follow authorId={author.id} /></div>
         </div>
-      </article>
+      </header>
 
-      <section className={styles.tabsContainer} id="artigos">
-        <nav aria-label="Seções do autor"><ul className={styles.tabs}>
-          <li className={styles.tabItem}>
-            <Link
-              aria-current={activeTab === "artigos" ? "page" : undefined}
-              className={`${styles.tab} ${activeTab === "artigos" ? styles.tabActive : ""}`}
-              href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
-            >
-              Artigos publicados
-              <span className={styles.tabBadge}>{totalArticles}</span>
-            </Link>
-          </li>
-          <li className={styles.tabItem}>
-            <Link
-              aria-current={activeTab === "sobre" ? "page" : undefined}
-              className={`${styles.tab} ${activeTab === "sobre" ? styles.tabActive : ""}`}
-              href={`/autores/${encodeURIComponent(author.id)}?aba=sobre${originQuery}#sobre`}
-            >
-              Sobre o autor
-            </Link>
-          </li>
-        </ul></nav>
+      <section className={styles.tabsContainer} id="publicacoes">
+        <nav aria-label="Seções do autor">
+          <ul className={styles.tabs}>
+            {tabs.map(({ id, label }) => (
+              <li className={styles.tabItem} key={id}>
+                <Link
+                  aria-current={activeTab === id ? "page" : undefined}
+                  className={`${styles.tab} ${activeTab === id ? styles.tabActive : ""}`}
+                  href={tabHref(id)}
+                  scroll={false}
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-        {activeTab === "artigos" ? (
-          <div id="painel-artigos">
-            {articles.data.length === 0 ? (
+        {publications ? (
+          <>
+            {publications.data.length === 0 ? (
               <div className={styles.emptyState}>
-                <p>
-                  {page > 1
-                    ? "Não há artigos nesta página."
-                    : "Este autor ainda não possui artigos publicados no momento."}
-                </p>
+                <p>{page > 1 ? "Não há publicações nesta página."
+                  : activeTab === "series" ? "Este autor ainda não publicou séries."
+                  : "Este autor ainda não publicou contos avulsos."}</p>
                 {page > 1 ? (
-                  <Link
-                    className={styles.emptyAction}
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
-                  >
+                  <Link className={styles.emptyAction} href={`${tabHref(activeTab)}#publicacoes`}>
                     Voltar à primeira página
                   </Link>
                 ) : (
-                  <Link className={styles.emptyAction} href="/#artigos">
-                    Explorar outros artigos no Grifório →
+                  <Link className={styles.emptyAction} href="/#contos">
+                    Explorar contos no Grifório
                   </Link>
                 )}
               </div>
             ) : (
-              <div className={styles.articleGrid}>
-                {articles.data.map((item) => {
-                  const cover = coverPath(item.coverImage);
-                  const dateStr = formatDate(item.publishedAt);
-                  const categoryName = item.categories?.[0]?.name || "Leitura";
+              <div className={activeTab === "series" ? styles.seriesList : styles.storyGrid}>
+                {publications.data.map((item) => {
+                  const isSeries = "description" in item;
+                  const cover = publicCoverPath(item.coverImage ?? null);
+                  const href = isSeries ? `/series/${encodeURIComponent(item.id)}` : `/posts/${encodeURIComponent(item.slug)}`;
+                  const action = isSeries ? "Ver capítulos" : "Ler conto";
+                  const date = isSeries ? null : formatDate(item.publishedAt);
                   return (
-                    <article className={`${styles.card} article-surface`} key={item.id}>
-                      {cover && (
-                        <div className={styles.cardCover}>
-                          <Image
-                            src={cover}
-                            alt=""
-                            width={600}
-                            height={338}
-                            sizes="(max-width: 700px) 100vw, 33vw"
-                            unoptimized
-                          />
-                        </div>
+                    <article className={`${styles.card} ${isSeries ? styles.seriesCard : ""} article-surface`} key={item.id}>
+                      {(cover || isSeries) && (
+                        <CoverImage className={styles.cardCover} src={cover} blurredBackdrop />
                       )}
-                      <p className={styles.cardCategory}>{categoryName}</p>
-                      <h2>
-                        <Link href={`/posts/${encodeURIComponent(item.slug)}`}>
-                          {item.title}
+                      <div className={styles.cardBody}>
+                        <p className={styles.cardCategory}>
+                          {isSeries ? (item.contentRating === "18+" ? "Série · 18+" : "Série") : item.categories?.[0]?.name || "Conto"}
+                        </p>
+                        <h2>{item.title}</h2>
+                        <p className={styles.cardExcerpt}>{isSeries ? seriesPreview(item.description) : item.excerpt}</p>
+                        <div className={styles.cardMeta}>
+                          {isSeries ? (
+                            <span>{item.publishedCount} {item.publishedCount === 1 ? "capítulo publicado" : "capítulos publicados"}</span>
+                          ) : (
+                            <>
+                              {date && item.publishedAt && <time dateTime={item.publishedAt}>{date}</time>}
+                              <span>{item.readingTimeMinutes} min de leitura</span>
+                            </>
+                          )}
+                        </div>
+                        <Link className={`${styles.action} article-surface-link`} href={href} aria-label={`${action}: ${item.title}`}>
+                          {action}
                         </Link>
-                      </h2>
-                      <p className={styles.cardExcerpt}>{item.excerpt}</p>
-                      <div className={styles.cardMeta}>
-                        {dateStr && item.publishedAt && (
-                          <time dateTime={item.publishedAt}>{dateStr}</time>
-                        )}
-                        <span>{item.readingTimeMinutes} min de leitura</span>
                       </div>
-                      <Link
-                        className={`${styles.action} article-surface-link`}
-                        href={`/posts/${encodeURIComponent(item.slug)}`}
-                        aria-label={`Ler artigo: ${item.title}`}
-                      >
-                        Ler artigo <span aria-hidden="true">↗</span>
-                      </Link>
                     </article>
                   );
                 })}
               </div>
             )}
 
-            {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
-              <nav className={styles.pagination} aria-label="Paginação dos artigos do autor">
-                {articles.meta.hasPreviousPage && (
-                  <Link
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page - 1}${originQuery}#artigos`}
-                  >
-                    ← Anterior
-                  </Link>
-                )}
+            {(publications.meta.hasPreviousPage || publications.meta.hasNextPage) && (
+              <nav className={styles.pagination} aria-label={activeTab === "series" ? "Paginação das séries" : "Paginação dos contos"}>
+                {publications.meta.hasPreviousPage && <Link href={`${tabHref(activeTab, page - 1)}#publicacoes`}>Anterior</Link>}
                 <span>
-                  Página {articles.meta.page}
-                  {articles.meta.totalPages > 0 && ` de ${articles.meta.totalPages}`}
+                  Página {publications.meta.page}
+                  {publications.meta.totalPages > 0 && ` de ${publications.meta.totalPages}`}
                 </span>
-                {articles.meta.hasNextPage && (
-                  <Link
-                    href={`/autores/${encodeURIComponent(author.id)}?aba=artigos&page=${page + 1}${originQuery}#artigos`}
-                  >
-                    Próxima →
-                  </Link>
-                )}
+                {publications.meta.hasNextPage && <Link href={`${tabHref(activeTab, page + 1)}#publicacoes`}>Próxima</Link>}
               </nav>
             )}
-          </div>
+          </>
         ) : (
-          <div id="painel-sobre">
-            <div className={styles.aboutPanel} id="sobre">
-              <h2>Sobre {author.name}</h2>
-              {author.bio ? (
-                <p>{author.bio}</p>
-              ) : (
-                <p>Este autor ainda não adicionou uma biografia detalhada.</p>
-              )}
-              {(website || social) && (
-                <nav className={styles.links} aria-label="Links do autor">
-                  {website && (
-                    <a href={website} target="_blank" rel="noopener noreferrer">
-                      Site oficial ↗
-                    </a>
-                  )}
-                  {social && (
-                    <a href={social} target="_blank" rel="noopener noreferrer">
-                      Perfil em rede social ↗
-                    </a>
-                  )}
-                </nav>
-              )}
-              <Link
-                className={styles.viewArticlesBtn}
-                href={`/autores/${encodeURIComponent(author.id)}?aba=artigos${originQuery}#artigos`}
-              >
-                Ver artigos deste autor ({totalArticles}) →
-              </Link>
-            </div>
+          <div className={styles.aboutPanel} id="sobre">
+            <h2>Sobre {author.name}</h2>
+            <p>{author.bio || "Este autor ainda não adicionou uma biografia."}</p>
+            {(website || social) && (
+              <nav className={styles.links} aria-label="Links do autor">
+                {website && <a href={website} target="_blank" rel="noopener noreferrer">Site oficial ↗</a>}
+                {social && <a href={social} target="_blank" rel="noopener noreferrer">Perfil em rede social ↗</a>}
+              </nav>
+            )}
           </div>
         )}
       </section>

@@ -25,7 +25,7 @@ import {
   User,
 } from "lucide-react";
 import { getOwnProfile, logout, subscribeSession, type OwnProfile } from "@/lib/session-client";
-import { canWriteArticles, canAccessAdmin, formatRoleName } from "@/lib/permissions";
+import { canWritePosts, canAccessAdmin, formatRoleName } from "@/lib/permissions";
 import Avatar from "@/app/_components/avatar";
 import TotpSettings from "./totp-settings";
 import RecoveryEmailSettings from "./recovery-email-settings";
@@ -81,7 +81,7 @@ export default function Account({ section }: { section?: "totp" | "recovery-emai
     setState(confirmed ? "signed-out" : "uncertain");
   }
 
-  const canWrite = canWriteArticles(profile?.role);
+  const canWrite = canWritePosts(profile?.role);
   const isAdmin = canAccessAdmin(profile?.role);
   const showWriting = profile?.role === "READER" || canWrite;
 
@@ -258,7 +258,7 @@ export default function Account({ section }: { section?: "totp" | "recovery-emai
               <section className={account.panel} aria-labelledby="manage-title">
                 <h2 id="manage-title">Seu perfil e suas leituras</h2>
                 <p className={account.panelIntro}>
-                  Cuide das informações que você compartilha e encontre seus artigos salvos.
+                  Cuide das informações que você compartilha e encontre seus contos salvos.
                 </p>
                 <ul className={account.cardGrid}>
                   <li>
@@ -293,7 +293,7 @@ export default function Account({ section }: { section?: "totp" | "recovery-emai
                         <Bookmark size={18} aria-hidden="true" />
                       </span>
                       <span className={account.navCardBody}>
-                        <strong className={account.navCardTitle}>Artigos salvos</strong>
+                        <strong className={account.navCardTitle}>Contos salvos</strong>
                         <span className={account.navCardDesc}>Suas leituras e coleções guardadas</span>
                       </span>
                       <ChevronRight size={16} className={account.navCardChevron} aria-hidden="true" />

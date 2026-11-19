@@ -3,13 +3,13 @@
 .brand { font: bold 30px var(--font-serif, Georgia, serif); letter-spacing: -1.5px; }
 .brand span { color: var(--brand); }
 .back { color: var(--text-muted); font-size: 13px; font-weight: 700; }
-.article { max-width: 900px; margin: 0 auto; padding: 78px 0 100px; }
-.articleBack { margin-bottom: 28px; }
-.category { color: var(--brand); font-size: 11px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 24px; }
-.article h1 { max-width: 900px; font-family: var(--font-serif, 'EB Garamond', Georgia, serif); font-size: clamp(42px, 6vw, 76px); line-height: 1.05; letter-spacing: -.035em; color: var(--text); }
-.excerpt { color: var(--text-muted); font-size: clamp(18px, 2vw, 22px); line-height: 1.6; max-width: 740px; margin: 24px 0; }
-.meta { display: flex; flex-wrap: wrap; gap: 10px 24px; color: var(--text-muted); font-size: 13px; padding: 20px 0 36px; }
-.cover { position: relative; width: 100%; max-width: 900px; margin: 0 auto 48px; aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface-subtle); border-radius: 8px; border: 1px solid var(--border); }
+.article { max-width: 52rem; margin: 0 auto; padding: clamp(1rem, 3vw, 2rem) 0 3.5rem; }
+.articleBack { margin-bottom: 1.25rem; }
+.category { color: var(--brand); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .75rem; }
+.article h1 { margin: 0; font-family: var(--font-serif, 'EB Garamond', Georgia, serif); font-size: clamp(1.875rem, 4.4vw, 3.5rem); line-height: 1.1; letter-spacing: -.035em; color: var(--text); overflow-wrap: anywhere; }
+.excerpt { color: var(--text-muted); font-size: clamp(1rem, 2vw, 1.125rem); line-height: 1.6; max-width: 43rem; margin: .875rem 0; }
+.meta { display: flex; flex-wrap: wrap; gap: .625rem 1rem; color: var(--text-muted); font-size: .8125rem; padding: .75rem 0 1rem; }
+.cover { position: relative; width: 100%; max-width: 46rem; margin: 0 auto 1.75rem; aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface-subtle); border-radius: 8px; border: 1px solid var(--border); }
 .cover img, .relatedCover img { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .cover .coverBackdrop, .relatedCover .coverBackdrop { object-fit: cover; filter: blur(24px) brightness(.55); transform: scale(1.12); }
 .cover img:not(.coverBackdrop), .relatedCover img:not(.coverBackdrop) { position: relative; z-index: 1; }
@@ -27,8 +27,8 @@
 .seriesList a { text-decoration: underline; text-underline-offset: 4px; color: var(--brand); }
 .seriesList a:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .seriesList [aria-current="page"] { font-weight: 700; color: var(--text); }
-.comments { max-width: 900px; margin: 0 auto; border-top: 1px solid var(--border); padding: 54px 0 70px; }
-.comments h2 { font: 400 clamp(32px, 4vw, 48px) var(--font-serif, Georgia, serif); letter-spacing: -.04em; color: var(--text); }
+.comments { max-width: 52rem; margin: 0 auto; border-top: 1px solid var(--border); padding: 2rem 0 3rem; }
+.comments h2 { font: 400 clamp(1.75rem, 3vw, 2.25rem) var(--font-serif, Georgia, serif); letter-spacing: -.04em; color: var(--text); }
 .comments > p { color: var(--text-muted); line-height: 1.6; }
 .commentsList, .replies { list-style: none; padding: 0; }
 .commentsList > li { border-top: 1px solid var(--border); padding: 22px 0; }
@@ -88,24 +88,23 @@
 .message p { color: var(--text-muted); line-height: 1.6; }
 .message a, .message button { display: inline-block; margin: 20px 20px 0 0; color: var(--brand); font: inherit; text-decoration: underline; }
 .message button { background: none; border: 0; padding: 0; cursor: pointer; }
-@media (max-width: 700px) { .header { min-height: 80px; } .article { padding: 50px 0 65px; } .content { font-size: 17px; } .cover { margin-bottom: 35px; } }
+@media (max-width: 700px) { .header { min-height: 80px; } .content { font-size: 17px; } }
 @media (max-width: 1000px) { .relatedGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .relatedGrid { grid-template-columns: 1fr; } .related { padding: 40px 0 56px; } }
-.byline { display: flex; align-items: center; gap: 14px; padding: 18px 0 32px; flex-wrap: wrap; }
+.byline { display: flex; align-items: center; gap: .75rem; padding: .75rem 0 1.25rem; flex-wrap: wrap; }
 .bylineText { display: grid; gap: 4px; min-width: 0; flex: 1 1 220px; }
 .bylineText strong { font-size: 17px; color: var(--text); }
 .bylineText strong a:hover { text-decoration: underline; text-underline-offset: 4px; color: var(--brand); }
 .bylineText span { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .editLink { padding: 8px 14px; border: 1px solid var(--brand); border-radius: 4px; color: var(--brand); font-size: 13px; font-weight: 700; transition: all 0.15s ease; }
 .editLink:hover { background: var(--brand); color: #fff; }
-.authorBox { display: flex; gap: 20px; align-items: flex-start; max-width: 700px; margin: 56px auto 0; padding: 28px; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 8px; }
+.authorBox { display: flex; gap: 1rem; align-items: flex-start; max-width: 700px; margin: 2rem auto 0; padding: 1rem; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 8px; }
 .authorBox > div { min-width: 0; }
 .authorBox h2 { font: 400 28px/1.15 var(--font-serif, Georgia, serif); letter-spacing: -.03em; margin: 4px 0 10px; color: var(--text); }
 .authorLabel { margin: 0; color: var(--brand); font-size: 10px; font-weight: 700; letter-spacing: .15em; }
 .authorBio { margin: 0 0 14px; color: var(--text-muted); line-height: 1.7; overflow-wrap: anywhere; font-size: 15px; }
 .authorLink { color: var(--brand); font-size: 14px; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
 .authorLink:hover { color: var(--brand-hover); }
-@media (max-width: 520px) { .authorBox { flex-direction: column; padding: 22px; } }
 .reportForm { display: grid; gap: .5rem; max-width: 36rem; margin: 1rem 0; }
 .reportDialog { width: min(36rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1.5rem; border: 1px solid var(--border); border-radius: .6rem; background: var(--surface); color: var(--text); }
 .reportDialog::backdrop { background: rgba(0, 0, 0, 0.65); }

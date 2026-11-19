@@ -1,9 +1,9 @@
 export type UserRole = "READER" | "AUTHOR" | "ADMIN" | "SUPER_ADMIN";
 
 export enum Capability {
-  ARTICLE_CREATE = "article:create",
-  ARTICLE_EDIT_OWN = "article:edit:own",
-  ARTICLE_PUBLISH_OWN = "article:publish:own",
+  POST_CREATE = "post:create",
+  POST_EDIT_OWN = "post:edit:own",
+  POST_PUBLISH_OWN = "post:publish:own",
   COMMENT_CREATE = "comment:create",
   ADMIN_ACCESS = "admin:access",
   ADMIN_MODERATE = "admin:moderate",
@@ -22,24 +22,24 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
   READER: [Capability.COMMENT_CREATE],
   AUTHOR: [
     Capability.COMMENT_CREATE,
-    Capability.ARTICLE_CREATE,
-    Capability.ARTICLE_EDIT_OWN,
-    Capability.ARTICLE_PUBLISH_OWN,
+    Capability.POST_CREATE,
+    Capability.POST_EDIT_OWN,
+    Capability.POST_PUBLISH_OWN,
   ],
   ADMIN: [
     Capability.COMMENT_CREATE,
-    Capability.ARTICLE_CREATE,
-    Capability.ARTICLE_EDIT_OWN,
-    Capability.ARTICLE_PUBLISH_OWN,
+    Capability.POST_CREATE,
+    Capability.POST_EDIT_OWN,
+    Capability.POST_PUBLISH_OWN,
     Capability.ADMIN_ACCESS,
     Capability.ADMIN_MODERATE,
     Capability.ADMIN_MANAGE_USERS,
   ],
   SUPER_ADMIN: [
     Capability.COMMENT_CREATE,
-    Capability.ARTICLE_CREATE,
-    Capability.ARTICLE_EDIT_OWN,
-    Capability.ARTICLE_PUBLISH_OWN,
+    Capability.POST_CREATE,
+    Capability.POST_EDIT_OWN,
+    Capability.POST_PUBLISH_OWN,
     Capability.ADMIN_ACCESS,
     Capability.ADMIN_MODERATE,
     Capability.ADMIN_MANAGE_USERS,
@@ -67,12 +67,12 @@ export function roleSatisfies(
   return userLevel >= requiredLevel;
 }
 
-export function canWriteArticles(role: string | null | undefined): boolean {
-  return hasCapability(role, Capability.ARTICLE_CREATE);
+export function canWritePosts(role: string | null | undefined): boolean {
+  return hasCapability(role, Capability.POST_CREATE);
 }
 
 export function canManageSeries(role: string | null | undefined): boolean {
-  return hasCapability(role, Capability.ARTICLE_CREATE);
+  return hasCapability(role, Capability.POST_CREATE);
 }
 
 export function canAccessAdmin(role: string | null | undefined): boolean {

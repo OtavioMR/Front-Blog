@@ -59,11 +59,11 @@ export default async function PostsPage({
 
   if (invalid) {
     return (
-      <AdminShell title="Artigos" current="posts">
+      <AdminShell title="Contos" current="posts">
         <section className={styles.panel}>
           <h2>Filtros inválidos</h2>
           <p>Os parâmetros de busca informados não são válidos.</p>
-          <Link href="/gestao-editorial/artigos" className={styles.btnSecondary}>
+          <Link href="/gestao-editorial/contos" className={styles.btnSecondary}>
             Limpar filtros
           </Link>
         </section>
@@ -106,7 +106,7 @@ export default async function PostsPage({
     const p = new URLSearchParams(query);
     p.delete("limit");
     p.set("page", String(n));
-    return `/gestao-editorial/artigos?${p}`;
+    return `/gestao-editorial/contos?${p}`;
   };
 
   const statusTabHref = (s: string) => {
@@ -114,21 +114,21 @@ export default async function PostsPage({
     if (s) p.set("status", s);
     if (search) p.set("search", search);
     if (authorId) p.set("authorId", authorId);
-    return `/gestao-editorial/artigos?${p}`;
+    return `/gestao-editorial/contos?${p}`;
   };
 
   return (
-    <AdminShell title="Artigos" current="posts">
+    <AdminShell title="Contos" current="posts">
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Gestão editorial</p>
-        <h2>Artigos da plataforma</h2>
+        <h2>Contos da plataforma</h2>
         <p>Publicação, revisão e ocultação são estados independentes.</p>
       </div>
 
       {/* Tabs de Filtro Rápido */}
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         {[
-          { key: "", label: "Todos os artigos" },
+          { key: "", label: "Todos os contos" },
           { key: "pending", label: "Em revisão editorial" },
           { key: "published", label: "Publicados" },
           { key: "hidden", label: "Ocultados por moderação" },
@@ -149,7 +149,7 @@ export default async function PostsPage({
 
       {/* Painel de Filtros */}
       <section className={styles.panel}>
-        <Form className={styles.filters} action="/gestao-editorial/artigos" prefetch={false}>
+        <Form className={styles.filters} action="/gestao-editorial/contos" prefetch={false}>
           <label>
             Buscar título
             <input
@@ -189,7 +189,7 @@ export default async function PostsPage({
         </Form>
       </section>
 
-      {/* Tabela de Artigos */}
+      {/* Tabela de Contos */}
       <section className={styles.panel}>
         {value.data.length ? (
           <div className={styles.tableScroll}>
@@ -237,12 +237,12 @@ export default async function PostsPage({
                     </td>
                     <td>
                       <Link
-                        href={`/gestao-editorial/artigos/${row.id}`}
+                        href={`/gestao-editorial/contos/${row.id}`}
                         prefetch={false}
                         className={styles.btnSecondary}
                         style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem" }}
                       >
-                        <span>Ver artigo</span>
+                        <span>Ver conto</span>
                         <IconArrowUpRight size={13} />
                       </Link>
                     </td>
@@ -253,7 +253,7 @@ export default async function PostsPage({
           </div>
         ) : (
           <p style={{ padding: "1.5rem 0", textAlign: "center", color: "var(--text-muted)" }}>
-            Nenhum artigo nesta página.
+            Nenhum conto nesta página.
           </p>
         )}
 
@@ -273,7 +273,7 @@ export default async function PostsPage({
       </section>
 
       <p style={{ marginTop: "1.5rem" }}>
-        <Link href="/gestao-editorial/artigos?status=pending" className={styles.btnSecondary} prefetch={false}>
+        <Link href="/gestao-editorial/contos?status=pending" className={styles.btnSecondary} prefetch={false}>
           Ver primeiras publicações em revisão
         </Link>
       </p>

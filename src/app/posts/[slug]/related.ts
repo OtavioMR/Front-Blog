@@ -90,7 +90,7 @@ export async function getRelatedPosts(
     results.push(item);
   }
 
-  // 1. Artigos relacionados (mesmas tags/categorias ativas via endpoint nativo)
+  // 1. Contos relacionados (mesmas tags/categorias ativas via endpoint nativo)
   try {
     const response = await fetch(
       `${origin}/api/v1/posts/${encodeURIComponent(targetSlug)}/related`,
@@ -113,7 +113,7 @@ export async function getRelatedPosts(
     // Falha pontual no tier 1 não deve interromper os fallbacks
   }
 
-  // 2. Artigos do mesmo autor (quando houver poucos artigos relacionados)
+  // 2. Contos do mesmo autor (quando houver poucos contos relacionados)
   if (results.length < MAX_RECOMMENDATIONS && targetAuthorId) {
     try {
       const response = await fetch(
@@ -138,7 +138,7 @@ export async function getRelatedPosts(
     }
   }
 
-  // 3. Outros artigos publicados no blog (quando ainda não houver recomendações suficientes)
+  // 3. Outros contos publicados no blog (quando ainda não houver recomendações suficientes)
   if (results.length < MAX_RECOMMENDATIONS) {
     try {
       const response = await fetch(`${origin}/api/v1/posts?limit=10`, {
@@ -160,6 +160,6 @@ export async function getRelatedPosts(
     }
   }
 
-  // 4. Fallback inteligente: retorna os artigos disponíveis (1 a 4) ou lista vazia caso não haja nenhum outro artigo elegível
+  // 4. Fallback inteligente: retorna os contos disponíveis (1 a 4) ou lista vazia caso não haja nenhum outro conto elegível
   return results;
 }

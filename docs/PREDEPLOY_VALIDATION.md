@@ -43,7 +43,7 @@ Os testes com sufixo `real` ou Docker que podem alterar bancos existentes foram 
 
 ## Cinco avisos mantidos
 
-- `<img>` em [avatar.tsx](../src/app/_components/avatar.tsx), na [página administrativa de artigo](../src/app/gestao-editorial/(painel)/artigos/[id]/page.tsx) e no [editor](../src/app/studio/editor.tsx): preservar fallback de avatar, URLs dinâmicas e preview local; trocar por otimização de imagem exigiria validação adicional de comportamento e configuração.
+- `<img>` em [avatar.tsx](../src/app/_components/avatar.tsx), na [página administrativa de conto](../src/app/gestao-editorial/(painel)/contos/[id]/page.tsx) e no [editor](../src/app/studio/editor.tsx): preservar fallback de avatar, URLs dinâmicas e preview local; trocar por otimização de imagem exigiria validação adicional de comportamento e configuração.
 - Navegação completa no [login administrativo](../src/app/gestao-editorial/entrar/login-form.tsx): preservada a recarga após criação da sessão e a separação dos layouts; não trocar por navegação SPA nesta limpeza.
 - Ref numérica em [restricted-post.tsx](../src/app/posts/[slug]/restricted-post.tsx): é um contador para invalidar requisições, não uma referência a nó DOM. O cleanup marca o efeito inativo, invalida a revisão e cancela a assinatura; não aplicar mecanicamente uma correção destinada a refs de elementos.
 

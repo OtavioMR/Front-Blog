@@ -50,6 +50,27 @@
   color: var(--text-muted);
 }
 
+.headerCompact .hero {
+  padding-bottom: 16px;
+}
+
+.headerCompact .title {
+  font-size: 32px;
+  margin-bottom: 0;
+}
+
+.headerCompact .subtitle {
+  display: none;
+}
+
+.headerCompact .topRow {
+  margin-bottom: 16px;
+}
+
+.headerCompact .navBar {
+  margin-block: 16px 24px;
+}
+
 .navBar {
   display: flex;
   align-items: center;

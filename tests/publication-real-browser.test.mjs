@@ -37,7 +37,7 @@ test("publicacao e revisao no navegador com API isolada", { timeout: 120000, ski
   }
   const author = await user("Author"), first = await user("First");
   const draft = await request("/api/v1/posts", "POST", { title: `Publicacao sintetica ${suffix}`, content: "Conteudo sintetico.", published: false }, author.token);
-  const firstDraft = await request("/api/v1/posts", "POST", { title: `Primeiro artigo sintetico ${suffix}`, content: "Conteudo sintetico.", published: false }, first.token);
+  const firstDraft = await request("/api/v1/posts", "POST", { title: `Primeiro conto sintetico ${suffix}`, content: "Conteudo sintetico.", published: false }, first.token);
   const freePort = async () => { const server = createServer(); server.listen(0, "127.0.0.1"); await once(server, "listening"); const port = server.address().port; await new Promise(resolve => server.close(resolve)); return port; };
   const port = await freePort(), debugPort = await freePort(), base = `http://localhost:${port}`;
   const app = spawn(process.execPath, [join(temp, "node_modules/next/dist/bin/next"), "dev", "--webpack", "-p", String(port)], {
@@ -91,14 +91,14 @@ test("publicacao e revisao no navegador com API isolada", { timeout: 120000, ski
   await waitFor(() => has("Publicar agora"), "controles de publicacao");
   const revisedTitle = `Titulo editado ${suffix}`;
   await fill("input[required]", revisedTitle); await click("Salvar rascunho");
-  await waitFor(() => has("Rascunho salvo."), "salvamento de artigo existente");
+  await waitFor(() => has("Rascunho salvo."), "salvamento de conto existente");
   assert.equal((await getDraft()).title, revisedTitle);
   await click("Publicar agora"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao de publicacao"); await click("Publicar");
-  await waitFor(() => has("Artigo publicado."), "publicacao"); assert.equal((await getDraft()).published, true);
+  await waitFor(() => has("Conto publicado."), "publicacao"); assert.equal((await getDraft()).published, true);
   assert.equal((await fetch(`${base}/posts/${draft.slug}`)).status, 200);
   await click("Retirar do ar"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao de retirada");
   await evaluate("document.querySelector('dialog[open] button:last-child').click()");
-  await waitFor(() => has("Artigo retirado do ar e mantido como rascunho."), "retirada");
+  await waitFor(() => has("Conto retirado do ar e mantido como rascunho."), "retirada");
   assert.equal((await getDraft()).published, false); assert.equal((await fetch(`${base}/posts/${draft.slug}`)).status, 404);
   await fill("#schedule-date", "2099-01-15T12:30"); await click("Agendar publica\u00e7\u00e3o");
   await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao de agenda"); await click("Confirmar agendamento");
@@ -107,13 +107,13 @@ test("publicacao e revisao no navegador com API isolada", { timeout: 120000, ski
   await evaluate("document.querySelector('dialog[open] button:last-child').click()");
   await waitFor(() => has("Agendamento cancelado."), "cancelamento"); assert.equal((await getDraft()).scheduledAt, null);
   await enter(first, firstDraft.id);
-  await waitFor(() => has("Enviar para revis\u00e3o"), "primeiro artigo");
+  await waitFor(() => has("Enviar para revis\u00e3o"), "primeiro conto");
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Publicar agora')"), false);
-  await click("Enviar para revis\u00e3o"); await click("Confirmar envio"); await waitFor(() => has("Artigo enviado para revis\u00e3o."), "envio para revisao");
+  await click("Enviar para revis\u00e3o"); await click("Confirmar envio"); await waitFor(() => has("Conto enviado para revis\u00e3o."), "envio para revisao");
   assert.equal(await evaluate("document.querySelector('textarea').readOnly"), true);
   const edit = await fetch(`${origin}/api/v1/posts/${firstDraft.id}`, { method: "PATCH", headers: { Authorization: `Bearer ${first.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: "Alteracao indevida" }) }); assert.equal(edit.status, 409);
   const remove = await fetch(`${origin}/api/v1/posts/${firstDraft.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${first.token}` } }); assert.equal(remove.status, 409);
   await cdp("Page.navigate", { url: `${base}/studio` }); await waitFor(() => has("Em revis\u00e3o"), "studio pendente");
-  assert.equal(await evaluate("Array.from(document.querySelectorAll('a')).some(x => x.textContent.trim() === 'Editar artigo')"), false);
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('a')).some(x => x.textContent.trim() === 'Editar conto')"), false);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Desativar')?.disabled"), true);
 });

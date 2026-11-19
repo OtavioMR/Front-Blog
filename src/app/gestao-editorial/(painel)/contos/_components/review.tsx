@@ -31,7 +31,7 @@ export default function Review({ id, csrf }: { id: string; csrf: string }) {
     setPending(true);
     setMessage("");
     try {
-      const response = await fetch(`/gestao-editorial/artigos/${id}/revisar`, {
+      const response = await fetch(`/gestao-editorial/contos/${id}/revisar`, {
         method: "POST",
         body: new URLSearchParams({ csrf, decision, reason: note }),
         cache: "no-store",
@@ -117,11 +117,11 @@ export default function Review({ id, csrf }: { id: string; csrf: string }) {
 
       {showConfirm && (
         <ConfirmDialog
-          title={decision === "APPROVED" ? "Aprovar e publicar este artigo?" : "Rejeitar este artigo?"}
+          title={decision === "APPROVED" ? "Aprovar e publicar este conto?" : "Rejeitar este conto?"}
           description={
             decision === "APPROVED"
-              ? "O primeiro artigo será publicado imediatamente e o autor terá a permissão de publicação direta liberada."
-              : "O artigo será rejeitado com a justificativa informada e o autor será notificado para realizar os ajustes."
+              ? "O primeiro conto será publicado imediatamente e o autor terá a permissão de publicação direta liberada."
+              : "O conto será rejeitado com a justificativa informada e o autor será notificado para realizar os ajustes."
           }
           confirmLabel={decision === "APPROVED" ? "Aprovar e publicar" : "Confirmar rejeição"}
           variant={decision === "APPROVED" ? "primary" : "danger"}

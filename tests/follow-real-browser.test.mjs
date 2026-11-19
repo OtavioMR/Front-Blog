@@ -93,7 +93,7 @@ test("acompanhar autor e feed com API isolada", { timeout: 120000, skip: process
   await waitFor(() => has("Deixar de seguir"), "autor seguido");
   assert.equal((await request(`/api/v1/authors/${author.id}/follow`, "GET", undefined, reader.token)).following, true);
   await cdp("Page.navigate", { url: `${base}/conta/feed` });
-  await waitFor(() => has(draft.title), "artigo no feed");
+  await waitFor(() => has(draft.title), "conto no feed");
   assert.equal((await request("/api/v1/feed?page=1&limit=10", "GET", undefined, reader.token)).data.some(item => item.id === draft.id), true);
   await cdp("Page.navigate", { url: `${base}/autores/${author.id}` });
   await waitFor(() => has("Deixar de seguir"), "estado persistido"); await click("Deixar de seguir");

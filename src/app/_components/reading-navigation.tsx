@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import styles from "./reading-navigation.module.css";
 
-/** Article pages track the article body; other pages track the whole document. */
+/** Post pages track the post body; other pages track the whole document. */
 export function ReadingProgress() {
   const [progress, setProgress] = useState(0);
   const pathname = usePathname();

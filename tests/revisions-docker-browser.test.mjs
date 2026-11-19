@@ -94,9 +94,9 @@ test("historico e restauracao no navegador com API Docker", { timeout: 120000, s
   await waitFor(() => has(originalTitle), "historico");
   await evaluate(`Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes(${JSON.stringify(originalTitle)})).click()`);
   await waitFor(() => has(originalContent), "previa");
-  await fill("#article-content", "Conteudo nao salvo");
+  await fill("#post-content", "Conteudo nao salvo");
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Restaurar esta vers\u00e3o').disabled"), true);
-  await fill("#article-content", "Conteudo atual sintetico"); await click("Restaurar esta vers\u00e3o");
+  await fill("#post-content", "Conteudo atual sintetico"); await click("Restaurar esta vers\u00e3o");
   await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao"); await click("Cancelar");
   assert.equal((await request(`/api/v1/posts/${post.id}`, "GET", undefined, author.token)).content, "Conteudo atual sintetico");
   await click("Restaurar esta vers\u00e3o"); await click("Restaurar vers\u00e3o");

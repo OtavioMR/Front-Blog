@@ -17,7 +17,7 @@ export function ReportForm({ target, targetId, session, initialOwner, onClose, o
   const [message, setMessage] = useState("");
   const [locked, setLocked] = useState(false);
   const [busy, setBusy] = useState(false);
-  const label = target === "POST" ? "artigo" : "comentário";
+  const label = target === "POST" ? "conto" : "comentário";
   useEffect(() => {
     const element = dialog.current;
     if (!element || !owner || target !== "COMMENT") return;

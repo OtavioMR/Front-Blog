@@ -181,7 +181,7 @@ export function TagRowActions({
       {mode === "merge" && (
         <form className={styles.moderate} onSubmit={onRequestMerge} style={{ marginTop: "0.5rem" }}>
           <label>
-            ID da tag de destino (para onde os artigos serão transferidos)
+            ID da tag de destino (para onde os contos serão transferidos)
             <input required pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" placeholder="UUID da tag de destino" value={targetId} onChange={e => setTargetId(e.target.value)} disabled={pending || uncertain} />
           </label>
           <button disabled={pending || uncertain}>{pending ? "Mesclando…" : "Confirmar mesclagem"}</button>
@@ -193,7 +193,7 @@ export function TagRowActions({
       {confirmModal === "alert_in_use" && (
         <ConfirmDialog
           title="Tag em uso"
-          description={`A tag possui ${postCount} artigo(s) associado(s). Mescle a tag em outra antes de excluí-la.`}
+          description={`A tag possui ${postCount} conto(s) associado(s). Mescle a tag em outra antes de excluí-la.`}
           confirmLabel="Entendido"
           isAlert={true}
           variant="primary"
@@ -215,8 +215,8 @@ export function TagRowActions({
       {confirmModal === "merge" && (
         <ConfirmDialog
           title={`Mesclar a tag "${currentName}"?`}
-          description="Todos os artigos associados serão transferidos para a tag de destino informada e esta tag será excluída."
-          confirmLabel="Mesclar artigos e excluir tag"
+          description="Todos os contos associados serão transferidos para a tag de destino informada e esta tag será excluída."
+          confirmLabel="Mesclar contos e excluir tag"
           variant="primary"
           onCancel={() => setConfirmModal(null)}
           onConfirm={executeMerge}

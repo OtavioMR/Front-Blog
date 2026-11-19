@@ -1,18 +1,35 @@
 .frame {
   position: relative;
+  isolation: isolate;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   background: var(--surface-subtle);
   border-radius: 8px;
   flex-shrink: 0;
 }
 
-.img {
+.img,
+.backdrop {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
   display: block;
+}
+
+.img {
+  z-index: 1;
+}
+
+.frame > .backdrop {
+  z-index: 0;
+  object-fit: cover;
+  filter: blur(24px) brightness(.6);
+  transform: scale(1.12);
+  pointer-events: none;
+  user-select: none;
 }
 
 .placeholder {

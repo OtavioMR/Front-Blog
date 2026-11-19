@@ -45,7 +45,7 @@ export default function DeactivateControl() {
   }
   return <>
     <p>
-      O encerramento definitivo da conta impede o acesso futuro e despublica imediatamente todos os seus artigos.
+      O encerramento definitivo da conta impede o acesso futuro e despublica imediatamente todos os seus contos.
       Seus dados pessoais serão anonimizados ou eliminados em conformidade com a LGPD (meta operacional de até 30 dias).
       Seus comentários permanecerão na plataforma para garantir o encadeamento das discussões, porém anonimizados como &ldquo;Conta encerrada&rdquo;, desvinculados de seu nome e foto.
     </p>
@@ -58,7 +58,7 @@ export default function DeactivateControl() {
       <div role="status" style={{ padding: "16px", background: "var(--surface-subtle)", border: "1px solid var(--border)", borderRadius: "6px", marginTop: "12px" }}>
         <p style={{ margin: 0, fontWeight: 700 }}>Conta desativada. Suas sessões foram encerradas.</p>
         <p style={{ margin: "6px 0 0", fontSize: "14px" }}>
-          Sua solicitação de encerramento foi processada com sucesso. Seus artigos foram retirados do ar e seus dados pessoais anonimizados conforme a LGPD.
+          Sua solicitação de encerramento foi processada com sucesso. Seus contos foram retirados do ar e seus dados pessoais anonimizados conforme a LGPD.
         </p>
       </div>
     )}
@@ -67,7 +67,7 @@ export default function DeactivateControl() {
     {!!openedBy && (
       <ConfirmDialog
         title="Encerrar e desativar sua conta?"
-        description="Ao confirmar, todos os seus artigos publicados serão despublicados imediatamente e seus dados pessoais serão anonimizados (meta de até 30 dias pela LGPD). Comentários em postagens serão mantidos de forma anônima como 'Conta encerrada'. Suas sessões serão encerradas e você não poderá desfazer esta operação."
+        description="Ao confirmar, todos os seus contos publicados serão despublicados imediatamente e seus dados pessoais serão anonimizados (meta de até 30 dias pela LGPD). Comentários em contos serão mantidos de forma anônima como 'Conta encerrada'. Suas sessões serão encerradas e você não poderá desfazer esta operação."
         confirmLabel="Desativar conta"
         onCancel={() => setOpenedBy("")}
         onConfirm={() => void confirm()}

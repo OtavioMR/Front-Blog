@@ -16,7 +16,7 @@ const validDay = (day: string) =>
 const roleLabels: Record<string, string> = { READER: "Leitor", AUTHOR: "Autor", ADMIN: "Administrador", SUPER_ADMIN: "Superadministrador" };
 const statusLabels: Record<string, string> = { RESOLVED: "Resolvida", DISMISSED: "Improcedente", APPROVED: "Aprovado", REJECTED: "Rejeitado", PENDING: "Pendente" };
 
-const resourceLabels: Record<string, string> = { user: "Usuário", post: "Artigo", comment: "Comentário", report: "Denúncia", category: "Categoria", tag: "Tag", session: "Sessão" };
+const resourceLabels: Record<string, string> = { user: "Usuário", post: "Conto", comment: "Comentário", report: "Denúncia", category: "Categoria", tag: "Tag", session: "Sessão" };
 
 export default async function AuditPage({
   searchParams,
@@ -215,7 +215,7 @@ export default async function AuditPage({
             const resource = resourceLabels[String(row.targetType)] ?? "Recurso";
             const targetLabel = typeof row.targetLabel === "string" && row.targetLabel ? row.targetLabel : typeof details.name === "string" && details.name ? details.name : null;
             const result = typeof details.status === "string" ? details.status : typeof details.decision === "string" ? details.decision : null;
-            const paths: Record<string, string> = { user: "usuarios", post: "artigos", comment: "comentarios", report: "denuncias" };
+            const paths: Record<string, string> = { user: "usuarios", post: "contos", comment: "comentarios", report: "denuncias" };
             const targetPath = paths[String(row.targetType)];
             return <article key={String(row.id)} className={styles.auditCard}>
               <div className={styles.auditCardHeader}><div><span className={styles.auditBadge}>{resource}</span><h3>{eventTitles[String(row.action)] ?? "Evento registrado"}</h3></div><time dateTime={String(row.createdAt)}>{new Date(String(row.createdAt)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</time></div>

@@ -85,12 +85,12 @@ test("collections in browser with isolated API", { timeout: 120000, skip: proces
   await fill("#collection-name", `Lista ${suffix}`); await click("Criar cole\u00e7\u00e3o"); await waitFor(() => has("Cole\u00e7\u00e3o criada."), "create");
   const select = (selector, value) => evaluate(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(e,${JSON.stringify(value)}); e.dispatchEvent(new Event('change',{bubbles:true})); })()`);
   const collectionId = await evaluate("document.querySelector('#collection-select option:nth-child(2)').value");
-  await select("#collection-select", collectionId); await waitFor(() => has("Artigos da cole\u00e7\u00e3o"), "select");
+  await select("#collection-select", collectionId); await waitFor(() => has("Contos da cole\u00e7\u00e3o"), "select");
   await fill("#collection-name", `Renomeada ${suffix}`); await click("Renomear"); await waitFor(() => has("Cole\u00e7\u00e3o renomeada."), "rename");
-  await select("#saved-select", post.id); await click("Adicionar"); await waitFor(() => has("Artigo adicionado"), "add");
+  await select("#saved-select", post.id); await click("Adicionar"); await waitFor(() => has("Conto adicionado"), "add");
   assert.equal((await request(`/api/v1/collections/${collectionId}/posts`, "GET", undefined, reader.token)).data.length, 1);
   await click("Remover"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "remove confirmation"); await click("Cancelar");
-  await click("Remover"); await click("Remover artigo"); await waitFor(() => has("Artigo removido"), "remove"); assert.equal((await request(`/api/v1/collections/${collectionId}/posts`, "GET", undefined, reader.token)).data.length, 0);
+  await click("Remover"); await click("Remover conto"); await waitFor(() => has("Conto removido"), "remove"); assert.equal((await request(`/api/v1/collections/${collectionId}/posts`, "GET", undefined, reader.token)).data.length, 0);
   await click("Excluir cole\u00e7\u00e3o"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "delete confirmation");
   const secondTarget = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(base + "/entrar")}`, { method: "PUT" })).json(); secondSocket = new WebSocket(secondTarget.webSocketDebuggerUrl); await once(secondSocket, "open"); let seq2 = 0; const pending2 = new Map();
   secondSocket.addEventListener("message", event => { const data=JSON.parse(event.data); if(pending2.has(data.id)){const {resolve,reject}=pending2.get(data.id);pending2.delete(data.id);if(data.error)reject(new Error(data.error.message));else resolve(data.result);} });
@@ -101,6 +101,6 @@ test("collections in browser with isolated API", { timeout: 120000, skip: proces
   await eval2("Array.from(document.querySelectorAll('button')).find(x=>x.textContent.trim()==='Entrar').click()"); await waitFor(()=>eval2("location.pathname==='/conta'"),"switch");
   await waitFor(()=>evaluate("!document.querySelector('dialog[open]')"),"dialog dismissed"); assert.equal((await request("/api/v1/collections", "GET", undefined, reader.token)).length, 1);
   await cdp("Page.navigate", { url: `${base}/entrar` }); await waitFor(()=>evaluate("!!document.querySelector('#email') && Object.keys(document.querySelector('#email')).some(k=>k.startsWith('__reactProps'))"),"login again"); await fill("#email",reader.email); await fill("#password",password); await click("Entrar"); await waitFor(()=>evaluate("location.pathname==='/conta'"),"reader again");
-  await cdp("Page.navigate",{url:`${base}/conta/salvos`}); await waitFor(()=>evaluate("!!document.querySelector('#collection-select option:nth-child(2)')"),"collection again"); await select("#collection-select",collectionId); await waitFor(()=>has("Artigos da cole\u00e7\u00e3o"),"collection selected");
+  await cdp("Page.navigate",{url:`${base}/conta/salvos`}); await waitFor(()=>evaluate("!!document.querySelector('#collection-select option:nth-child(2)')"),"collection again"); await select("#collection-select",collectionId); await waitFor(()=>has("Contos da cole\u00e7\u00e3o"),"collection selected");
   await click("Excluir cole\u00e7\u00e3o"); await waitFor(()=>evaluate("!!document.querySelector('dialog[open]')"),"confirm deletion"); await evaluate("document.querySelector('dialog button:last-child').click()"); await waitFor(()=>has("Cole\u00e7\u00e3o exclu\u00edda"),"deleted"); assert.equal((await request("/api/v1/collections", "GET", undefined, reader.token)).length, 0);
 });

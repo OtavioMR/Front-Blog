@@ -47,10 +47,10 @@ export default function CommentForm({ postId, slug, page, replyToId }: { postId:
         if (page === 1 || replyToId) router.refresh(); else router.push(`/posts/${encodeURIComponent(slug)}#comentarios`);
       } else if (result === "invalid") setMessage("Escreva um comentário de até 1000 caracteres.");
       else if (result === "rate-limited") setMessage("Muitas tentativas. Aguarde um pouco antes de enviar novamente.");
-      else if (result === "disabled") { setState("disabled"); setMessage("Os comentários foram desativados neste artigo."); }
+      else if (result === "disabled") { setState("disabled"); setMessage("Os comentários foram desativados neste conto."); }
       else if (result === "unauthorized") { setState("locked"); setMessage("Sua sessão terminou. Copie o texto antes de entrar novamente."); }
       else if (result === "changed") { setState("locked"); setMessage("A conta mudou. Copie o texto e entre novamente antes de comentar."); }
-      else if (result === "missing") { setState("locked"); setMessage("Este artigo não está mais disponível para comentários."); }
+      else if (result === "missing") { setState("locked"); setMessage("Este conto não está mais disponível para comentários."); }
       else { setState("locked"); setMessage("Não foi possível confirmar o envio. Copie seu texto e atualize os comentários para verificar antes de tentar novamente."); }
     }
     running.current = false; setBusy(false);

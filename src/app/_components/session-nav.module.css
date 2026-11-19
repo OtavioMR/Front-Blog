@@ -8,3 +8,8 @@
 .write:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .user span:last-child { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .placeholder { display: inline-block; width: 64px; height: 28px; background: var(--surface-subtle); border-radius: 14px; }
+
+@media (max-width: 440px) {
+  .account, .write { padding-inline: 8px; }
+  .placeholder { width: 55px; }
+}

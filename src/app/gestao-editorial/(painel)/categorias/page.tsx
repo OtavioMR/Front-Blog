@@ -77,7 +77,7 @@ export default async function CategoriesPage({
       <div className={styles.intro}>
         <p className={styles.eyebrow}>Taxonomia</p>
         <h2>Categorias editoriais</h2>
-        <p>Gerencie as seções e agrupamentos do conteúdo. A desativação preserva artigos e associações.</p>
+        <p>Gerencie as seções e agrupamentos do conteúdo. A desativação preserva contos e associações.</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 26rem), 1fr))", gap: "1.5rem" }}>
@@ -104,7 +104,7 @@ export default async function CategoriesPage({
                   <tr>
                     <th>Nome</th>
                     <th>Endereço (slug)</th>
-                    <th>Artigos</th>
+                    <th>Contos</th>
                     <th>Situação</th>
                     <th>Ações</th>
                   </tr>
@@ -125,7 +125,7 @@ export default async function CategoriesPage({
                       </td>
                       <td>
                         <span className={styles.badgeInReview} style={{ fontSize: "0.75rem" }}>
-                          {String(row.postCount)} {Number(row.postCount) === 1 ? "artigo" : "artigos"}
+                          {String(row.postCount)} {Number(row.postCount) === 1 ? "conto" : "contos"}
                         </span>
                       </td>
                       <td>

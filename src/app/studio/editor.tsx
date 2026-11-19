@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@/lib/session-client";
-import { canWriteArticles, canAccessAdmin } from "@/lib/permissions";
+import { canWritePosts, canAccessAdmin } from "@/lib/permissions";
 import { validatePhoto } from "../conta/foto/photo-upload";
 import { isPendingResponse, parseDraft, parsePublicationResponse, parseScheduleResponse, parseUpdatedDraft, publicationEligibility, reviewEligibility, scheduleToIso, validDraftId, type Draft } from "./editor-contracts";
 import styles from "./editor.module.css";
@@ -166,7 +166,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
           setState("signed-out");
           return;
         }
-        if (!canWriteArticles(profile.role)) {
+        if (!canWritePosts(profile.role)) {
           setState("denied");
           return;
         }
@@ -205,7 +205,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
           setSeriesContext({ id: initialSeriesId, title: series.title });
         }
 
-        // Fetch existing article if editing
+        // Fetch existing post if editing
         if (initialId) {
           if (!validDraftId(initialId)) {
             setState("error");
@@ -302,7 +302,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
     return valid;
   }
 
-  // Save article (Create or Update)
+  // Save post (Create or Update)
   function requestSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!running.current && !isReadOnly && validateFields()) setConfirmSave(true);
@@ -371,7 +371,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
         setFeedback({
           type: "error",
           text: errMsg.includes("property excerpt should not exist")
-            ? "A vers\u00e3o atual do servidor ainda n\u00e3o aceita a descri\u00e7\u00e3o do artigo. Seu texto foi preservado; atualize o servidor antes de salvar com descri\u00e7\u00e3o."
+            ? "A vers\u00e3o atual do servidor ainda n\u00e3o aceita a descri\u00e7\u00e3o do conto. Seu texto foi preservado; atualize o servidor antes de salvar com descri\u00e7\u00e3o."
             : `N\u00e3o foi poss\u00edvel salvar as altera\u00e7\u00f5es. ${errMsg}`,
         });
         return;
@@ -388,7 +388,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       if ([401, 403, 404, 409].includes(response.status)) {
         setFeedback({
           type: "error",
-          text: "Não foi possível salvar as alterações. Tente novamente. Sua conta não tem permissão para editar este artigo ou ele foi modificado.",
+          text: "Não foi possível salvar as alterações. Tente novamente. Sua conta não tem permissão para editar este conto ou ele foi modificado.",
         });
         return;
       }
@@ -410,8 +410,8 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       setFeedback({
         type: "success",
         text: draft.published
-          ? "Artigo atualizado com sucesso!"
-          : "Artigo atualizado com sucesso! Rascunho salvo.",
+          ? "Conto atualizado com sucesso!"
+          : "Conto atualizado com sucesso! Rascunho salvo.",
       });
     } catch {
       if (operation === revision.current) {
@@ -473,7 +473,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
     const operation = ++revision.current;
     running.current = true;
     setBusy(true);
-    setFeedback({ type: "saving", text: "Enviando artigo para revisão..." });
+    setFeedback({ type: "saving", text: "Enviando conto para revisão..." });
 
     try {
       const response = await authenticatedFetchForSubject(owner, `/api/v1/post-reviews/${id}/submit`, {
@@ -484,7 +484,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       if ([401, 403, 404, 409].includes(response.status)) {
         setFeedback({
           type: "error",
-          text: "Não foi possível enviar para revisão. Verifique o estado do artigo no Studio.",
+          text: "Não foi possível enviar para revisão. Verifique o estado do conto no Studio.",
         });
         return;
       }
@@ -494,7 +494,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
 
       setStatus("PENDING");
       setConfirmSubmit(false);
-      setFeedback({ type: "success", text: "Artigo enviado para revisão." });
+      setFeedback({ type: "success", text: "Conto enviado para revisão." });
     } catch {
       if (operation === revision.current) {
         setFeedback({
@@ -514,25 +514,25 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
     running.current = true;
     setBusy(true);
     setConfirmPublication(null);
-    setFeedback({ type: "saving", text: nextPublished ? "Publicando artigo..." : "Retirando artigo do ar..." });
+    setFeedback({ type: "saving", text: nextPublished ? "Publicando conto..." : "Retirando conto do ar..." });
     try {
       const response = await authenticatedFetchForSubject(owner, `/api/v1/posts/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ published: nextPublished }),
       });
       if (operation !== revision.current) return;
       if ([400, 401, 403, 404, 409, 422, 429].includes(response.status)) {
-        setFeedback({ type: "error", text: "Não foi possível alterar a publicação. Confira sua sessão e o estado do artigo no Studio." });
+        setFeedback({ type: "error", text: "Não foi possível alterar a publicação. Confira sua sessão e o estado do conto no Studio." });
         return;
       }
       if (!response.ok) throw new Error();
       const result = parsePublicationResponse(await response.json(), owner, id, nextPublished);
       if (operation !== revision.current) return;
       apply(result);
-      setFeedback({ type: "success", text: nextPublished ? "Artigo publicado." : "Artigo retirado do ar e mantido como rascunho." });
+      setFeedback({ type: "success", text: nextPublished ? "Conto publicado." : "Conto retirado do ar e mantido como rascunho." });
     } catch {
       if (operation === revision.current) {
         setPublicationUncertain(true);
-        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do artigo antes de tentar novamente." });
+        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do conto antes de tentar novamente." });
       }
     } finally {
       running.current = false;
@@ -565,7 +565,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       });
       if (operation !== revision.current) return;
       if ([400, 401, 403, 404, 409, 422, 429].includes(response.status)) {
-        setFeedback({ type: "error", text: "Não foi possível alterar o agendamento. Confira a data, sua sessão e o estado do artigo no Studio." });
+        setFeedback({ type: "error", text: "Não foi possível alterar o agendamento. Confira a data, sua sessão e o estado do conto no Studio." });
         return;
       }
       if (!response.ok) throw new Error();
@@ -573,11 +573,11 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       if (operation !== revision.current) return;
       apply(result);
       setScheduleInput("");
-      setFeedback({ type: "success", text: nextSchedule ? "Publicação agendada." : "Agendamento cancelado. O artigo continua como rascunho." });
+      setFeedback({ type: "success", text: nextSchedule ? "Publicação agendada." : "Agendamento cancelado. O conto continua como rascunho." });
     } catch {
       if (operation === revision.current) {
         setPublicationUncertain(true);
-        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do artigo antes de tentar novamente." });
+        setFeedback({ type: "error", text: "Não foi possível confirmar o resultado. Recarregue o editor e verifique o estado do conto antes de tentar novamente." });
       }
     } finally { running.current = false; setBusy(false); }
   }
@@ -589,38 +589,38 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
   // Mode texts
   const pageTitle = isEditMode
     ? published
-      ? "Editar artigo publicado"
+      ? "Editar conto publicado"
       : "Editar rascunho"
-    : "Criar artigo";
+    : "Novo conto";
 
   const introText =
     status === "PENDING"
-      ? "Este artigo aguarda revisão da equipe editorial e não pode ser alterado no momento."
+      ? "Este conto aguarda revisão da equipe editorial e não pode ser alterado no momento."
       : published
-      ? "Este artigo está publicado. As alterações salvas são refletidas imediatamente na página pública."
+      ? "Este conto está publicado. As alterações salvas são refletidas imediatamente na página pública."
       : scheduledAt
       ? `Publicação agendada para ${new Intl.DateTimeFormat("pt-BR", {
           dateStyle: "long",
           timeStyle: "short",
-        }).format(new Date(scheduledAt))}, no seu horário local. Artigos agendados não podem ser enviados para revisão.`
+        }).format(new Date(scheduledAt))}, no seu horário local. Contos agendados não podem ser enviados para revisão.`
       : status === "REJECTED"
-      ? "Este artigo foi rejeitado na revisão. Revise os pontos apontados antes de reenviar."
-      : "Seu artigo permanece privado até a aprovação e publicação.";
+      ? "Este conto foi rejeitado na revisão. Revise os pontos apontados antes de reenviar."
+      : "Seu conto permanece privado até a aprovação e publicação.";
 
   return (
     <main className={styles.page}>
-      {confirmSave && <ConfirmDialog title={published ? "Atualizar publicação?" : "Salvar alterações?"} description={published ? "As alterações confirmadas ficarão visíveis na publicação. A capa e o texto são salvos em etapas; confira o resultado se houver falha." : "As alterações serão salvas no artigo."} confirmLabel="Confirmar e salvar" variant="primary" onCancel={() => setConfirmSave(false)} onConfirm={() => void save()} />}
+      {confirmSave && <ConfirmDialog title={published ? "Atualizar publicação?" : "Salvar alterações?"} description={published ? "As alterações confirmadas ficarão visíveis na publicação. A capa e o texto são salvos em etapas; confira o resultado se houver falha." : "As alterações serão salvas no conto."} confirmLabel="Confirmar e salvar" variant="primary" onCancel={() => setConfirmSave(false)} onConfirm={() => void save()} />}
       {destination && <ConfirmDialog title="Sair sem salvar?" description={LEAVE_PROMPT} confirmLabel="Sair sem salvar" onCancel={() => setDestination(null)} onConfirm={() => { const target = destination; setDestination(null); router.push(target); }} />}
       {confirmPublication !== null && <ConfirmDialog
-        title={confirmPublication ? "Publicar artigo?" : "Retirar artigo do ar?"}
-        description={confirmPublication ? (scheduledAt ? "O artigo ficará público agora e o agendamento será cancelado." : "O artigo ficará público imediatamente.") : "O artigo deixará de estar público e continuará disponível como rascunho."}
+        title={confirmPublication ? "Publicar conto?" : "Retirar conto do ar?"}
+        description={confirmPublication ? (scheduledAt ? "O conto ficará público agora e o agendamento será cancelado." : "O conto ficará público imediatamente.") : "O conto deixará de estar público e continuará disponível como rascunho."}
         confirmLabel={confirmPublication ? "Publicar" : "Retirar do ar"}
         onCancel={() => setConfirmPublication(null)}
         onConfirm={() => void changePublication(confirmPublication)}
       />}
       {confirmSchedule !== undefined && <ConfirmDialog
         title={confirmSchedule ? "Agendar publicação?" : "Cancelar agendamento?"}
-        description={confirmSchedule ? `O artigo será publicado a partir de ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" }).format(new Date(confirmSchedule))}, no seu horário local. A verificação ocorre a cada minuto enquanto o serviço estiver em execução.` : "O artigo continuará como rascunho e não será publicado automaticamente."}
+        description={confirmSchedule ? `O conto será publicado a partir de ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" }).format(new Date(confirmSchedule))}, no seu horário local. A verificação ocorre a cada minuto enquanto o serviço estiver em execução.` : "O conto continuará como rascunho e não será publicado automaticamente."}
         confirmLabel={confirmSchedule ? "Confirmar agendamento" : "Cancelar agendamento"}
         onCancel={() => setConfirmSchedule(undefined)}
         onConfirm={() => void changeSchedule(confirmSchedule)}
@@ -673,7 +673,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
                 target="_blank"
                 rel="noreferrer"
               >
-                Ver artigo ↗
+                Ver conto ↗
               </Link>
             )}
 
@@ -704,16 +704,16 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       {state === "signed-out" && (
         <p>
           Entre para acessar o editor.{" "}
-          <Link className={styles.viewArticleLink} href="/entrar">
+          <Link className={styles.viewPostLink} href="/entrar">
             Entrar
           </Link>
         </p>
       )}
       {state === "denied" && (
-        <p role="alert">Este artigo não está disponível para edição nesta conta.</p>
+        <p role="alert">Este conto não está disponível para edição nesta conta.</p>
       )}
       {state === "error" && (
-        <p role="alert">Não foi possível carregar o artigo. Verifique a conexão e retorne ao Studio.</p>
+        <p role="alert">Não foi possível carregar o conto. Verifique a conexão e retorne ao Studio.</p>
       )}
 
       {state === "ready" && (
@@ -727,15 +727,15 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
 
           <div className={styles.studioLayout}>
           {/* Main Writing Canvas */}
-          <form id="article-form" onSubmit={requestSave} className={styles.mainCanvas} noValidate>
+          <form id="post-form" onSubmit={requestSave} className={styles.mainCanvas} noValidate>
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
-                <label htmlFor="article-title">Título do artigo *</label>
+                <label htmlFor="post-title">Título do conto *</label>
                 <span className={styles.fieldCounter}>{title.length} / 150</span>
               </div>
               <input
                 ref={titleInputRef}
-                id="article-title"
+                id="post-title"
                 name="title"
                 className={styles.titleInput}
                 placeholder="Escreva um título memorável..."
@@ -755,11 +755,11 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
 
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
-                <label htmlFor="article-excerpt">Descrição do artigo</label>
+                <label htmlFor="post-excerpt">Descrição do conto</label>
                 <span className={styles.fieldCounter}>{excerpt.length} / 200</span>
               </div>
-              <textarea id="article-excerpt" name="excerpt" className={`${styles.contentArea} ${styles.excerptArea}`}
-                placeholder="Apresente seu artigo em poucas palavras..." maxLength={200} rows={3}
+              <textarea id="post-excerpt" name="excerpt" className={`${styles.contentArea} ${styles.excerptArea}`}
+                placeholder="Apresente seu conto em poucas palavras..." maxLength={200} rows={3}
                 value={excerpt} onChange={event => { setExcerpt(event.target.value); setConfirmSubmit(false); }}
                 readOnly={isReadOnly} />
               <p>Uma breve apresentação exibida abaixo do título e nas listagens.</p>
@@ -767,15 +767,15 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
 
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
-                <label htmlFor="article-content">Conteúdo do artigo *</label>
+                <label htmlFor="post-content">Conteúdo do conto *</label>
                 <span className={styles.fieldCounter}>{content.length} / 50.000</span>
               </div>
               <textarea
                 ref={contentAreaRef}
-                id="article-content"
+                id="post-content"
                 name="content"
                 className={styles.contentArea}
-                placeholder="Escreva aqui seu artigo com boas ideias, parágrafos fluidos e reflexões..."
+                placeholder="Escreva seu conto aqui."
                 required
                 minLength={10}
                 maxLength={50000}
@@ -831,7 +831,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
           </form>
 
           {/* Sidebar Settings */}
-          <aside className={styles.sidebar} aria-label="Configurações do artigo">
+          <aside className={styles.sidebar} aria-label="Configurações do conto">
             {id && <Revisions id={id} owner={owner} isAdmin={isAdmin} dirty={dirty} pending={status === "PENDING"} busy={busy || coverBusy} setBusy={setBusy} onRestore={apply} onUncertain={() => { setRevisionUncertain(true); setPublicationUncertain(true); }} />}
             {/* Cover Image Card */}
             <section className={styles.sideCard} aria-labelledby="cover-card-title">
@@ -844,7 +844,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
                 <>
                   {cover ? (
                     <div className={styles.coverPreviewWrapper}>
-                      <img src={cover} alt="Capa atual do artigo" className={styles.coverImage} />
+                      <img src={cover} alt="Capa atual do conto" className={styles.coverImage} />
                     </div>
                   ) : (
                     <p className={styles.cardHint}>
@@ -994,7 +994,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
             {categories.length > 0 && (
               <section className={styles.sideCard} aria-labelledby="categories-card-title">
                 <h2 id="categories-card-title">Categorias</h2>
-                <p className={styles.cardHint}>Selecione as categorias que melhor representam seu artigo:</p>
+                <p className={styles.cardHint}>Selecione as categorias que melhor representam seu conto:</p>
                 <div className={styles.categoryList}>
                   {categories.map(category => (
                     <label key={category.id} className={styles.checkOption}>
@@ -1023,7 +1023,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
               <h2 id="tags-card-title">Tags</h2>
               <p className={styles.cardHint}>Até 10 palavras-chave separadas por vírgula:</p>
               <input
-                id="article-tags"
+                id="post-tags"
                 className={styles.tagInput}
                 placeholder="ex.: tecnologia, cultura, design"
                 value={tags}
@@ -1086,11 +1086,11 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
                 {published && slug && (
                   <div className={styles.reviewSection}>
                     <Link
-                      className={styles.viewArticleLink}
+                      className={styles.viewPostLink}
                       href={`/posts/${encodeURIComponent(slug)}`}
                       onNavigate={event => preventUnsavedNavigation(event, `/posts/${encodeURIComponent(slug)}`)}
                     >
-                      Acessar artigo publicado ↗
+                      Acessar conto publicado ↗
                     </Link>
                   </div>
                 )}
@@ -1100,10 +1100,10 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
                     {reviewAccess === "unknown" ? (
                       <p className={styles.cardHint}>Não foi possível verificar a elegibilidade para revisão. Recarregue a página para tentar novamente.</p>
                     ) : reviewAccess === "ineligible" ? (
-                      publicationAccess === "eligible" ? null : <p className={styles.cardHint}>{isAdmin ? "Não foi possível liberar a publicação deste artigo para esta conta. Verifique se o artigo pertence a você e se o servidor está atualizado." : "O envio para revisão está disponível apenas para o primeiro artigo do próprio autor."}</p>
+                      publicationAccess === "eligible" ? null : <p className={styles.cardHint}>{isAdmin ? "Não foi possível liberar a publicação deste conto para esta conta. Verifique se o conto pertence a você e se o servidor está atualizado." : "O envio para revisão está disponível apenas para o primeiro conto do próprio autor."}</p>
                     ) : scheduledAt ? (
                       <p className={styles.cardHint}>
-                        Artigos agendados não podem ser enviados para revisão.
+                        Contos agendados não podem ser enviados para revisão.
                       </p>
                     ) : (
                       <>

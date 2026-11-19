@@ -8,7 +8,7 @@ const source = await readFile(new URL("../src/app/studio/contracts.ts", import.m
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const context = { exports: {} };
 vm.runInNewContext(compiled, context);
-const { parseRules, parseOwnArticles, acceptedRules } = context.exports;
+const { parseRules, parseOwnPosts, acceptedRules } = context.exports;
 
 test("regras exigem versão e lista de textos", () => {
   assert.equal(parseRules({ version: "1", rules: ["Regra de teste"] }).version, "1");
@@ -24,9 +24,9 @@ test("aceite só é confirmado para papel e versão esperados", () => {
 
 test("listagem própria valida os campos e paginação antes de exibir", () => {
   const page = { data: [{ id: "id", title: "Rascunho", slug: "rascunho", published: false, reviewStatus: "PENDING" }], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } };
-  assert.equal(parseOwnArticles(page).data[0].reviewStatus, "PENDING");
-  assert.throws(() => parseOwnArticles({ ...page, meta: {} }));
-  assert.throws(() => parseOwnArticles({ ...page, data: [{ ...page.data[0], published: "false" }] }));
-  assert.equal(parseOwnArticles({ ...page, data: [{ ...page.data[0], scheduledAt: "2099-01-01T12:00:00Z" }] }).data[0].scheduledAt, "2099-01-01T12:00:00Z");
-  assert.throws(() => parseOwnArticles({ ...page, data: [{ ...page.data[0], scheduledAt: "inválido" }] }));
+  assert.equal(parseOwnPosts(page).data[0].reviewStatus, "PENDING");
+  assert.throws(() => parseOwnPosts({ ...page, meta: {} }));
+  assert.throws(() => parseOwnPosts({ ...page, data: [{ ...page.data[0], published: "false" }] }));
+  assert.equal(parseOwnPosts({ ...page, data: [{ ...page.data[0], scheduledAt: "2099-01-01T12:00:00Z" }] }).data[0].scheduledAt, "2099-01-01T12:00:00Z");
+  assert.throws(() => parseOwnPosts({ ...page, data: [{ ...page.data[0], scheduledAt: "inválido" }] }));
 });

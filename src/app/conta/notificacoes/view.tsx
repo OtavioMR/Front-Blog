@@ -7,7 +7,7 @@ import { authenticatedFetchForSubject, getOwnProfile, subscribeSession } from "@
 import { parseNotifications, type Notifications, type Notice } from "./data";
 import styles from "../feed/view.module.css";
 
-const labels: Record<Notice["type"], string> = { post_like: "curtiu seu artigo", comment: "comentou em seu artigo", reply: "respondeu a um comentário", comment_like: "curtiu seu comentário", follow: "começou a acompanhar você", post_approved: "aprovou seu artigo", post_rejected: "rejeitou seu artigo", post_hidden: "ocultou seu artigo por moderação", post_restored: "restaurou seu artigo", comment_hidden: "ocultou seu comentário por moderação", comment_restored: "restaurou seu comentário", role_changed: "alterou sua função", sessions_revoked: "encerrou suas sessões", account_suspended: "suspendeu sua conta", account_restored: "restaurou sua conta", report_assigned: "atribuiu uma denúncia a você", content_rating_changed: "reclassificou a faixa etária do seu artigo" };
+const labels: Record<Notice["type"], string> = { post_like: "curtiu seu conto", comment: "comentou em seu conto", reply: "respondeu a um comentário", comment_like: "curtiu seu comentário", follow: "começou a acompanhar você", post_approved: "aprovou seu conto", post_rejected: "rejeitou seu conto", post_hidden: "ocultou seu conto por moderação", post_restored: "restaurou seu conto", comment_hidden: "ocultou seu comentário por moderação", comment_restored: "restaurou seu comentário", role_changed: "alterou sua função", sessions_revoked: "encerrou suas sessões", account_suspended: "suspendeu sua conta", account_restored: "restaurou sua conta", report_assigned: "atribuiu uma denúncia a você", content_rating_changed: "reclassificou a faixa etária do seu conto" };
 export default function NotificationsView() {
   const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
   const [data, setData] = useState<Notifications | null>(null);
@@ -82,7 +82,7 @@ export default function NotificationsView() {
                     </p>
                   )}
                   {item.postId && (item.type === "post_approved" || item.type === "post_rejected") && (
-                    <p><Link className={styles.link} href={`/studio/${encodeURIComponent(item.postId)}`}>Ver artigo e resultado da revisão</Link></p>
+                    <p><Link className={styles.link} href={`/studio/${encodeURIComponent(item.postId)}`}>Ver conto e resultado da revisão</Link></p>
                   )}
                   {isModerationAction && (
                     <p>

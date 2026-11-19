@@ -11,10 +11,11 @@ type CoverImageProps = {
   className?: string;
   fallbackLabel?: string;
   iconSize?: number;
+  blurredBackdrop?: boolean;
 };
 
 /**
- * Renders an article or series cover image with automatic fallback to a
+ * Renders a story or series cover image with automatic fallback to a
  * Griforio editorial placeholder when missing, invalid, or broken on load.
  */
 export default function CoverImage({
@@ -23,6 +24,7 @@ export default function CoverImage({
   className = "",
   fallbackLabel,
   iconSize = 22,
+  blurredBackdrop = false,
 }: CoverImageProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -39,13 +41,16 @@ export default function CoverImage({
   return (
     <div className={`${styles.frame} ${className}`}>
       {valid && resolved ? (
-        <img
-          ref={imgRef}
-          src={resolved}
-          alt={alt}
-          className={styles.img}
-          onError={() => setFailedSrc(resolved)}
-        />
+        <>
+          {blurredBackdrop && <img src={resolved} alt="" aria-hidden="true" className={styles.backdrop} />}
+          <img
+            ref={imgRef}
+            src={resolved}
+            alt={alt}
+            className={styles.img}
+            onError={() => setFailedSrc(resolved)}
+          />
+        </>
       ) : (
         <div className={styles.placeholder} aria-hidden={!alt || undefined}>
           <BookOpen size={iconSize} strokeWidth={1.6} aria-hidden="true" />

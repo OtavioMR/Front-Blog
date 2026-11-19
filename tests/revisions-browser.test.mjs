@@ -90,10 +90,10 @@ test("revision preview restore pending and account switch", { timeout: 120000 },
   const openEditor = async () => { await cdp("Page.navigate", { url: `${base}/studio/${postId}` }); await waitFor(() => evaluate("Array.from(document.querySelectorAll('button')).some(x => x.textContent.trim() === 'Ver hist\u00f3rico')"), "editor"); };
   const openPreview = async () => { await click("Ver hist\u00f3rico"); await waitFor(() => has("Versao antiga"), "list"); await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.includes('Versao antiga')).click()"); await waitFor(() => has("Conteudo privado anterior"), "preview"); };
   await openEditor(); await openPreview();
-  await fill("#article-content", "Alteracao nao salva");
+  await fill("#post-content", "Alteracao nao salva");
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Restaurar esta vers\u00e3o').disabled"), true); assert.equal(restores, 0);
-  await fill("#article-content", "Conteudo atual sintetico"); await click("Restaurar esta vers\u00e3o"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm"); await click("Cancelar"); assert.equal(restores, 0);
-  await click("Restaurar esta vers\u00e3o"); await click("Restaurar vers\u00e3o"); await waitFor(() => has("Vers\u00e3o restaurada."), "restored"); assert.equal(restores, 1); assert.equal(await evaluate("document.querySelector('#article-content').value"), revision.content);
+  await fill("#post-content", "Conteudo atual sintetico"); await click("Restaurar esta vers\u00e3o"); await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirm"); await click("Cancelar"); assert.equal(restores, 0);
+  await click("Restaurar esta vers\u00e3o"); await click("Restaurar vers\u00e3o"); await waitFor(() => has("Vers\u00e3o restaurada."), "restored"); assert.equal(restores, 1); assert.equal(await evaluate("document.querySelector('#post-content').value"), revision.content);
   await evaluate(`(async () => { const input = document.querySelector('input[type=file]'); const canvas = document.createElement('canvas'); canvas.width = 100; canvas.height = 200; canvas.getContext('2d').fillRect(0, 0, 100, 200); const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png')); const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'cover.png', { type: 'image/png' })); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); })()`);
   await waitFor(() => covers === 1, "cover saved");
   await waitFor(() => has("Capa atualizada com sucesso."), "cover feedback");

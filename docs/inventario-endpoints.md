@@ -49,7 +49,7 @@ Os dois GETs de newsletter s?o gerados e atendidos pelo backend diretamente nos 
 | 39 | `DELETE` | `/api/v1/posts/:id/like` | Em c?digo; escopo e testes variam |
 | 40 | `PUT` | `/api/v1/posts/:id/save` | Em c?digo; escopo e testes variam |
 | 41 | `DELETE` | `/api/v1/posts/:id/save` | Em c?digo; escopo e testes variam |
-| 42 | `GET` | `/api/v1/posts/trending` | Sem chamada ? Artigos em alta; avaliar jornada. |
+| 42 | `GET` | `/api/v1/posts/trending` | Sem chamada ? Contos em alta; avaliar jornada. |
 | 43 | `POST` | `/api/v1/posts/:id/views` | Em c?digo; escopo e testes variam |
 | 44 | `POST` | `/api/v1/post-reviews/:id/submit` | Em c?digo, sob flag; valida??o pendente |
 | 45 | `GET` | `/api/v1/post-reviews` | Em c?digo, sob flag; valida??o pendente |
@@ -88,7 +88,7 @@ Os dois GETs de newsletter s?o gerados e atendidos pelo backend diretamente nos 
 | 78 | `PATCH` | `/api/v1/categories/:id` | Em c?digo, sob flag; valida??o pendente |
 | 79 | `DELETE` | `/api/v1/categories/:id` | Em c?digo, sob flag; valida??o pendente |
 | 80 | `GET` | `/api/v1/tags` | Em código: listagem pública paginada. |
-| 81 | `GET` | `/api/v1/tags/:slug` | Em código: detalhe e artigos filtrados. |
+| 81 | `GET` | `/api/v1/tags/:slug` | Em código: detalhe e contos filtrados. |
 | 82 | `GET` | `/api/v1/posts/:postId/comments` | Em c?digo; escopo e testes variam |
 | 83 | `GET` | `/api/v1/posts/:postId/comments/:id/replies` | Em c?digo; escopo e testes variam |
 | 84 | `POST` | `/api/v1/posts/:postId/comments` | Em c?digo; escopo e testes variam |

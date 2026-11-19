@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "@/lib/use-session";
-import { canWriteArticles } from "@/lib/permissions";
+import { canWritePosts } from "@/lib/permissions";
 import Avatar from "./avatar";
 import styles from "./session-nav.module.css";
 
@@ -11,7 +11,7 @@ export default function SessionNav() {
   const { status, profile } = useSession();
   if (status === "loading") return <span className={styles.placeholder} aria-hidden="true" />;
   if (status === "signed-in" && profile) {
-    const canWrite = canWriteArticles(profile.role);
+    const canWrite = canWritePosts(profile.role);
     return (
       <div className={styles.wrapper}>
         {canWrite && (

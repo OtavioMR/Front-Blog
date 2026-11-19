@@ -25,8 +25,8 @@ test("recomendações priorizam relacionados, mesmo autor, gerais e fallback int
 
   const authorOtherPost = {
     id: "a1111111-1111-1111-1111-111111111111",
-    slug: "artigo-do-mesmo-autor",
-    title: "Artigo do Mesmo Autor",
+    slug: "conto-do-mesmo-autor",
+    title: "Conto do Mesmo Autor",
     excerpt: "Outro texto do mesmo autor",
     readingTimeMinutes: 3,
     published: true,
@@ -110,20 +110,20 @@ test("recomendações priorizam relacionados, mesmo autor, gerais e fallback int
 
   const { getRelatedPosts } = await loadRelatedModule();
 
-  // Caso 1: Sem posts relacionados (como o artigo do relato), busca autor e depois geral
+  // Caso 1: Sem posts relacionados (como o conto do relato), busca autor e depois geral
   const recs = await getRelatedPosts(currentPost);
   assert.ok(Array.isArray(recs));
   assert.equal(recs.length, 4);
-  assert.equal(recs[0].slug, "artigo-do-mesmo-autor");
+  assert.equal(recs[0].slug, "conto-do-mesmo-autor");
   assert.equal(recs[1].slug, "geral-post-1");
   assert.equal(recs[2].slug, "geral-post-2");
   assert.equal(recs[3].slug, "geral-post-3");
   // Nunca inclui rascunho
   assert.ok(!recs.some((r) => r.slug === "rascunho-invalido"));
-  // Nunca inclui o artigo atual
+  // Nunca inclui o conto atual
   assert.ok(!recs.some((r) => r.slug === currentPost.slug || r.id === currentPost.id));
 
-  // Caso 2: Artigo tem posts relacionados suficientes (Tier 1)
+  // Caso 2: Conto tem posts relacionados suficientes (Tier 1)
   relatedResponse = [
     { ...generalPost1, id: "r1111111-1111-1111-1111-111111111111", slug: "rel-1", title: "Relacionado 1" },
     { ...generalPost2, id: "r2222222-2222-2222-2222-222222222222", slug: "rel-2", title: "Relacionado 2" },
@@ -132,10 +132,10 @@ test("recomendações priorizam relacionados, mesmo autor, gerais e fallback int
   assert.equal(recsWithTier1.length, 4);
   assert.equal(recsWithTier1[0].slug, "rel-1");
   assert.equal(recsWithTier1[1].slug, "rel-2");
-  assert.equal(recsWithTier1[2].slug, "artigo-do-mesmo-autor");
+  assert.equal(recsWithTier1[2].slug, "conto-do-mesmo-autor");
   assert.equal(recsWithTier1[3].slug, "geral-post-1");
 
-  // Caso 3: Fallback inteligente quando há poucos artigos disponíveis no total (apenas 2)
+  // Caso 3: Fallback inteligente quando há poucos contos disponíveis no total (apenas 2)
   relatedResponse = [];
   authorResponse = [];
   generalResponse = [generalPost1, generalPost2];
@@ -144,7 +144,7 @@ test("recomendações priorizam relacionados, mesmo autor, gerais e fallback int
   assert.equal(recsFew[0].slug, "geral-post-1");
   assert.equal(recsFew[1].slug, "geral-post-2");
 
-  // Caso 4: Nenhum outro artigo elegível disponível (apenas o próprio post)
+  // Caso 4: Nenhum outro conto elegível disponível (apenas o próprio post)
   generalResponse = [
     {
       id: currentPost.id,

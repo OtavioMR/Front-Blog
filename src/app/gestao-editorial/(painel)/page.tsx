@@ -51,13 +51,13 @@ export default async function AdminOverview() {
   // Preserva os textos esperados pelos testes de regressão
   const cards: [string, number, string, React.ReactNode][] = [
     ["Usuários", usersTotal, "Contas cadastradas", <IconUsers size={22} key="users" />],
-    ["Artigos", postsTotal, "Publicações e rascunhos", <IconPosts size={22} key="posts" />],
-    ["Publicados", postsPublished, "Artigos visíveis", <IconCheckCircle size={22} key="published" />],
+    ["Contos", postsTotal, "Publicações e rascunhos", <IconPosts size={22} key="posts" />],
+    ["Publicados", postsPublished, "Contos visíveis", <IconCheckCircle size={22} key="published" />],
     ["Denúncias pendentes", reportsPending, "Aguardando análise", <IconReports size={22} key="reports" />],
   ];
 
   if (count(value.posts.pending)) {
-    cards.push(["Artigos em revisão", value.posts.pending, "Primeiras publicações", <IconReview size={22} key="pending-posts" />]);
+    cards.push(["Contos em revisão", value.posts.pending, "Primeiras publicações", <IconReview size={22} key="pending-posts" />]);
   }
   if (count(value.reports.inReview)) {
     cards.push(["Denúncias em análise", value.reports.inReview, "Atribuídas a moderadores", <IconAlertCircle size={22} key="in-review-reports" />]);
@@ -113,18 +113,18 @@ export default async function AdminOverview() {
               <div className={styles.priorityCard}>
                 <div className={styles.priorityCardInfo}>
                   <span className={styles.priorityCardCount}>{postsPending}</span>
-                  <span className={styles.priorityCardLabel}>Artigos em revisão editorial</span>
+                  <span className={styles.priorityCardLabel}>Contos em revisão editorial</span>
                   <span className={styles.priorityCardDesc}>Primeiras publicações de novos autores</span>
                 </div>
-                <Link href="/gestao-editorial/artigos?status=pending" className={styles.priorityActionBtn} prefetch={false}>
-                  Revisar artigos
+                <Link href="/gestao-editorial/contos?status=pending" className={styles.priorityActionBtn} prefetch={false}>
+                  Revisar contos
                 </Link>
               </div>
             )}
           </div>
         ) : (
           <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.92rem" }}>
-            Nenhuma denúncia pendente ou artigo aguardando aprovação editorial neste momento. A plataforma está operando sem pendências críticas.
+            Não há denúncias pendentes nem contos aguardando aprovação editorial.
           </p>
         )}
       </section>
@@ -156,8 +156,8 @@ export default async function AdminOverview() {
           <Link href="/gestao-editorial/denuncias" className={styles.btnPrimary} prefetch={false}>
             Ver denúncias
           </Link>
-          <Link href="/gestao-editorial/artigos?status=pending" className={styles.btnSecondary} prefetch={false}>
-            Revisar artigos
+          <Link href="/gestao-editorial/contos?status=pending" className={styles.btnSecondary} prefetch={false}>
+            Revisar contos
           </Link>
           <Link href="/gestao-editorial/usuarios" className={styles.btnSecondary} prefetch={false}>
             Gerenciar usuários

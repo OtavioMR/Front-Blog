@@ -37,19 +37,19 @@ export default function SavedPosts() {
   }, [page, retry]);
 
   return <main className={styles.page}><section className={styles.content}>
-    <AccountBack /><p className={styles.eyebrow}>SUA CONTA</p><h1>Artigos salvos.</h1><p>Retome suas leituras quando quiser.</p>
-    {state === "loading" && <p role="status">Carregando artigos salvos…</p>}
+    <AccountBack /><p className={styles.eyebrow}>SUA CONTA</p><h1>Contos salvos.</h1><p>Retome suas leituras quando quiser.</p>
+    {state === "loading" && <p role="status">Carregando contos salvos…</p>}
     {state === "signed-out" && <p role="status">Sua sessão terminou. <Link href="/entrar">Entre novamente</Link>.</p>}
     {state === "forbidden" && <p role="alert">Sua conta não tem acesso a esta lista.</p>}
-    {state === "error" && <><p role="alert">Não foi possível carregar seus artigos salvos agora.</p><button type="button" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button></>}
+    {state === "error" && <><p role="alert">Não foi possível carregar seus contos salvos agora.</p><button type="button" onClick={() => setRetry(value => value + 1)}>Tentar novamente</button></>}
     {state === "ready" && result && <>
       <nav className={navigation.shortcuts} aria-label="Navegação das suas leituras">
-        <a href="#saved-articles"><strong>Artigos salvos</strong><span>Volte às suas leituras</span></a>
-        <a href="#collections-title"><strong>Coleções privadas</strong><span>Organize e encontre seus artigos</span></a>
+        <a href="#contos-salvos"><strong>Contos salvos</strong><span>Volte às suas leituras</span></a>
+        <a href="#collections-title"><strong>Coleções privadas</strong><span>Organize e encontre seus contos</span></a>
       </nav>
-      <section aria-labelledby="saved-articles"><h2 id="saved-articles">Artigos salvos</h2>
-      {result.data.length === 0 ? <p>{page === 1 ? "Você ainda não salvou nenhum artigo." : "Nenhum artigo encontrado nesta página."}</p> : <ul className={styles.list}>{result.data.map(post => <li className={styles.item} key={post.id}><article className="article-surface"><h2><Link className="article-surface-link" prefetch={false} href={`/posts/${post.id}`}>{post.title}</Link></h2><p>{post.excerpt}</p><p>{post.author.name}</p></article></li>)}</ul>}
-      {(result.meta.hasPreviousPage || result.meta.hasNextPage) && <nav aria-label="Paginação dos artigos salvos"><button type="button" disabled={!result.meta.hasPreviousPage} onClick={() => setPage(value => value - 1)}>← Anteriores</button> <span>Página {page} de {result.meta.totalPages || 1}</span> <button type="button" disabled={!result.meta.hasNextPage} onClick={() => setPage(value => value + 1)}>Próximos →</button></nav>}
+      <section aria-labelledby="contos-salvos"><h2 id="contos-salvos">Contos salvos</h2>
+      {result.data.length === 0 ? <p>{page === 1 ? "Você ainda não salvou nenhum conto." : "Nenhum conto encontrado nesta página."}</p> : <ul className={styles.list}>{result.data.map(post => <li className={styles.item} key={post.id}><article className="article-surface"><h2><Link className="article-surface-link" prefetch={false} href={`/posts/${post.id}`}>{post.title}</Link></h2><p>{post.excerpt}</p><p>{post.author.name}</p></article></li>)}</ul>}
+      {(result.meta.hasPreviousPage || result.meta.hasNextPage) && <nav aria-label="Paginação dos contos salvos"><button type="button" disabled={!result.meta.hasPreviousPage} onClick={() => setPage(value => value - 1)}>← Anteriores</button> <span>Página {page} de {result.meta.totalPages || 1}</span> <button type="button" disabled={!result.meta.hasNextPage} onClick={() => setPage(value => value + 1)}>Próximos →</button></nav>}
       </section>
       <Collections saved={result.data} expectedOwner={owner} />
     </>}

@@ -163,7 +163,7 @@ export default async function UserDetailPage({
                 {new Date(detail.createdAt).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
               </p>
               <p style={{ margin: 0 }}>
-                <strong>Produção:</strong> {`Artigos: ${detail.counts.posts} · Comentários: ${detail.counts.comments}`}
+                <strong>Produção:</strong> {`Contos: ${detail.counts.posts} · Comentários: ${detail.counts.comments}`}
               </p>
             </div>
 

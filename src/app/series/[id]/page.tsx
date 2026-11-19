@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import CoverImage from "@/app/_components/cover-image";
+import BackButton from "@/app/_components/back-button";
 import { publicCoverPath } from "@/lib/public-post";
 import styles from "./series.module.css";
 
@@ -19,15 +20,51 @@ export default async function SeriesPage({ params }: { params: Promise<{ id: str
   if (!record(value) || typeof value.title !== "string" || typeof value.description !== "string" || !(value.coverImage === null || typeof value.coverImage === "string") || !Array.isArray(value.posts) || !value.posts.every((p: unknown) => record(p) && typeof p.id === "string" && uuid.test(p.id) && typeof p.slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug) && typeof p.title === "string" && typeof p.excerpt === "string" && (p.coverImage === null || typeof p.coverImage === "string") && Number.isInteger(p.position))) throw new Error("Resposta de série inválida.");
   const series = value as Series;
   const cover = publicCoverPath(series.coverImage) ?? series.posts.map(post => publicCoverPath(post.coverImage)).find(Boolean) ?? null;
-  return <main className={styles.page}>
-    <Link className={styles.back} href="/">← Voltar às leituras</Link>
-    <header className={styles.hero}>
-      {cover && <div className={styles.heroCover}><Image src={cover} alt="" width={960} height={640} unoptimized /></div>}
-      <div><p className={styles.eyebrow}>SÉRIE {series.contentRating === "18+" && " · 18+"}</p><h1>{series.title}</h1>{series.author?.name && <p>Por {series.author.name}</p>}<p className={styles.description}>{series.description}</p><p>{series.posts.length} {series.posts.length === 1 ? "capítulo publicado" : "capítulos publicados"}</p></div>
-    </header>
-    <section><p className={styles.eyebrow}>CONTINUE ESTA HISTÓRIA</p><h2>Capítulos</h2><ol className={styles.chapters}>{series.posts.map((chapter, index) => {
-      const image = publicCoverPath(chapter.coverImage);
-      return <li key={chapter.id}><Link className={styles.chapter} href={`/posts/${encodeURIComponent(chapter.slug)}`}>{image ? <Image src={image} alt="" width={320} height={200} unoptimized /> : <span className={styles.placeholder} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>}<span className={styles.chapterBody}><span className={styles.eyebrow}>CAPÍTULO {index + 1}{chapter.contentRating === "18+" && " · 18+"}</span><strong>{chapter.title}</strong>{chapter.excerpt && <span className={styles.excerpt}>{chapter.excerpt}</span>}<span className={styles.read}>Ler capítulo →</span></span></Link></li>;
-    })}</ol></section>
-  </main>;
+  const synopsis = series.description.trim();
+
+  return (
+    <main className={styles.page}>
+      <BackButton fallback="/" />
+
+      <div className={cover ? `${styles.overview} ${styles.withCover}` : styles.overview}>
+        {cover && <CoverImage src={cover} className={styles.seriesCover} blurredBackdrop />}
+        <header className={styles.heading}>
+          <p className={styles.eyebrow}>Série{series.contentRating === "18+" && " · 18+"}</p>
+          <h1 className={styles.title}>{series.title}</h1>
+          {series.author?.name && <p className={styles.byline}>Por {series.author.name}</p>}
+          <p className={styles.chapterCount}>
+            {series.posts.length} {series.posts.length === 1 ? "capítulo publicado" : "capítulos publicados"}
+          </p>
+        </header>
+
+        {synopsis && (
+          <section className={styles.synopsis} aria-labelledby="sinopse">
+            <h2 className={styles.synopsisHeading} id="sinopse">Sinopse</h2>
+            {synopsis.split(/\r?\n(?:[ \t]*\r?\n)+/).map((paragraph, index) => (
+              <p className={styles.description} key={index}>{paragraph}</p>
+            ))}
+          </section>
+        )}
+      </div>
+
+      <section className={styles.chapterSection} aria-labelledby="capitulos">
+        <h2 className={styles.chapterHeading} id="capitulos">Capítulos</h2>
+        <ol className={styles.chapters} role="list">
+          {series.posts.map((chapter, index) => (
+            <li key={chapter.id}>
+              <Link className={styles.chapter} href={`/posts/${encodeURIComponent(chapter.slug)}`}>
+                <CoverImage src={chapter.coverImage} className={styles.chapterCover} blurredBackdrop />
+                <span className={styles.chapterBody}>
+                  <span className={styles.eyebrow}>Capítulo {index + 1}{chapter.contentRating === "18+" && " · 18+"}</span>
+                  <strong className={styles.chapterTitle}>{chapter.title}</strong>
+                  {chapter.excerpt && <span className={styles.excerpt}>{chapter.excerpt}</span>}
+                  <span className={styles.read}>Ler capítulo</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </main>
+  );
 }

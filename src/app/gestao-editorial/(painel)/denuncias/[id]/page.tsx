@@ -211,7 +211,7 @@ export default async function ReportDetailPage({
                     {targetType === "POST" && <IconPosts size={14} />}
                     {targetType === "COMMENT" && <IconComments size={14} />}
                     {targetType === "USER" && <IconUsers size={14} />}
-                    {targetType === "POST" ? "Artigo" : targetType === "COMMENT" ? "Comentário" : "Perfil de usuário"}
+                    {targetType === "POST" ? "Conto" : targetType === "COMMENT" ? "Comentário" : "Perfil de usuário"}
                   </span>
                   <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontFamily: "monospace" }}>
                     ID: {String(target.id)}
@@ -249,7 +249,7 @@ export default async function ReportDetailPage({
                 {targetType === "COMMENT" && target.content && (
                   <div style={{ padding: "1rem", borderRadius: "0.6rem", border: "1px solid var(--border)", background: "var(--surface)" }}>
                     <p><Avatar name={target.author?.name || "Usuário removido"} src={target.author?.profilePhoto || null} size={24} /> <strong>Autor:</strong> {target.author?.name || "Usuário removido"}</p>
-                    <p><strong>Artigo:</strong> {target.post?.title || "Conteúdo indisponível"}</p>
+                    <p><strong>Conto:</strong> {target.post?.title || "Conteúdo indisponível"}</p>
                     <strong>Texto do comentário denunciado</strong>
                     <p className={`${styles.commentText} ${styles.reportQuoteText}`}>
                       {String(target.content)}

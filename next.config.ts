@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/v1/:path*", destination: `${origin}/api/v1/:path*` },
       { source: "/uploads/:path*", destination: `${origin}/uploads/:path*` },
+      { source: "/gestao-editorial/artigos/:path*", destination: "/gestao-editorial/contos/:path*" },
     ];
   },
 };

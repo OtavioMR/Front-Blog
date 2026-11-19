@@ -138,7 +138,7 @@ export default async function CommentDetail({
                 <strong>Autor:</strong> {record(detail.author) && typeof detail.author.name === "string" ? detail.author.name : "Usuário removido"}
               </p>
               <p style={{ margin: 0 }}>
-                <strong>Artigo:</strong> {record(detail.post) && typeof detail.post.title === "string" ? detail.post.title : "Conteúdo indisponível"}
+                <strong>Conto:</strong> {record(detail.post) && typeof detail.post.title === "string" ? detail.post.title : "Conteúdo indisponível"}
               </p>
               {Boolean(detail.rootId || detail.replyToId) && <details><summary>Referências da conversa</summary><p><strong>Comentário principal:</strong> {String(detail.rootId || "—")} · <strong>Em resposta a:</strong> {String(detail.replyToId || "—")}</p></details>}
             </div>

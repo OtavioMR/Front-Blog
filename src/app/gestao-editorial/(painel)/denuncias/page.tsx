@@ -21,7 +21,7 @@ const statuses: Record<string, string> = {
   DISMISSED: "Improcedente",
 };
 const targets: Record<string, string> = {
-  POST: "Artigo",
+  POST: "Conto",
   COMMENT: "Comentário",
   USER: "Perfil",
 };
@@ -253,13 +253,13 @@ export default async function ReportsPage({
               </thead>
               <tbody>
                 {value.data.map(row => {
-                  const targetLabel = row.postId ? "Artigo" : row.commentId ? "Comentário" : "Perfil";
+                  const targetLabel = row.postId ? "Conto" : row.commentId ? "Comentário" : "Perfil";
                   return (
                     <tr key={String(row.id)}>
                       <td>
                         <div>{typeof row.targetLabel === "string" && row.targetLabel ? row.targetLabel : "Conteúdo indisponível"}</div>
                         {(row.postId || row.commentId) && <div style={{ display: "flex", alignItems: "center", gap: ".35rem", marginTop: ".3rem" }}><Avatar name={typeof row.authorName === "string" ? row.authorName : "Usuário removido"} src={typeof row.authorPhoto === "string" ? row.authorPhoto : null} size={24} /><span>{typeof row.authorName === "string" ? row.authorName : "Usuário removido"}</span></div>}
-                        {row.commentId && <div>{typeof row.postTitle === "string" ? row.postTitle : "Artigo indisponível"}</div>}
+                        {row.commentId && <div>{typeof row.postTitle === "string" ? row.postTitle : "Conto indisponível"}</div>}
                       </td>
                       <td>
                         <span

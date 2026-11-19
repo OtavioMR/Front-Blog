@@ -18,7 +18,7 @@ test("valida paginação, identificação e conteúdo das revisões", () => {
   assert.throws(() => parseRevisions({ data: [], meta: { page: 2, hasNextPage: false, hasPreviousPage: false } }, 1));
 });
 
-test("restauração confirma titular, artigo e bloqueio de revisão", () => {
+test("restauração confirma titular, conto e bloqueio de revisão", () => {
   const draft = { id, authorId: id, title: "Titulo", content: "Conteudo sintetico", published: false, isActive: true, reviewStatus: "DRAFT", scheduledAt: null };
   assert.equal(parseRestored(draft, id, false, id).id, id);
   const withoutActive = { ...draft }; delete withoutActive.isActive;

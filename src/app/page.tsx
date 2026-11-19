@@ -3,9 +3,9 @@ import Form from "next/form";
 import type { Metadata } from "next";
 import Image from "next/image";
 import styles from "./home.module.css";
-import { publicCoverPath } from "@/lib/public-post";
+import { publicCoverPath, seriesPreview } from "@/lib/public-post";
 
-type ArticleSummary = {
+type PostSummary = {
   id: string;
   slug: string;
   title: string;
@@ -18,8 +18,8 @@ type ArticleSummary = {
   discoverySeries?: { id: string; title: string; description: string; coverImage: string | null; fallbackCoverImage?: string | null; publishedCount: number; contentRating: string };
 };
 
-type ArticlePage = {
-  data: ArticleSummary[];
+type PostPage = {
+  data: PostSummary[];
   meta: { page: number; totalPages: number; hasNextPage: boolean; hasPreviousPage: boolean };
 };
 
@@ -27,7 +27,7 @@ type QueryParams = { search?: string | string[]; author?: string | string[]; cat
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<QueryParams> }): Promise<Metadata> {
   const { search, author, categorySlug } = await searchParams;
-  if ([search, author, categorySlug].some((value) => typeof value === "string" && value.trim())) return { title: "Busca de artigos", robots: { index: false, follow: true } };
+  if ([search, author, categorySlug].some((value) => typeof value === "string" && value.trim())) return { title: "Busca de contos", robots: { index: false, follow: true } };
   return { title: "Grifório | Um espaço para boas ideias" };
 }
 
@@ -35,7 +35,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isArticleSummary(value: unknown): value is ArticleSummary {
+function isPostSummary(value: unknown): value is PostSummary {
   return isRecord(value)
     && typeof value.id === "string"
     && typeof value.slug === "string"
@@ -59,10 +59,10 @@ function pageLink(page: number, search: string, author: string, category: string
   if (category) params.set("categorySlug", category);
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
-  return `/${query ? `?${query}` : ""}#artigos`;
+  return `/${query ? `?${query}` : ""}#contos`;
 }
 
-async function getArticles(page: number, search: string, author: string, category: string): Promise<ArticlePage> {
+async function getPosts(page: number, search: string, author: string, category: string): Promise<PostPage> {
   const params = new URLSearchParams({ page: String(page), limit: "6", discovery: "true" });
   if (search) params.set("search", search);
   if (author) params.set("author", author);
@@ -73,12 +73,12 @@ async function getArticles(page: number, search: string, author: string, categor
   });
   if (!response.ok) throw new Error("API indisponível");
   const result: unknown = await response.json();
-  if (!isRecord(result) || !Array.isArray(result.data) || !result.data.every(isArticleSummary) || !isRecord(result.meta)
+  if (!isRecord(result) || !Array.isArray(result.data) || !result.data.every(isPostSummary) || !isRecord(result.meta)
       || typeof result.meta.page !== "number" || typeof result.meta.totalPages !== "number"
       || typeof result.meta.hasNextPage !== "boolean" || typeof result.meta.hasPreviousPage !== "boolean") {
     throw new Error("Resposta inválida");
   }
-  return result as ArticlePage;
+  return result as PostPage;
 }
 
 async function getCategories(): Promise<{ slug: string; name: string }[] | null> {
@@ -102,14 +102,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
   const category = typeof query.categorySlug === "string" ? query.categorySlug.trim().slice(0, 100) : "";
   const requestedPage = typeof query.page === "string" && /^[1-9]\d*$/.test(query.page) ? Number(query.page) : 1;
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const [articles, categories] = await Promise.all([getArticles(page, search, author, category), getCategories()]);
+  const [posts, categories] = await Promise.all([getPosts(page, search, author, category), getCategories()]);
   const filtering = Boolean(search || author || category);
-  const showFeatured = page === 1 && !filtering && articles.data.length > 0;
-  const cover = (a: ArticleSummary) => Boolean(publicCoverPath(a.coverImage ?? null));
-  const destination = (a: ArticleSummary) => a.discoverySeries ? `/series/${a.discoverySeries.id}` : `/posts/${encodeURIComponent(a.slug)}`;
-  const present = (a: ArticleSummary): ArticleSummary => a.discoverySeries ? { ...a, title: a.discoverySeries.title, excerpt: a.discoverySeries.description.length > 150 ? `${a.discoverySeries.description.slice(0, 147).trimEnd()}…` : a.discoverySeries.description, coverImage: publicCoverPath(a.discoverySeries.coverImage) ?? publicCoverPath(a.discoverySeries.fallbackCoverImage ?? null) ?? publicCoverPath(a.coverImage ?? null), categories: [{ name: `SÉRIE · ${a.discoverySeries.publishedCount} ${a.discoverySeries.publishedCount === 1 ? "CAPÍTULO" : "CAPÍTULOS"}${a.discoverySeries.contentRating === "18+" ? " · 18+" : ""}` }] } : a;
-  const featured = showFeatured ? present(articles.data[0]) : null;
-  const rest = (showFeatured ? articles.data.slice(1) : articles.data).map(present);
+  const showFeatured = page === 1 && !filtering && posts.data.length > 0;
+  const cover = (a: PostSummary) => Boolean(publicCoverPath(a.coverImage ?? null));
+  const destination = (a: PostSummary) => a.discoverySeries ? `/series/${a.discoverySeries.id}` : `/posts/${encodeURIComponent(a.slug)}`;
+  const present = (a: PostSummary): PostSummary => a.discoverySeries ? { ...a, title: a.discoverySeries.title, excerpt: seriesPreview(a.discoverySeries.description), coverImage: publicCoverPath(a.discoverySeries.coverImage) ?? publicCoverPath(a.discoverySeries.fallbackCoverImage ?? null) ?? publicCoverPath(a.coverImage ?? null), categories: [{ name: `SÉRIE · ${a.discoverySeries.publishedCount} ${a.discoverySeries.publishedCount === 1 ? "CAPÍTULO" : "CAPÍTULOS"}${a.discoverySeries.contentRating === "18+" ? " · 18+" : ""}` }] } : a;
+  const featured = showFeatured ? present(posts.data[0]) : null;
+  const rest = (showFeatured ? posts.data.slice(1) : posts.data).map(present);
 
   return (
     <main className={styles.homeContainer}>
@@ -122,7 +122,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
               Um lugar para desacelerar, encontrar novas perspectivas e deixar a curiosidade levar você mais longe.
             </p>
             <div className={styles.heroFooter}>
-              <a href="#artigos" className={styles.heroCta}>EXPLORAR ARTIGOS <span aria-hidden="true">↘</span></a>
+              <a href="#contos" className={styles.heroCta}>EXPLORAR CONTOS <span aria-hidden="true">↘</span></a>
             </div>
           </div>
           <div className={styles.heroArtwork} aria-hidden="true">
@@ -134,8 +134,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
         </section>
 
         <section className={styles.discovery} aria-label="Encontrar leituras">
-          <Form key={`${search}|${author}|${category}`} className={styles.search} action="/#artigos" role="search" aria-label="Busca de artigos">
-            <div className={styles.field}><label htmlFor="search">Buscar artigos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
+          <Form key={`${search}|${author}|${category}`} className={styles.search} action="/#contos" role="search" aria-label="Busca de contos">
+            <div className={styles.field}><label htmlFor="search">Buscar contos</label><input id="search" name="search" type="search" defaultValue={search} maxLength={100} placeholder="Título ou assunto" /></div>
             <div className={styles.field}><label htmlFor="author">Autor <span>(opcional)</span></label><input id="author" name="author" type="search" defaultValue={author} maxLength={100} placeholder="Nome do autor" /></div>
             {category && <input type="hidden" name="categorySlug" value={category} />}
             <button type="submit">Buscar</button>
@@ -144,19 +144,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
             <span className={styles.categoryNavLabel}>Assuntos:</span>
             <div className={styles.categoryList}>
               {categories?.map((item) => <Link key={item.slug} href={pageLink(1, search, author, item.slug)} aria-current={category === item.slug ? "true" : undefined} className={`${styles.categoryPill} ${category === item.slug ? styles.categoryPillActive : ""}`}>{item.name}</Link>)}
-              <Link className={styles.categoryPill} href={`/categorias?${new URLSearchParams({ ...(search && { articleSearch: search }), ...(author && { author }) })}`}>Ver todas as categorias →</Link>
+              <Link className={styles.categoryPill} href={`/categorias?${new URLSearchParams({ ...(search && { storySearch: search }), ...(author && { author }) })}`}>Ver todas as categorias →</Link>
             </div>
             {!categories && <span>Não foi possível carregar os assuntos em destaque.</span>}
             {categories && categories.length === 0 && <span>Ainda não há categorias cadastradas.</span>}
           </nav>
         </section>
 
-        <section className={styles.articles} id="artigos" aria-labelledby="articles-title">
-          <div className={styles.articlesHeading}>
-            <div>
-              <p className={styles.eyebrow}><span className={styles.eyebrowLine} /> LEITURAS PARA DESCOBRIR</p>
-              <h2 id="articles-title">Ideias para ficar um pouco mais.</h2>
-            </div>
+        <section className={styles.articles} id="contos" aria-labelledby="contos-title">
+          <div className={styles.articlesHeading} id="artigos">
+            <h2 id="contos-title">Contos e séries</h2>
           </div>
 
           {filtering && (
@@ -167,18 +164,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
                 {author && <span className={styles.chip}>Autor: {author}</span>}
                 {category && <span className={styles.chip}>Categoria: {categories?.find(item => item.slug === category)?.name || category}</span>}
               </div>
-              <Link className={styles.clearFilters} href="/#artigos">Limpar filtros ✕</Link>
+              <Link className={styles.clearFilters} href="/#contos">Limpar filtros ✕</Link>
             </div>
           )}
 
-          {articles.data.length === 0 ? (
+          {posts.data.length === 0 ? (
             <div className={styles.articleStatus}>
               <p className={styles.emptyTitle}>
-                {page > 1 ? "Não há artigos nesta página." : filtering ? "Nenhum artigo encontrado para esta busca." : "Ainda não há artigos publicados por aqui."}
+                {page > 1 ? "Não há contos nesta página." : filtering ? "Nenhum conto encontrado para esta busca." : "Ainda não há contos publicados por aqui."}
               </p>
               {filtering && <p className={styles.emptySubtitle}>Tente pesquisar por outros termos ou explorar outras categorias.</p>}
               {filtering ? (
-                <Link className={styles.clearSearchBtn} href="/#artigos">Ver todos os artigos</Link>
+                <Link className={styles.clearSearchBtn} href="/#contos">Ver todos os contos</Link>
               ) : page > 1 ? (
                 <Link className={styles.clearSearchBtn} href={pageLink(1, search, author, category)}>Voltar à primeira página</Link>
               ) : null}
@@ -186,7 +183,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
           ) : (
             <>
               {featured && (
-                <article className={`${styles.featured} article-surface`}>
+                <article className={`${styles.featured} ${!cover(featured) ? styles.featuredTextOnly : ""} article-surface`}>
                   {cover(featured) && <Link prefetch={false} href={destination(featured)} className={styles.featuredCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" unoptimized /><Image src={featured.coverImage!} alt="" width={960} height={540} sizes="(max-width: 800px) 100vw, 55vw" priority unoptimized /></Link>}
                   <div className={styles.featuredBody}>
                     <p className={styles.leadLabel}>PUBLICAÇÃO RECENTE <span aria-hidden="true">↗</span></p>
@@ -194,29 +191,31 @@ export default async function Home({ searchParams }: { searchParams: Promise<Que
                     <h3><Link prefetch={false} href={destination(featured)}>{featured.title}</Link></h3>
                     <p className={styles.articleExcerpt}>{featured.excerpt}</p>
                     <p className={styles.articleMeta}>{featured.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(featured.author.id)}`}>{featured.author.name}</Link> : "Equipe editorial"} {!featured.discoverySeries && featured.readingTimeMinutes ? `· ${featured.readingTimeMinutes} min de leitura` : ""}</p>
-                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(featured)} aria-label={`${featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"}: ${featured.title}`}>{featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"} <span aria-hidden="true">↗</span></Link>
+                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(featured)} aria-label={`${featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler conto"}: ${featured.title}`}>{featured.discoverySeries ? "Ver cap\u00edtulos" : "Ler conto"} <span aria-hidden="true">↗</span></Link>
                   </div>
                 </article>
               )}
-              {rest.length > 0 && <div className={styles.articleGrid}>
-                {rest.map((article) => (
-                  <article className={`${styles.card} article-surface`} key={article.id}>
-                    {cover(article) && <Link prefetch={false} href={destination(article)} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /><Image src={article.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
-                    <p className={styles.articleCategory}>{article.categories?.[0]?.name || "LEITURA"}</p>
-                    <h3><Link prefetch={false} href={destination(article)}>{article.title}</Link></h3>
-                    <p className={styles.articleExcerpt}>{article.excerpt}</p>
-                    <p className={styles.articleMeta}>{article.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(article.author.id)}`}>{article.author.name}</Link> : "Equipe editorial"} {!article.discoverySeries && article.readingTimeMinutes ? `· ${article.readingTimeMinutes} min de leitura` : ""}</p>
-                    <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(article)} aria-label={`${article.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"}: ${article.title}`}>{article.discoverySeries ? "Ver cap\u00edtulos" : "Ler artigo"} <span aria-hidden="true">↗</span></Link>
+              {rest.length > 0 && <div className={`${styles.articleGrid} ${rest.length === 1 ? styles.articleGridSingle : ""}`}>
+                {rest.map((post) => (
+                  <article className={`${styles.card} article-surface`} key={post.id}>
+                    {cover(post) && <Link prefetch={false} href={destination(post)} className={styles.cardCover} tabIndex={-1} aria-hidden="true"><Image className={styles.coverBackdrop} src={post.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /><Image src={post.coverImage!} alt="" width={960} height={540} sizes="(max-width: 700px) 100vw, 33vw" unoptimized /></Link>}
+                    <div className={styles.cardBody}>
+                      <p className={styles.articleCategory}>{post.categories?.[0]?.name || "LEITURA"}</p>
+                      <h3><Link prefetch={false} href={destination(post)}>{post.title}</Link></h3>
+                      <p className={styles.articleExcerpt}>{post.excerpt}</p>
+                      <p className={styles.articleMeta}>{post.author ? <Link className="article-surface-secondary" href={`/autores/${encodeURIComponent(post.author.id)}`}>{post.author.name}</Link> : "Equipe editorial"} {!post.discoverySeries && post.readingTimeMinutes ? `· ${post.readingTimeMinutes} min de leitura` : ""}</p>
+                      <Link className={`${styles.articleLink} article-surface-link`} prefetch={false} href={destination(post)} aria-label={`${post.discoverySeries ? "Ver cap\u00edtulos" : "Ler conto"}: ${post.title}`}>{post.discoverySeries ? "Ver cap\u00edtulos" : "Ler conto"} <span aria-hidden="true">↗</span></Link>
+                    </div>
                   </article>
                 ))}
               </div>}
             </>
           )}
-          {(articles.meta.hasPreviousPage || articles.meta.hasNextPage) && (
-            <nav className={styles.pagination} aria-label="Paginação dos artigos">
-              {articles.meta.hasPreviousPage && <Link href={pageLink(page - 1, search, author, category)}>← Anterior</Link>}
-              <span>Página {articles.meta.page}{articles.meta.totalPages > 0 && ` de ${articles.meta.totalPages}`}</span>
-              {articles.meta.hasNextPage && <Link href={pageLink(page + 1, search, author, category)}>Próxima →</Link>}
+          {(posts.meta.hasPreviousPage || posts.meta.hasNextPage) && (
+            <nav className={styles.pagination} aria-label="Paginação dos contos">
+              {posts.meta.hasPreviousPage && <Link href={pageLink(page - 1, search, author, category)}>← Anterior</Link>}
+              <span>Página {posts.meta.page}{posts.meta.totalPages > 0 && ` de ${posts.meta.totalPages}`}</span>
+              {posts.meta.hasNextPage && <Link href={pageLink(page + 1, search, author, category)}>Próxima →</Link>}
             </nav>
           )}
         </section>

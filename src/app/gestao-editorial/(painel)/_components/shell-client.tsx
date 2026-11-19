@@ -196,16 +196,16 @@ export function AdminShellClient({
               <span>Denúncias</span>
             </Link>
             <Link
-              href="/gestao-editorial/artigos"
+              href="/gestao-editorial/contos"
               prefetch={false}
               className={styles.navLink}
               aria-current={current === "posts" ? "page" : undefined}
             >
               <IconPosts size={18} />
-              <span>Artigos</span>
+              <span>Contos</span>
             </Link>
             <Link
-              href="/gestao-editorial/artigos?status=pending"
+              href="/gestao-editorial/contos?status=pending"
               prefetch={false}
               className={styles.navLink}
             >

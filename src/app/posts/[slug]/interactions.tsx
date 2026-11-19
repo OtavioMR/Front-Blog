@@ -56,10 +56,10 @@ export default function Interactions({ postId }: { postId: string }) {
     finally { submitting.current = false; setBusy(false); }
   }
 
-  return <section className={styles.interactions} aria-label="Interações com o artigo">
+  return <section className={styles.interactions} aria-label="Interações com o conto">
     {view === "loading" && <p role="status">Carregando interações…</p>}
     {view === "signed-out" && <p><Link href="/entrar">Entre na sua conta</Link> para curtir ou salvar esta leitura.</p>}
-    {view === "denied" && <p role="status">Sua conta não pode interagir com este artigo.</p>}
+    {view === "denied" && <p role="status">Sua conta não pode interagir com este conto.</p>}
     {view === "unavailable" && <><p role="status">Não foi possível carregar as interações.</p><button onClick={() => void load()}>Tentar novamente</button></>}
     {view === "uncertain" && <><p role="status">Não foi possível confirmar a alteração. Consulte o estado atual antes de tentar novamente.</p><button onClick={() => void load()}>Consultar estado</button></>}
     {view === "ready" && state && <><button disabled={busy} aria-pressed={state.liked} onClick={() => void toggle("like")}>{state.liked ? "♥ Curtido" : "♡ Curtir"}</button><span>{state.likes} {state.likes === 1 ? "curtida" : "curtidas"}</span><button disabled={busy} aria-pressed={state.saved} onClick={() => void toggle("save")}>{state.saved ? "✓ Salvo" : "+ Salvar"}</button></>}

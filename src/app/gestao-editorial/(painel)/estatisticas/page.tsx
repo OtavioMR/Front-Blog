@@ -60,14 +60,14 @@ export default async function ActivityAnalytics() {
       {/* Painel: Evolução Diária */}
       <section className={styles.panel}>
         <h2>Evolução diária</h2>
-        <p>Cadastros, artigos, denúncias e primeiros registros de inscrição na newsletter.</p>
+        <p>Cadastros, contos, denúncias e primeiros registros de inscrição na newsletter.</p>
         <div className={styles.tableScroll}>
           <table className={styles.table}>
             <thead>
               <tr>
                 <th>Dia</th>
                 <th>Usuários</th>
-                <th>Artigos</th>
+                <th>Contos</th>
                 <th>Denúncias</th>
                 <th>Inscrições</th>
               </tr>
@@ -109,7 +109,7 @@ export default async function ActivityAnalytics() {
         <section className={styles.panel} style={{ margin: 0 }}>
           <h2>Publicações recentes</h2>
           <p style={{ margin: "0 0 1rem", fontSize: "0.88rem" }}>
-            Últimos artigos publicados na plataforma.
+            Últimos contos publicados na plataforma.
           </p>
           {value.recentPosts.length ? (
             <ul className={styles.list}>

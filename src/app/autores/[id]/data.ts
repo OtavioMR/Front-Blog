@@ -8,7 +8,7 @@ export type Author = {
   publicationCount: number;
 };
 
-export type AuthorArticle = {
+type AuthorStory = {
   id: string;
   slug: string;
   title: string;
@@ -20,12 +20,19 @@ export type AuthorArticle = {
   categories?: { id?: string; name: string; slug?: string }[];
 };
 
-export type AuthorArticlesPage = {
-  data: AuthorArticle[];
+type AuthorSeries = {
+  id: string;
+  title: string;
+  description: string;
+  coverImage: string | null;
+  publishedCount: number;
+  contentRating: string;
+};
+
+type PublicationsPage<T> = {
+  data: T[];
   meta: {
     page: number;
-    limit: number;
-    total: number;
     totalPages: number;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
@@ -66,7 +73,7 @@ export async function getAuthor(id: string): Promise<Author | null> {
   return result as Author;
 }
 
-function isAuthorArticle(value: unknown): value is AuthorArticle {
+function isAuthorStory(value: unknown): value is AuthorStory {
   if (!record(value)) return false;
   if (typeof value.id !== "string" || !uuid.test(value.id)) return false;
   if (typeof value.slug !== "string" || !slugRegex.test(value.slug)) return false;
@@ -80,9 +87,17 @@ function isAuthorArticle(value: unknown): value is AuthorArticle {
   return true;
 }
 
-function parseArticlesPage(value: unknown): AuthorArticlesPage {
-  if (!record(value) || !Array.isArray(value.data) || !value.data.every(isAuthorArticle)) {
-    throw new Error("Resposta inválida do serviço de artigos.");
+function isAuthorSeries(value: unknown): value is AuthorSeries {
+  return record(value) && typeof value.id === "string" && uuid.test(value.id)
+    && typeof value.title === "string" && typeof value.description === "string"
+    && nullableString(value.coverImage) && typeof value.contentRating === "string"
+    && typeof value.publishedCount === "number" && Number.isSafeInteger(value.publishedCount)
+    && value.publishedCount > 0;
+}
+
+function parsePublicationsPage<T>(value: unknown, isItem: (item: unknown) => item is T): PublicationsPage<T> {
+  if (!record(value) || !Array.isArray(value.data) || !value.data.every(isItem)) {
+    throw new Error("Resposta inválida do serviço de publicações.");
   }
   if (
     !record(value.meta) ||
@@ -91,14 +106,12 @@ function parseArticlesPage(value: unknown): AuthorArticlesPage {
     typeof value.meta.hasNextPage !== "boolean" ||
     typeof value.meta.hasPreviousPage !== "boolean"
   ) {
-    throw new Error("Metadados inválidos do serviço de artigos.");
+    throw new Error("Metadados inválidos do serviço de publicações.");
   }
   return {
     data: value.data,
     meta: {
       page: value.meta.page as number,
-      limit: typeof value.meta.limit === "number" ? value.meta.limit : 6,
-      total: typeof value.meta.total === "number" ? value.meta.total : value.data.length,
       totalPages: value.meta.totalPages as number,
       hasNextPage: value.meta.hasNextPage as boolean,
       hasPreviousPage: value.meta.hasPreviousPage as boolean,
@@ -106,50 +119,26 @@ function parseArticlesPage(value: unknown): AuthorArticlesPage {
   };
 }
 
-export async function getAuthorArticles(
-  authorId: string,
-  authorName: string,
-  page: number = 1,
-  limit: number = 6,
-): Promise<AuthorArticlesPage> {
-  if (!uuid.test(authorId)) {
-    return {
-      data: [],
-      meta: { page: 1, limit, total: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false },
-    };
-  }
+async function getPublicationsPage<T>(path: string, query: URLSearchParams, isItem: (item: unknown) => item is T) {
   const origin = process.env.API_ORIGIN || "http://localhost:3001";
-  const primaryUrl = `${origin}/api/v1/posts?authorId=${encodeURIComponent(authorId)}&page=${page}&limit=${limit}`;
-  const response = await fetch(primaryUrl, {
+  const response = await fetch(`${origin}/api/v1/${path}?${query}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(8000),
   });
 
-  if (response.ok) {
-    const json: unknown = await response.json();
-    return parseArticlesPage(json);
-  }
+  if (!response.ok) throw new Error("Serviço de publicações indisponível.");
+  return parsePublicationsPage(await response.json(), isItem);
+}
 
-  // Graceful fallback for environments where authorId query param is not yet present
-  if (response.status === 400 && authorName.trim()) {
-    const fallbackUrl = `${origin}/api/v1/posts?author=${encodeURIComponent(authorName.trim())}&page=${page}&limit=${limit}`;
-    const fallbackResponse = await fetch(fallbackUrl, {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!fallbackResponse.ok) throw new Error("Serviço de artigos indisponível.");
-    const json: unknown = await fallbackResponse.json();
-    const parsed = parseArticlesPage(json);
-    const filtered = parsed.data.filter((item) => !item.author?.id || item.author.id.toLowerCase() === authorId.toLowerCase());
-    return {
-      ...parsed,
-      data: filtered,
-    };
-  }
+export function getAuthorStories(authorId: string, page: number) {
+  const query = new URLSearchParams({ authorId, page: String(page), limit: "6", standalone: "true" });
+  return getPublicationsPage("posts", query, isAuthorStory);
+}
 
-  throw new Error("Serviço de artigos indisponível.");
+export function getAuthorSeries(authorId: string, page: number) {
+  const query = new URLSearchParams({ authorId, page: String(page), limit: "6" });
+  return getPublicationsPage("series", query, isAuthorSeries);
 }
 
 export function pageNumber(value: unknown): number {
@@ -171,13 +160,6 @@ export function photoPath(value: string | null): string | null {
   if (!value) return null;
   if (/^\/uploads\/profile-photos\/[0-9a-f-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
   if (/^https:\/\/[a-z0-9.-]+\/(?:profile-photos\/)?[0-9a-f-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
-  return null;
-}
-
-export function coverPath(value: string | null | undefined): string | null {
-  if (!value) return null;
-  if (/^\/uploads\/post-covers\/[a-z0-9-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
-  if (/^https:\/\/[a-z0-9.-]+\/(?:post-covers\/)?[a-z0-9-]+\.(webp|png|jpe?g)$/i.test(value)) return value;
   return null;
 }
 

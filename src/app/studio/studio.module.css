@@ -289,7 +289,7 @@
   cursor: not-allowed;
 }
 
-/* Article Cards */
+/* Post cards */
 .list {
   list-style: none;
   padding: 0;
@@ -298,7 +298,7 @@
   gap: 12px;
 }
 
-.articleCard {
+.postCard {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr) auto;
   align-items: center;
@@ -310,7 +310,7 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.articleCard:hover {
+.postCard:hover {
   border-color: var(--brand-accent);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
@@ -321,13 +321,13 @@
   border-radius: 8px;
 }
 
-.articleMeta {
+.postMeta {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
 
-.articleTitle {
+.postTitle {
   margin: 0;
   font-family: var(--font-serif, Georgia, serif);
   font-size: 18px;
@@ -481,7 +481,7 @@
 }
 
 @media (max-width: 720px) {
-  .articleCard {
+  .postCard {
     grid-template-columns: 1fr;
     align-items: stretch;
   }

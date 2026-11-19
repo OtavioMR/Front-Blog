@@ -2,7 +2,7 @@
 
 # Frontend do blog
 
-Base inicial em Next.js App Router, React e TypeScript. A página inicial consulta artigos públicos e busca na API; o desenvolvimento das demais jornadas está em andamento.
+Base inicial em Next.js App Router, React e TypeScript. A página inicial consulta contos públicos e busca na API; o desenvolvimento das demais jornadas está em andamento.
 
 ## Executar localmente
 
@@ -13,7 +13,7 @@ npm.cmd install
 npm.cmd run dev -- -p 5173
 ```
 
-Abra http://localhost:5173. Para o container `backend-blog` existente, copie `.env.example` para `.env.local` e configure `API_ORIGIN=http://localhost:3000` e `SITE_ORIGIN=http://localhost:5173`. A origem da API não deve conter barra final nem `/api/v1`. O arquivo local não deve ser versionado. A topologia de produção e a passagem de cookies e uploads ainda precisam ser verificadas na Sprint 0. Sem API acessível, a página informa que os artigos estão indisponíveis.
+Abra http://localhost:5173. Para o container `backend-blog` existente, copie `.env.example` para `.env.local` e configure `API_ORIGIN=http://localhost:3000` e `SITE_ORIGIN=http://localhost:5173`. A origem da API não deve conter barra final nem `/api/v1`. O arquivo local não deve ser versionado. A topologia de produção e a passagem de cookies e uploads ainda precisam ser verificadas na Sprint 0. Sem API acessível, a página informa que os contos estão indisponíveis.
 
 `SITE_ORIGIN` define a origem pública canônica, sem barra final, e deve corresponder a `FRONTEND_URL` do backend para que sitemap e feeds apontem para o site correto.
 

@@ -48,7 +48,7 @@ export default function DiretrizesPage() {
       <section className={styles.section}>
         <h2>2. Classificação Indicativa e Conteúdo Maduro (18+)</h2>
         <p>
-          2.1. Todo artigo deve possuir classificação indicativa adequada, conforme explicado em nossas <Link href="/diretrizes/classificacao">Diretrizes de Classificação Etária</Link>.
+          2.1. Todo conto deve possuir classificação indicativa adequada, conforme explicado em nossas <Link href="/diretrizes/classificacao">Diretrizes de Classificação Etária</Link>.
         </p>
         <p>
           2.2. O Grifório permite obras de ficção com temas maduros, suspense, terror psicológico, violência ficcional dramática e romances adultos, desde que respeitadas as diretrizes editoriais e a legislação. Tais obras devem obrigatoriamente receber a etiqueta <code>18+</code>.
@@ -61,7 +61,7 @@ export default function DiretrizesPage() {
       <section className={styles.section}>
         <h2>3. Procedimento de Moderação e Proteção da Equipe</h2>
         <p>
-          3.1. <strong>Comunicação motivada:</strong> Quando um artigo ou comentário é ocultado, o autor recebe uma notificação detalhada contendo o motivo da decisão da moderação.
+          3.1. <strong>Comunicação motivada:</strong> Quando um conto ou comentário é ocultado, o autor recebe uma notificação detalhada contendo o motivo da decisão da moderação.
         </p>
         <p>
           3.2. <strong>Decisões institucionais:</strong> Para salvaguardar a segurança física e psicológica de nossos revisores contra perseguições e assédio online, as ações de moderação são assinadas coletivamente como <strong>&quot;Moderação do Grifório&quot;</strong>.
@@ -81,7 +81,7 @@ export default function DiretrizesPage() {
           <li><strong>Protocolo exclusivo:</strong> Cada recurso gera um identificador transparente no formato <code>GRIF-REC-AAAAMMDD-XXXXXX</code>.</li>
           <li><strong>Prazo operacional (SLA):</strong> Estabelecemos a meta de até <strong>15 (quinze) dias</strong> para análise e decisão fundamentada.</li>
           <li><strong>Prevenção de conflito de interesse:</strong> O recurso será obrigatoriamente atribuído a um moderador distinto daquele que realizou a moderação original, assegurando imparcialidade na reanálise.</li>
-          <li><strong>Restauração automática:</strong> Em caso de deferimento do recurso, o artigo, comentário ou perfil é imediatamente restaurado ao estado público anterior.</li>
+          <li><strong>Restauração automática:</strong> Em caso de deferimento do recurso, o conto, comentário ou perfil é imediatamente restaurado ao estado público anterior.</li>
         </ul>
       </section>
 

@@ -24,8 +24,12 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     const meta = { page: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
     const category = { id: "c1", slug: "cultura", name: "Cultura", description: "Boas ideias", isActive: true };
     const tag = { id: "t1", slug: "ideias", name: "Ideias" };
-    const series = { id: "8d779824-0a9f-442f-8652-a81600000002", title: "Série de teste", description: "Sinopse da série", coverImage: "/uploads/post-covers/8d779824-0a9f-442f-8652-a81600000002.webp", publishedCount: 2, contentRating: "LIVRE", posts: [{ ...article, position: 1, contentRating: "LIVRE" }, { ...article, id: "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", slug: "proximo-capitulo", title: "Próximo capítulo", position: 2, contentRating: "LIVRE" }] };
-    if (url.pathname === "/api/v1/series") return response.end(JSON.stringify({ data: [series], meta }));
+    const series = { id: "8d779824-0a9f-442f-8652-a81600000002", title: "Série de teste", description: "Sinopse da série. Na vila do outro lado do rio, uma cartógrafa encontra um mapa que muda cada vez que o sino toca.\nAs trilhas passam a apontar para lugares que ninguém lembra de ter visitado.\n\nPara descobrir como chegar de volta, ela precisa seguir as marcas antes que desapareçam. Quando o sino para, enfim o caminho se revela.", coverImage: "/uploads/post-covers/8d779824-0a9f-442f-8652-a81600000002.webp", publishedCount: 2, contentRating: "LIVRE", posts: [{ ...article, position: 1, contentRating: "LIVRE" }, { ...article, id: "76f781e0-9f94-42a3-ac2a-8dc5a41a983d", slug: "proximo-capitulo", title: "Próximo capítulo", position: 2, contentRating: "LIVRE" }] };
+    if (url.pathname === "/api/v1/series") {
+      assert.equal(url.searchParams.get("authorId"), article.author.id);
+      const page = Number(url.searchParams.get("page"));
+      return response.end(JSON.stringify({ data: [series], meta: { page, totalPages: 2, hasNextPage: page === 1, hasPreviousPage: page > 1 } }));
+    }
     if (url.pathname === `/api/v1/series/${series.id}`) return response.end(JSON.stringify(series));
     if (url.pathname === "/api/v1/tags") return response.end(JSON.stringify({ data: [tag], meta }));
     if (url.pathname === "/api/v1/tags/ideias") return response.end(JSON.stringify(tag));
@@ -47,6 +51,9 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     }
     if (url.pathname === "/api/v1/posts") {
       lastPostQuery = url.searchParams;
+      if (url.searchParams.get("standalone") === "true") {
+        return response.end(JSON.stringify({ data: [article], meta }));
+      }
       if (url.searchParams.get("search") === "indisponivel") { response.statusCode = 503; return response.end("{}"); }
       if (url.searchParams.get("search") === "vazio") return response.end(JSON.stringify({ data: [], meta: { page: 1, totalPages: 0, hasNextPage: false, hasPreviousPage: false } }));
       if (url.searchParams.get("search") === "paginar") return response.end(JSON.stringify({ data: [article], meta: { page: 1, totalPages: 2, hasNextPage: true, hasPreviousPage: false } }));
@@ -99,12 +106,13 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   const seriesPage = await fetch(`${base}/series/8d779824-0a9f-442f-8652-a81600000002`);
   assert.equal(seriesPage.status, 200);
   const seriesHtml = await seriesPage.text();
-  assert.match(seriesHtml, /Sinopse da série/);
+  assert.match(seriesHtml, /id="sinopse">Sinopse<\/h2>/);
+  assert.match(seriesHtml, /<p[^>]*>Sinopse da série\.[^<]*\nAs trilhas[^<]*<\/p><p[^>]*>Para descobrir[^<]*Quando o sino para, enfim o caminho se revela\.<\/p>/);
   assert.match(seriesHtml, /Próximo capítulo/);
   assert.ok(seriesHtml.indexOf("Uma história de teste") < seriesHtml.indexOf("Próximo capítulo"));
   assert.match(homeHtml, /href="\/sobre"/);
   assert.match(homeHtml, /PUBLICAÇÃO RECENTE/);
-  assert.match(homeHtml, /aria-label="Ler artigo: Uma história de teste"/);
+  assert.match(homeHtml, /aria-label="Ler conto: Uma história de teste"/);
   const about = await fetch(`${base}/sobre`);
   assert.equal(about.status, 200);
   assert.match(await about.text(), /Boas ideias merecem/);
@@ -115,7 +123,7 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.equal(lastPostQuery.get("categorySlug"), "cultura");
   assert.match(searchHtml, /name="robots" content="noindex/);
   assert.match(searchHtml, /Limpar filtros/);
-  assert.match(searchHtml, /search=paginar&amp;author=Ana&amp;categorySlug=cultura&amp;page=2#artigos/);
+  assert.match(searchHtml, /search=paginar&amp;author=Ana&amp;categorySlug=cultura&amp;page=2#contos/);
   assert.match(searchHtml, /name="categorySlug" value="cultura"/);
   for (const count of [0, 5, 20, 60, 105]) {
     categoryCount = count;
@@ -126,9 +134,11 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
     if (count > 12) assert.match(directory, /Pr.xima/);
   }
   categoryCount = 105;
-  const directorySearch = await (await fetch(`${base}/categorias?search=104&articleSearch=ideias&author=Ana`)).text();
+  const directorySearch = await (await fetch(`${base}/categorias?search=104&storySearch=ideias&author=Ana`)).text();
   assert.match(directorySearch, /Assunto 104/);
-  assert.match(directorySearch, /search=ideias&amp;author=Ana&amp;categorySlug=assunto-104#artigos/);
+  assert.match(directorySearch, /search=ideias&amp;author=Ana&amp;categorySlug=assunto-104#contos/);
+  const legacyDirectorySearch = await (await fetch(`${base}/categorias?search=104&articleSearch=ideias&author=Ana`)).text();
+  assert.match(legacyDirectorySearch, /search=ideias&amp;author=Ana&amp;categorySlug=assunto-104#contos/);
   assert.match(await (await fetch(`${base}/categorias?search=inexistente`)).text(), /Nenhuma categoria encontrada para esta busca/);
   categoryCount = 1;
   categoriesDown = true;
@@ -137,7 +147,7 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.match(await fallback.text(), /name="categorySlug" value="cultura"/);
   categoriesDown = false;
   const empty = await fetch(`${base}/?search=vazio`);
-  assert.match(await empty.text(), /Nenhum artigo encontrado/);
+  assert.match(await empty.text(), /Nenhum conto encontrado/);
   const unavailable = await fetch(`${base}/?search=indisponivel`);
   assert.equal(unavailable.status, 500);
   assert.match(await unavailable.text(), /name="robots" content="noindex/);
@@ -155,24 +165,40 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.match(categoriesHtml, /aria-label="Explorar categoria: Cultura"/);
   const categoryHtml = await (await fetch(`${base}/categorias/cultura`)).text();
   assert.match(categoryHtml, /<title>Cultura \| Grifório<\/title>/);
-  assert.match(categoryHtml, /aria-label="Ler artigo: Uma história de teste"/);
+  assert.match(categoryHtml, /aria-label="Ler conto: Uma história de teste"/);
   assert.match(await (await fetch(`${base}/categorias/cultura?page=2`)).text(), /<title>Cultura — página 2 \| Grifório<\/title>/);
   assert.equal((await fetch(`${base}/categorias/inexistente`)).status, 404);
   const authorHtml = await (await fetch(`${base}/autores/${article.author.id}`)).text();
+  assert.equal(lastPostQuery.get("authorId"), article.author.id);
+  assert.equal(lastPostQuery.get("standalone"), "true");
   assert.match(authorHtml, /<title>Autora de teste \| Grifório<\/title>/);
-  assert.match(authorHtml, /Biografia de teste/);
-  assert.match(authorHtml, /Artigos publicados/);
-  assert.match(authorHtml, /aria-current="page"[^>]*href="[^"]*aba=artigos/);
+  assert.match(authorHtml, />Contos<\/a>/);
+  assert.match(authorHtml, />Séries<\/a>/);
+  assert.match(authorHtml, />Sobre o autor<\/a>/);
+  assert.match(authorHtml, /aria-current="page"[^>]*href="[^"]*aba=contos/);
   assert.doesNotMatch(authorHtml, /role="tablist"/);
   assert.match(authorHtml, /<a(?=[^>]*href="\/")(?=[^>]*data-back-button="true")[^>]*>/);
   assert.match(authorHtml, /Uma história de teste/);
-  assert.match(authorHtml, /aria-label="Ler artigo: Uma história de teste"/);
+  assert.match(authorHtml, /aria-label="Ler conto: Uma história de teste"/);
+  assert.doesNotMatch(authorHtml, /Próximo capítulo|Série de teste/);
+  const authorSeriesHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=series&origem=conta`)).text();
+  assert.match(authorSeriesHtml, /aria-current="page"[^>]*href="[^"]*aba=series/);
+  assert.match(authorSeriesHtml, /aria-label="Ver capítulos: Série de teste"/);
+  assert.match(authorSeriesHtml, /href="\/series\/8d779824-0a9f-442f-8652-a81600000002"/);
+  assert.match(authorSeriesHtml, /aba=series&amp;page=2&amp;origem=conta#publicacoes/);
+  assert.match(authorSeriesHtml, /Sinopse da série\.[^<]{1,149}…/);
+  assert.doesNotMatch(authorSeriesHtml, /enfim o caminho se revela/);
+  assert.doesNotMatch(authorSeriesHtml, /Próximo capítulo|Uma história de teste/);
   const authorAboutHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=sobre`)).text();
+  assert.match(authorAboutHtml, /Biografia de teste/);
   assert.match(authorAboutHtml, /Sobre .*Autora de teste/);
   assert.match(authorAboutHtml, /aria-current="page"[^>]*href="[^"]*aba=sobre/);
   const accountAuthorHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=sobre&origem=conta`)).text();
   assert.match(accountAuthorHtml, /<a(?=[^>]*href="\/conta")(?=[^>]*data-back-button="true")[^>]*>/);
-  assert.match(accountAuthorHtml, /aba=artigos&amp;origem=conta/);
+  assert.match(accountAuthorHtml, /aba=contos&amp;origem=conta/);
+  assert.match(accountAuthorHtml, /aba=series&amp;origem=conta/);
+  const legacyAuthorHtml = await (await fetch(`${base}/autores/${article.author.id}?aba=artigos#artigos`)).text();
+  assert.match(legacyAuthorHtml, /aria-current="page"[^>]*href="[^"]*aba=contos/);
   assert.equal((await fetch(`${base}/autores/invalido`)).status, 404);
   const sitemap = await fetch(`${base}/sitemap.xml`);
   assert.equal(sitemap.status, 200);
@@ -181,7 +207,7 @@ test("páginas públicas respondem conforme o contrato HTTP", { timeout: 30000 }
   assert.equal(feed.status, 200);
   const post = await fetch(`${base}/posts/uma-historia`);
   const html = await post.text();
-  assert.match(html, /aria-label="Ler artigo: Outra leitura"/);
+  assert.match(html, /aria-label="Ler conto: Outra leitura"/);
   assert.equal(post.status, 200);
   assert.match(html, /Conteúdo de teste/);
   assert.match(html, /Outra leitura/);

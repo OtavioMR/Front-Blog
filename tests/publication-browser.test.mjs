@@ -49,7 +49,7 @@ test("autor aprovado publica, retira e agenda na API simulada", { timeout: 12000
       if (input.published === true) post.scheduledAt = null;
       return respond(200, post);
     }
-    if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Artigo em revisao" });
+    if (req.url === `/api/v1/posts/${postId}` && ["PATCH", "DELETE"].includes(req.method) && post?.reviewStatus === "PENDING") return respond(409, { message: "Conto em revisao" });
     if (req.url === "/api/v1/posts/me?page=1&limit=10" && req.method === "GET") return respond(200, { data: post?.isActive ? [post] : [], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } });
     if (req.url === `/api/v1/posts/${postId}` && req.method === "DELETE" && role === "AUTHOR") { post.isActive = false; post.published = false; post.scheduledAt = null; res.statusCode = 204; return res.end(); }
     if (req.url === `/api/v1/post-reviews/${postId}/submit` && req.method === "POST" && role === "AUTHOR" && post?.reviewStatus === "DRAFT") { post.reviewStatus = "PENDING"; return respond(201, { status: "PENDING" }); }
@@ -107,16 +107,16 @@ test("autor aprovado publica, retira e agenda na API simulada", { timeout: 12000
   await waitFor(() => evaluate("location.pathname === '/conta'"), "entrada");
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
   await waitFor(() => has("Publicar agora"), "editor autenticado");
-  await fill("#article-title", "Alteracao nao salva");
+  await fill("#post-title", "Alteracao nao salva");
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Publicar agora').disabled"), true);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).find(x => x.textContent.trim() === 'Agendar publica\u00e7\u00e3o').disabled"), true);
-  await fill("#article-title", "Synthetic title");
-  await click("Publicar agora"); await waitFor(() => has("Publicar artigo?"), "confirmacao de publicacao");
+  await fill("#post-title", "Synthetic title");
+  await click("Publicar agora"); await waitFor(() => has("Publicar conto?"), "confirmacao de publicacao");
   assert.equal(post.published, false); await click("Publicar");
-  await waitFor(() => has("Artigo publicado."), "publicacao"); assert.equal(post.published, true);
-  await click("Retirar do ar"); await waitFor(() => has("Retirar artigo do ar?"), "confirmacao de retirada");
+  await waitFor(() => has("Conto publicado."), "publicacao"); assert.equal(post.published, true);
+  await click("Retirar do ar"); await waitFor(() => has("Retirar conto do ar?"), "confirmacao de retirada");
   await evaluate("document.querySelector('dialog[open] button:last-child').click()");
-  await waitFor(() => has("Artigo retirado do ar"), "retirada"); assert.equal(post.published, false);
+  await waitFor(() => has("Conto retirado do ar"), "retirada"); assert.equal(post.published, false);
   await fill("#schedule-date", "2099-07-01T12:30"); await click("Agendar publica\u00e7\u00e3o");
   await waitFor(() => has("Agendar publica\u00e7\u00e3o?"), "confirmacao de agendamento");
   assert.equal(post.scheduledAt, null); await click("Confirmar agendamento");
@@ -127,7 +127,7 @@ test("autor aprovado publica, retira e agenda na API simulada", { timeout: 12000
   await waitFor(() => has("Agendamento cancelado."), "cancelamento"); assert.equal(post.scheduledAt, null);
   post.reviewStatus = "PENDING";
   await cdp("Page.navigate", { url: `${base}/studio/${postId}` });
-  await waitFor(() => has("aguarda revis\u00e3o"), "artigo pendente");
-  assert.equal(await evaluate("document.querySelector('#article-title').readOnly"), true);
+  await waitFor(() => has("aguarda revis\u00e3o"), "conto pendente");
+  assert.equal(await evaluate("document.querySelector('#post-title').readOnly"), true);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('button')).some(x => ['Publicar agora', 'Agendar publica\u00e7\u00e3o'].includes(x.textContent.trim()))"), false);
 });

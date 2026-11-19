@@ -140,12 +140,12 @@ export default async function CommentsPage({
           </label>
 
           <label>
-            Identificador do artigo
+            Identificador do conto
             <input
               name="postId"
               defaultValue={postId}
               maxLength={36}
-              placeholder="UUID do artigo..."
+              placeholder="UUID do conto..."
             />
           </label>
 
@@ -168,7 +168,7 @@ export default async function CommentsPage({
                     <Avatar name={record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"} src={record(row.author) && typeof row.author.profilePhoto === "string" ? row.author.profilePhoto : null} size={24} /> <strong>Autor:</strong> {record(row.author) && typeof row.author.name === "string" ? row.author.name : "Usuário removido"}
                   </span>
                   <span>
-                    <strong>Artigo:</strong> {record(row.post) && typeof row.post.title === "string" ? row.post.title : "Conteúdo indisponível"}
+                    <strong>Conto:</strong> {record(row.post) && typeof row.post.title === "string" ? row.post.title : "Conteúdo indisponível"}
                   </span>
                 </p>
                 <p style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>

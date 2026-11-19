@@ -10,12 +10,14 @@ type StudioHeaderProps = {
   activeTab: "contos" | "series";
   editorialEnabled?: boolean;
   onLeaveNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
+  backAction?: { label: string; onClick: () => void; disabled?: boolean };
 };
 
 export default function StudioHeader({
   activeTab,
   editorialEnabled = true,
   onLeaveNavigate,
+  backAction,
 }: StudioHeaderProps) {
   function handleClick(href: string) {
     return (event: MouseEvent<HTMLAnchorElement>) => {
@@ -24,16 +26,24 @@ export default function StudioHeader({
   }
 
   return (
-    <header className={styles.header}>
+    <header className={`${styles.header} ${backAction ? styles.headerCompact : ""}`}>
       <div className={styles.topRow}>
-        <Link
-          href="/conta"
-          className={backStyles.back}
-          onClick={handleClick("/conta")}
-        >
-          <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
-          <span>Minha conta</span>
-        </Link>
+        {backAction ? (
+          <button type="button" className={backStyles.back} data-back-button onClick={backAction.onClick} disabled={backAction.disabled}>
+            <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+            <span>{backAction.label}</span>
+          </button>
+        ) : (
+          <Link
+            href="/conta"
+            className={backStyles.back}
+            data-back-button
+            onClick={handleClick("/conta")}
+          >
+            <ArrowLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+            <span>Minha conta</span>
+          </Link>
+        )}
       </div>
 
       <div className={styles.hero}>

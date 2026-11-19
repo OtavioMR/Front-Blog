@@ -21,7 +21,7 @@ export default function Footer() {
             <div>
               <p className={styles.heading}>Descubra</p>
               <Link href="/">Página inicial</Link>
-              <Link href="/#artigos">Explorar artigos</Link>
+              <Link href="/#contos">Explorar contos</Link>
               <Link href="/categorias">Categorias</Link>
             </div>
             <div>

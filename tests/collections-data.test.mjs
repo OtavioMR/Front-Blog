@@ -13,8 +13,8 @@ test("valida coleções privadas e descarta campos adicionais", () => {
   assert.throws(() => parseCollections([item, item]));
   assert.throws(() => parseCollections([{ ...item, name: " " }]));
 });
-test("valida paginação e links públicos de artigos da coleção", () => {
-  const post = { id, slug: "artigo-sintetico", title: "Artigo", excerpt: "Resumo" };
+test("valida paginação e links públicos de contos da coleção", () => {
+  const post = { id, slug: "conto-sintetico", title: "Conto", excerpt: "Resumo" };
   const value = { data: [post], meta: { page: 1, hasPreviousPage: false, hasNextPage: false } };
   assert.equal(parseCollectionPosts(value, 1).items[0].slug, post.slug);
   assert.throws(() => parseCollectionPosts(value, 2));

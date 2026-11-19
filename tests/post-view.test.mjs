@@ -53,7 +53,7 @@ test("exige visibilidade e interação real antes de registrar", () => {
   assert.equal(b.requests[0].options.credentials, "omit");
 });
 
-test("aba oculta ou artigo fora da tela cancela a espera", () => {
+test("aba oculta ou conto fora da tela cancela a espera", () => {
   const b = browser();
   b.track(); b.intersect(true); b.win.emit("scroll", { isTrusted: true });
   b.doc.visibilityState = "hidden"; b.doc.emit("visibilitychange"); b.elapse();

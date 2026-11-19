@@ -15,7 +15,7 @@ export default function SobrePage() {
           <p className={styles.eyebrow}>SOBRE O GRIFÓRIO</p>
           <h1 id="sobre-titulo">Boas ideias merecem <em>ser compartilhadas.</em></h1>
           <p>O Grifório é um espaço para quem gosta de descobrir, aprender e enxergar o mundo por outras perspectivas.</p>
-          <Link className={styles.primaryLink} href="/#artigos">Explore os artigos <span aria-hidden="true">↗</span></Link>
+          <Link className={styles.primaryLink} href="/#contos">Explore os contos <span aria-hidden="true">↗</span></Link>
         </div>
         <div className={styles.art} aria-hidden="true">
           <div className={styles.artCircle} />
@@ -42,7 +42,7 @@ export default function SobrePage() {
       </section>
       <section className={styles.invitation}>
         <div><p className={styles.eyebrow}>A PRÓXIMA HISTÓRIA ESPERA POR VOCÊ</p><h2>Vamos descobrir juntos?</h2></div>
-        <Link className={styles.primaryLink} href="/#artigos">Encontrar uma leitura <span aria-hidden="true">↗</span></Link>
+        <Link className={styles.primaryLink} href="/#contos">Encontrar uma leitura <span aria-hidden="true">↗</span></Link>
       </section>
     </main>
   );

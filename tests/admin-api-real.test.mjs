@@ -76,7 +76,7 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
     if (authorized) {
       const sessionCookie = panelLogin.headers.getSetCookie().find(value => value.startsWith("__Host-editorial-session="))?.split(";")[0];
       assert.ok(sessionCookie);
-      for (const [path, label] of [["/gestao-editorial", "O Grifório em números"], ["/gestao-editorial/usuarios", "Contas da plataforma"], ["/gestao-editorial/comentarios", "Comentários"], ["/gestao-editorial/artigos", "Artigos da plataforma"], ["/gestao-editorial/denuncias", "Central de denúncias"], ["/gestao-editorial/estatisticas", "Movimentação da plataforma"], ["/gestao-editorial/auditoria", "Ações registradas"], ["/gestao-editorial/categorias", "Categorias editoriais"], ["/gestao-editorial/tags", "Tags da plataforma"]]) {
+      for (const [path, label] of [["/gestao-editorial", "O Grifório em números"], ["/gestao-editorial/usuarios", "Contas da plataforma"], ["/gestao-editorial/comentarios", "Comentários"], ["/gestao-editorial/contos", "Contos da plataforma"], ["/gestao-editorial/denuncias", "Central de denúncias"], ["/gestao-editorial/estatisticas", "Movimentação da plataforma"], ["/gestao-editorial/auditoria", "Ações registradas"], ["/gestao-editorial/categorias", "Categorias editoriais"], ["/gestao-editorial/tags", "Tags da plataforma"]]) {
         const response = await frontRequest(path, { headers: { Cookie: sessionCookie } });
         assert.equal(response.status, 200, path);
         assert.ok((await response.text()).includes(label), `resposta válida ${path}`);
@@ -99,19 +99,19 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
         detail = await frontRequest(path, { headers: { Cookie: sessionCookie } });
         assert.match(await detail.text(), /Ativa/);
         assert.equal(syntheticPosts.length, 2);
-        const reject = await form(`/gestao-editorial/artigos/${syntheticPosts[0]}/revisar`, { csrf, decision: "REJECTED", reason: "Rejeicao sintetica para teste" }, sessionCookie);
+        const reject = await form(`/gestao-editorial/contos/${syntheticPosts[0]}/revisar`, { csrf, decision: "REJECTED", reason: "Rejeicao sintetica para teste" }, sessionCookie);
         assert.equal(reject.status, 204);
         const pendingSubscribers = execFileSync("docker", ["exec", "blog_postgres", "psql", "-U", "postgres", "-d", "blog_db", "-Atc", "SELECT count(*) FROM newsletter_subscribers WHERE confirmed = true"], { encoding: "utf8" }).trim();
         assert.equal(pendingSubscribers, "0", "Publicação de teste exige ausência de destinatários externos.");
-        const approve = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/revisar`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie);
+        const approve = await form(`/gestao-editorial/contos/${syntheticPosts[1]}/revisar`, { csrf, decision: "APPROVED", reason: "" }, sessionCookie);
         assert.equal(approve.status, 204);
-        const approvedDetail = await frontRequest(`/gestao-editorial/artigos/${syntheticPosts[1]}`, { headers: { Cookie: sessionCookie } });
+        const approvedDetail = await frontRequest(`/gestao-editorial/contos/${syntheticPosts[1]}`, { headers: { Cookie: sessionCookie } });
         assert.match(await approvedDetail.text(), /Publicado/);
 
-        // Moderação de artigo (ocultar e restaurar)
-        const hidePost = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/moderar`, { csrf, action: "hide", reason: "Ocultacao sintetica para teste" }, sessionCookie);
+        // Moderação de conto (ocultar e restaurar)
+        const hidePost = await form(`/gestao-editorial/contos/${syntheticPosts[1]}/moderar`, { csrf, action: "hide", reason: "Ocultacao sintetica para teste" }, sessionCookie);
         assert.equal(hidePost.status, 204);
-        const restorePost = await form(`/gestao-editorial/artigos/${syntheticPosts[1]}/moderar`, { csrf, action: "restore", reason: "Restauracao sintetica para teste" }, sessionCookie);
+        const restorePost = await form(`/gestao-editorial/contos/${syntheticPosts[1]}/moderar`, { csrf, action: "restore", reason: "Restauracao sintetica para teste" }, sessionCookie);
         assert.equal(restorePost.status, 204);
 
         // Revogação de sessões e moderação de usuário via BFF React
@@ -173,7 +173,7 @@ test("API real aplica a matriz administrativa a contas sintéticas", { skip: pro
     assert.equal(typeof token, "string");
     if (account.role === "AUTHOR") {
       for (let index = 0; index < 2; index++) {
-        const created = await fetch("http://127.0.0.1:3000/api/v1/posts", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: `Artigo sintetico ${randomUUID()}`, content: "Conteudo sintetico para revisao administrativa.", published: false }), signal: AbortSignal.timeout(10000) });
+        const created = await fetch("http://127.0.0.1:3000/api/v1/posts", { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ title: `Conto sintetico ${randomUUID()}`, content: "Conteudo sintetico para revisao administrativa.", published: false }), signal: AbortSignal.timeout(10000) });
         assert.equal(created.status, 201);
         const post = await created.json(); assert.match(post.id, /^[0-9a-f-]{36}$/i); syntheticPosts.push(post.id);
         const submitted = await fetch(`http://127.0.0.1:3000/api/v1/post-reviews/${post.id}/submit`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });

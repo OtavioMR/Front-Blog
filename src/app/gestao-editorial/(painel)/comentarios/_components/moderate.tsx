@@ -41,7 +41,7 @@ export default function ModerateComment({
     setMessage("");
     try {
       const body = new URLSearchParams({ csrf, action, reason: note });
-      const response = await fetch(`/gestao-editorial/${kind === "posts" ? "artigos" : "comentarios"}/${id}/moderar`, {
+      const response = await fetch(`/gestao-editorial/${kind === "posts" ? "contos" : "comentarios"}/${id}/moderar`, {
         method: "POST",
         body,
         cache: "no-store",
@@ -68,7 +68,7 @@ export default function ModerateComment({
     }
   }
 
-  const labelItem = kind === "posts" ? "artigo" : "comentário";
+  const labelItem = kind === "posts" ? "conto" : "comentário";
 
   return (
     <>

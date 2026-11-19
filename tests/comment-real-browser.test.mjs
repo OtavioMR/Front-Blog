@@ -38,7 +38,7 @@ test("comentarios no navegador com API e banco isolados", { timeout: 120000, ski
   const author = await user("Author"), reader = await user("Reader"), other = await user("Other"), admin = await user("Admin");
   const post = await request("/api/v1/posts", "POST", { title: `Historia sintetica ${suffix}`, content: "Conteudo sintetico da historia.", published: true }, author.token);
   const draft = await request("/api/v1/posts", "POST", { title: `Rascunho sintetico ${suffix}`, content: "Rascunho sintetico.", published: false }, author.token);
-  const adminTarget = await request("/api/v1/posts", "POST", { title: `Moderacao sintetica ${suffix}`, content: "Artigo sintetico.", published: false }, author.token);
+  const adminTarget = await request("/api/v1/posts", "POST", { title: `Moderacao sintetica ${suffix}`, content: "Conto sintetico.", published: false }, author.token);
   const deletion = async token => fetch(`${origin}/api/v1/posts/${draft.id}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
   assert.equal((await deletion()).status, 401);
   assert.equal((await deletion(reader.token)).status, 403);
@@ -117,11 +117,11 @@ test("comentarios no navegador com API e banco isolados", { timeout: 120000, ski
   await cdp("Page.navigate", { url: `${base}/studio` });
   await waitFor(() => has(draft.title), "rascunho no Studio");
   const deactivate = async title => {
-    const label = `Desativar artigo ${title}`;
+    const label = `Desativar conto ${title}`;
     await evaluate(`document.querySelector(${JSON.stringify(`button[aria-label=${JSON.stringify(label)}]`)}).click()`);
-    await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao de artigo");
-    await click("Desativar artigo");
-    await waitFor(async () => !(await has(title)), "artigo removido da lista");
+    await waitFor(() => evaluate("!!document.querySelector('dialog[open]')"), "confirmacao de conto");
+    await click("Desativar conto");
+    await waitFor(async () => !(await has(title)), "conto removido da lista");
   };
   await deactivate(draft.title);
   assert.equal((await deletion(author.token)).status, 404);

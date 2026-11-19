@@ -4,7 +4,7 @@ import styles from "../../legal.module.css";
 
 export const metadata: Metadata = {
   title: "Critérios de Classificação Etária | Grifório",
-  description: "Entenda a escala de classificação indicativa de artigos no Grifório e os critérios de proteção a menores de idade.",
+  description: "Entenda a escala de classificação indicativa de contos no Grifório e os critérios de proteção a menores de idade.",
 };
 
 export default function DiretrizesClassificacaoPage() {
@@ -84,7 +84,7 @@ export default function DiretrizesClassificacaoPage() {
       <section className={styles.section}>
         <h2>2. Regras de Acesso e Proteção Técnica a Conteúdos 18+</h2>
         <p>
-          2.1. <strong>Barreira de acesso:</strong> Artigos classificados como <code>18+</code> <strong>não têm seu texto integral, imagem de capa ou prévias detalhadas entregues a visitantes deslogados</strong>. O backend aplica a restrição na origem da resposta.
+          2.1. <strong>Barreira de acesso:</strong> Contos classificados como <code>18+</code> <strong>não têm seu texto integral, imagem de capa ou prévias detalhadas entregues a visitantes deslogados</strong>. O backend aplica a restrição na origem da resposta.
         </p>
         <p>
           2.2. <strong>Acesso autenticado:</strong> Apenas usuários autenticados com idade cadastrada compatível têm acesso à leitura e capa das publicações adultas.
@@ -107,7 +107,7 @@ export default function DiretrizesClassificacaoPage() {
           4.1. Leitores podem denunciar publicações caso identifiquem classificação etária declarada incorretamente (ex.: conteúdo de terror explícito classificado como LIVRE).
         </p>
         <p>
-          4.2. A moderação do Grifório possui a prerrogativa técnica de ajustar a classificação etária de um artigo, notificando o autor com a fundamentação editorial da alteração.
+          4.2. A moderação do Grifório possui a prerrogativa técnica de ajustar a classificação etária de um conto, notificando o autor com a fundamentação editorial da alteração.
         </p>
       </section>
     </main>

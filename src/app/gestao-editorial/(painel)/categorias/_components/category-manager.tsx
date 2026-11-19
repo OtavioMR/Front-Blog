@@ -183,7 +183,7 @@ export function CategoryRowActions({
       {confirmAction === "delete" && (
         <ConfirmDialog
           title={`Desativar a categoria "${currentName}"?`}
-          description="Ela deixará de aparecer publicamente, mas artigos e associações serão mantidos."
+          description="Ela deixará de aparecer publicamente, mas contos e associações serão mantidos."
           confirmLabel="Desativar categoria"
           variant="danger"
           onCancel={() => setConfirmAction(null)}
