@@ -285,8 +285,8 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
       setContentError("O conteúdo é obrigatório e deve ter pelo menos 10 caracteres.");
       if (valid) contentAreaRef.current?.focus();
       valid = false;
-    } else if (trimmedContent.length > 50000) {
-      setContentError("O conteúdo deve ter no máximo 50.000 caracteres.");
+    } else if (content.length > 100000) {
+      setContentError("O conteúdo deve ter no máximo 100.000 caracteres.");
       if (valid) contentAreaRef.current?.focus();
       valid = false;
     }
@@ -768,7 +768,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
             <div className={styles.fieldGroup}>
               <div className={styles.fieldHeader}>
                 <label htmlFor="post-content">Conteúdo do conto *</label>
-                <span className={styles.fieldCounter}>{content.length} / 50.000</span>
+                <span className={styles.fieldCounter}>{content.length} / 100.000</span>
               </div>
               <textarea
                 ref={contentAreaRef}
@@ -778,7 +778,7 @@ export default function Editor({ initialId, initialSeriesId }: { initialId?: str
                 placeholder="Escreva seu conto aqui."
                 required
                 minLength={10}
-                maxLength={50000}
+                maxLength={100000}
                 rows={18}
                 value={content}
                 onChange={event => {

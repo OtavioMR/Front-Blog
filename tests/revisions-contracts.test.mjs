@@ -10,6 +10,12 @@ const { parseRevisions, parseRevision, parseRestored } = await import(`data:text
 const id = "4c781e0d-b963-493c-b2df-0a8fa66c0615", rev = "76f781e0-9f94-42a3-ac2a-8dc5a41a983d";
 const entry = { id: rev, title: "Versao sintetica", content: "Texto sintetico", createdAt: "2026-01-01T00:00:00Z" };
 
+test("revisões aceitam 100 mil caracteres e rejeitam acima do limite", () => {
+  const content = "á".repeat(100000);
+  assert.equal(parseRevision({ ...entry, content }, rev).content, content);
+  assert.throws(() => parseRevision({ ...entry, content: content + "a" }, rev));
+});
+
 test("valida paginação, identificação e conteúdo das revisões", () => {
   assert.equal(parseRevisions({ data: [entry], meta: { page: 1, hasNextPage: false, hasPreviousPage: false } }, 1).items[0].id, rev);
   assert.equal(parseRevision(entry, rev).content, entry.content);

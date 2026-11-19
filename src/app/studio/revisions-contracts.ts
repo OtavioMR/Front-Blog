@@ -3,7 +3,7 @@ import { parseDraft, validDraftId, type Draft } from "./editor-contracts";
 export type Revision = { id: string; title: string; createdAt: string; content?: string };
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 function revision(value: unknown, detail = false): Revision {
-  if (!record(value) || typeof value.id !== "string" || !validDraftId(value.id) || typeof value.title !== "string" || value.title.length > 150 || typeof value.createdAt !== "string" || !Number.isFinite(Date.parse(value.createdAt)) || (detail && (typeof value.content !== "string" || value.content.length > 50000))) throw new Error("Resposta inválida.");
+  if (!record(value) || typeof value.id !== "string" || !validDraftId(value.id) || typeof value.title !== "string" || value.title.length > 150 || typeof value.createdAt !== "string" || !Number.isFinite(Date.parse(value.createdAt)) || (detail && (typeof value.content !== "string" || value.content.length > 100000))) throw new Error("Resposta inválida.");
   return { id: value.id, title: value.title, createdAt: value.createdAt, ...(detail ? { content: value.content as string } : {}) };
 }
 export function parseRevisions(value: unknown, page: number) {
